@@ -1,77 +1,124 @@
 # The Agent Ran. What Did That Prove?
 
-An agent demo can end with a confident answer and still leave the important questions unanswered. Did the record change? Was the user allowed to change it? Did a retry create a duplicate? Could someone else reproduce the result?
+> **Draft status: unreviewed, not authorized for publication.** Every result below is tied to a run ID in [`docs/CLAIM_LEDGER.md`](../docs/CLAIM_LEDGER.md). Anything not in that ledger is marked planned or unknown.
 
-I want to build a small public lab around those questions. The aim is to make the layers visible, using synthetic workflows that readers can run themselves rather than asking them to trust a recording.
+An agent demo usually ends with a green check and a friendly message: "Your request is complete." I wanted to know what that check had actually established. So I built a small lab that splits it into four questions and answers each one separately:
 
-This is the design of that lab, not a results report. The experiments still need to be implemented and executed before I can say what passed.
+1. **Did it run?** A process started and finished.
+2. **Did it run against something realistic?** The systems it called were emulated, and emulated is not the same as real.
+3. **Was it allowed?** Authority is a separate decision from whether the code ran.
+4. **Did the outcome happen?** Someone other than the agent checked the state.
 
-## Start with a request people understand
+These are four different claims. A demo that answers the first one is often presented as if it answered all four.
 
-The first example starts in a Slack conversation. A user asks for a service request, the application queues the work, creates a ticket, stores a receipt and replies in the original thread.
+<!-- media: lab-overview -->
 
-That is a deliberately ordinary workflow. It gives us several places where something can go wrong without needing a complicated business domain to explain the failure.
+## The setup
 
-I want the reader to see more than the final reply. The lab should show the incoming event, the business action, the stored result and the assertions used to judge completion.
+Everything here is synthetic: fictional companies, fictional users, fake credentials. It all runs on a laptop.
 
-## Give each tool one clear job
+- **Slack** is [Emulate](https://emulate.dev/docs/slack) 0.12.3, two fictional workspaces, with strict scope checks and signed callbacks.
+- **Cloud storage and a queue** come from [Floci](https://floci.io/) 2.3.0, pinned by image digest. The lab uses only its S3 and SQS.
+- **A ledger** is a SQLite file. It holds the inbox, outbox, tickets, approvals and a narrow CRM stand-in.
+- **The worker** is a scripted program, not a model. Each run is labelled `mode: scripted`. A deterministic worker lets the lab test integration, authorization and evidence without mixing in model behavior.
 
-Emulate supplies the Slack side of the experiment, including stateful messages, threads, signed callbacks and selected interactions ([Emulate Slack](https://emulate.dev/docs/slack)). I plan to use it so the application can send actual local API requests without posting into a real workspace.
+There are three workflows. W01 is a service request: a Slack mention becomes a queued job, a ticket, a receipt in S3 and a reply in the thread. W02 is a purchase approval that a second, authorized person has to click. W03 is a CRM description update with a version check.
 
-Floci supplies the cloud-shaped dependencies. It documents local cloud emulators, and this lab will begin with the much narrower job of exercising S3 and SQS operations ([Floci](https://floci.io/)).
+## Running is not verifying
 
-AX answers a different question: where an agent task runs and how its execution environment is managed ([AX](https://github.com/google/ax)). I would make that an optional execution lane, so readers can understand and run the basic experiment without first setting up a cluster.
+The worker can say "done". In this lab that statement is one observation among several, never the verdict.
 
-CodeRabbit belongs in the review lane, where it can examine code changes ([CodeRabbit](https://docs.coderabbit.ai/guides/code-review-overview)). Its findings can be useful evidence, but I still want a separate test to tell me whether a forbidden approval changed a record.
+A separate collector process reads the outcome. It has its own Slack token, which can only read conversations. It has its own S3 client and opens the ledger read-only. It never talks to the worker. For W01 it checks three stores: is there exactly one ticket, does the S3 receipt match the request, and is there exactly one completion reply in the original thread? Those facts go into an observation bundle, and an evaluator compares them with expectations fixed in the specification.
 
-Putting these tools on the same diagram should not turn them into competitors. The useful question is which responsibility each one owns.
+The case that matters is the one where they disagree. In one test the receipt is deleted after the worker has committed it, and the worker still claims success. The required assertion fails, and the report shows no success banner (C-08).
 
-## A convincing reply is not the acceptance test
+<!-- media: service-request-success -->
+<!-- media: evidence-report -->
 
-Suppose the worker says, “Your request is complete.” I want the evaluator to look for the ticket, read the storage receipt and inspect the original Slack thread.
+A rule from the specification turned out to be harder to keep than to state: **missing evidence is not zero.** If the collector cannot read the ledger, it does not know which receipt to look for. An early version recorded `receipt_count: 0` anyway, which reads as "no receipt". The test for the unreadable-ledger case caught it. The fact is now absent with a reason, and the report says UNKNOWN (L-021).
 
-If the receipt is missing, that run should not turn green because the text sounds right. If the collector cannot read the state, the result should remain unknown rather than quietly becoming a zero or a pass.
+## Emulated is not real, in specific ways
 
-The next test should repeat the same event. A second delivery is an opportunity to check idempotency, not a reason to create a second service request.
+An emulator is useful when you can say exactly which question it answers. Emulate answered mine: signed event callbacks, thread replies, button clicks, strict scopes, an explicit retry simulator. It also has documented gaps, including Socket Mode, slash commands and exact rate limiting (C-36). None of the lab's claims depend on those.
 
-I also want to show an ambiguous outcome. If a provider accepts a write but the response times out, the application may not know whether retrying is safe. That uncertainty deserves a visible state and a recovery path.
+The surprises came from where the documentation and the behavior differed:
 
-## Test who is allowed to act
+- Seeding an app with an event subscription through the public API did not deliver any callbacks. The seeder drops the dispatcher that delivers them. The lab carries a small, hash-checked patch for that one file and says so in its dependency lock (L-001).
+- Every emulated workspace reports the same `team_id`. Tenancy therefore cannot be keyed on it; the lab binds each tenant to its callback URL and signing secret (L-013).
+- The simulator routes that fake a button click accept **any** valid token, including the worker's own bot token. An independent reviewer used exactly that to forge an approval (L-019).
 
-The second workflow is a synthetic approval request. One person asks for an equipment purchase, and a different authorized person may approve it before the request expires.
+The last finding changed the design. The worker no longer gets an emulator URL at all. It gets a loopback proxy that forwards one Slack method and refuses everything else. That fixes the worker's path, not the emulator. Anyone who knows an emulator URL and holds any valid token can still simulate clicks. The boundary is process separation, and the ledger says so (C-16).
 
-The interesting test is the denied one. The requester should not approve their own request, and a copied button interaction from another workspace should not acquire authority just because it looks valid.
+The same discipline applies to the CRM. W03 runs against a local contract double that is good for version conflicts and input validation (C-07). It is not Salesforce. The Salesforce lane is designed and blocked, and parity is reported as UNKNOWN rather than implied (C-09, C-32).
 
-The policy should be outside the model's control. A model can propose an action; it should not choose which customer's credentials apply or decide that an expired approval is close enough.
+## Authorized is not the same as delivered through Slack
 
-No real payment belongs in this demonstration. The observable outcome is a controlled state transition, or the absence of that transition when the action is not allowed.
+A button click arriving through a signed Slack callback proves where the click came from. It does not prove the clicker may approve. In W02 the policy checks the current actor, the tenant and a digest of the request at the moment of the click.
 
-## Use a real platform when the question requires one
+The lab's results for the denied paths, all with zero writes:
 
-The third workflow updates a synthetic CRM account. A narrow local contract double is useful for fast tests of request shape, error handling and version conflicts.
+- the requester clicking their own approval (C-06);
+- a user without approval rights (C-06);
+- a button copied into the other workspace (C-14);
+- an approver whose permission was revoked before the click (C-14).
 
-It is not Salesforce. A Salesforce scratch org is an actual disposable code and metadata deployment, which gives us a different environment for testing platform-specific behavior ([Salesforce DX](https://developer.salesforce.com/docs/platform/sfdx-dev/guide/sfdx-dev-scratch-orgs.html)).
+<!-- media: approval-denied -->
 
-That distinction should stay visible in the report. Passing against a local double does not establish that an Apex operation respects the intended persona's permissions, or that a customer's accumulated configuration will behave the same way.
+Duplicate delivery is part of the same question. A signed retry of the same event creates no second ticket and no second reply (C-04). If a reply is sent and the response never comes back, the outcome is recorded as UNKNOWN and never re-posted. With least-privilege scopes the worker cannot read history to check, so the lab trades reconcilability for privilege and says so (L-017).
 
-The optional scratch-org lane should therefore run its own checks. If the org is unavailable, the honest result is “not verified here,” not a substituted local success.
+<!-- media: duplicate-event-safe -->
 
-## Make the limits part of the lesson
+## Tests that cannot fail
 
-Emulate's Slack documentation lists unsupported behavior, including Socket Mode, slash commands and exact rate limiting ([Slack limits](https://emulate.dev/docs/slack)). The lab should use supported interactions and carry those limits into the article and recording.
+The most useful lessons came from tests that passed for the wrong reason.
 
-A local emulator can help me ask a precise question about my application. It cannot make every production condition disappear.
+The optional lanes (Salesforce, CodeRabbit, AX, a live model) are supposed to report BLOCKED until their owner approves them. They did. But the profile loader looked for a named export while every adapter used a default export, so each lane reported "adapter not installed". BLOCKED was right and the reason was wrong. The check now refuses that placeholder as evidence (L-020).
 
-The same applies to tests. Public cases are useful because readers can inspect and reproduce them, but they are not secret holdouts. If I want a genuinely blind evaluation, it needs a separately controlled environment and undisclosed cases.
+Regenerating a report also rewrote its checksum file, which would have quietly re-approved an edited evidence file. Report generation now verifies the old checksums first and refuses on a mismatch (L-022).
 
-## Record evidence, not just a good take
+Four deliberate mutants target the defects the lab exists to catch: deduplication off, approval bypassed, reply sent before the receipt, missing evidence turned into success. All four were caught on the tested tree (C-15). That is a count for four probes, not a claim that nothing else is wrong.
 
-The recording should show a happy path, a denied action and a defect that a test catches. Each clip should identify its run, source revision, profile and whether the worker used a scripted plan or a live model.
+Two failures appeared only after merging. Each branch had passed its own gates. Together, the new Slack proxy sat in front of a forbidden endpoint and hid it from the worker's guard. Separately, a restarted worker collided with the ports of its crashed predecessor. Only the full harness on the merged tree caught them (L-025, L-026). Both were fixed before the runs this article cites.
 
-I would publish the test inputs and limitations alongside the video. A shorter clip can make the explanation clearer, but an edit should never be passed off as measured execution time.
+## What it costs to run
 
-The first version should use a deterministic scripted worker. That keeps integration behavior reproducible and makes it clear that the experiment is not yet a claim about model reasoning quality.
+Measured on one laptop (macOS arm64, 18 cores) with other workloads running, n=5 per workflow, raw values in [`docs/BENCHMARKS.md`](../docs/BENCHMARKS.md):
 
-After the lab runs, the results article can report which cases passed, which injected defects were caught, which integrations were blocked and what another reader reproduced. Until then, those are questions to answer, not numbers to invent.
+| Workflow | Callback to verified, 5 repetitions | Median |
+|---|---|---|
+| W01 service request | 71, 19, 17, 17, 18 ms | 18 ms |
+| W02 approval | 27, 23, 22, 23, 20 ms | 23 ms |
+| W03 CRM update | 41, 15, 14, 14, 13 ms | 14 ms |
 
-The standard I want is modest and checkable: someone can inspect the request, follow the action, challenge the result and rerun the case. That is more useful to me than an agent that simply sounds finished.
+The clock starts when the worker records the signed callback and stops when the collector first sees the complete final state (C-17 to C-19). The first repetition was the slowest every time. A cold `npm ci` with an empty cache took about 4 seconds here (C-20). The image pull was not measured. One independent observation pass costs a few milliseconds; the whole `collect-case` command takes about 3 seconds, mostly starting and stopping the stack (C-21). The full supplied harness took 260.6 seconds (C-22).
+
+These are descriptive numbers from a small sample on a busy machine. They are not a performance claim about Emulate, Floci or anything else.
+
+## What is not done
+
+- **The console and README media** are being built in a parallel task. In the run cited here, their cases were NOT_RUN, so the harness verdict is BLOCKED rather than ready (C-30).
+- **AX on Agent Substrate** is designed and blocked. The custom runner passed its contract tests under plain Docker, which says nothing about gVisor. AX does not read the agent command's exit status back, so in the design the collector, not the task phase, decides the outcome (C-31, C-37).
+- **Salesforce, CodeRabbit and a live model** are blocked on accounts and approvals the owner has not given (C-32 to C-34).
+- **Egress counting** for the optional lanes relies on shims for provider command-line tools. Routing Node's own traffic through the counting proxy is unproven (L-023).
+- **Blind holdouts** have not been run. The public challenge cases are reproducible, not secret (C-35).
+
+<!-- media: profile-boundaries -->
+
+## Reproduce it
+
+You need Node 24 and Docker. On the test machine, `npm ci` took about 4 seconds and the full harness about 4 to 6 minutes.
+
+```bash
+npm ci
+docker pull floci/floci:2.3.0
+npm run lab -- doctor
+bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh
+npm run mutate
+npm run bench
+```
+
+Your run produces new run IDs. Compare observations and statuses with the claim ledger, not the IDs. If yours differ, that is a finding, and the ledger is where it belongs.
+
+<!-- media: slack-service-request -->
+
+The standard I wanted is modest and checkable: someone else can inspect the request, follow the action, challenge the result and rerun the case.

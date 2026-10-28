@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Trust boundaries and credential custody (architecture, not execution evidence)",
+    "output": "docs/diagrams/trust-boundaries.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    { "id": "coord", "type": "backend", "label": "Coordinator", "sublabel": "setup + user tokens, secrets", "pos": [40, 40], "size": [190, 64] },
+    { "id": "proxy", "type": "security", "label": "Worker Slack proxy", "sublabel": "403 for /_slack/*, /_emulate/*", "pos": [300, 40], "size": [190, 64] },
+    { "id": "emulate", "type": "external", "label": "Emulate Slack x2", "sublabel": "simulate/* takes any valid token", "pos": [300, 280], "size": [190, 64], "tag": "L-019 residual" },
+    { "id": "worker", "type": "backend", "label": "Worker", "sublabel": "bot token, signing secret, fake AWS", "pos": [580, 280], "size": [190, 64] },
+    { "id": "ledger", "type": "database", "label": "SQLite ledger", "sublabel": "worker read-write", "pos": [860, 280], "size": [190, 64] },
+    { "id": "floci", "type": "cloud", "label": "Floci", "sublabel": "S3 + SQS, run-labelled", "pos": [860, 440], "size": [190, 64] },
+    { "id": "collector", "type": "security", "label": "Collector", "sublabel": "reader token, collector AWS key", "pos": [580, 600], "size": [190, 64] },
+    { "id": "evaluator", "type": "backend", "label": "Evaluator", "sublabel": "no provider credentials", "pos": [580, 760], "size": [190, 64] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "coordinator process", "wraps": ["coord", "proxy"] },
+    { "kind": "security-group", "label": "worker process", "wraps": ["worker"] },
+    { "kind": "security-group", "label": "collector process", "wraps": ["collector"] }
+  ],
+  "connections": [
+    { "id": "setup", "from": "coord", "to": "emulate", "label": "setup token: seed, simulate", "variant": "security" },
+    { "id": "post", "from": "worker", "to": "proxy", "label": "chat.postMessage", "fromSide": "top", "toSide": "right" },
+    { "id": "forward", "from": "proxy", "to": "emulate", "label": "forward only" },
+    { "id": "callback", "from": "emulate", "to": "worker", "label": "HMAC-signed", "variant": "security" },
+    { "id": "write", "from": "worker", "to": "ledger", "label": "transaction" },
+    { "id": "effects", "from": "worker", "to": "floci", "label": "fake AWS creds", "fromSide": "bottom", "toSide": "left" },
+    { "id": "read-slack", "from": "emulate", "to": "collector", "label": "conversations.* only", "variant": "security", "fromSide": "bottom", "toSide": "left" },
+    { "id": "read-floci", "from": "floci", "to": "collector", "label": "own S3/SQS client", "variant": "security", "fromSide": "bottom", "toSide": "right" },
+    { "id": "read-db", "from": "ledger", "to": "collector", "label": "readonly handle", "variant": "security", "fromSide": "right", "toSide": "top", "via": [[1100, 312], [1100, 560], [675, 560]] },
+    { "id": "bundle", "from": "collector", "to": "evaluator", "label": "C4 bundle" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Who holds what", "items": ["Worker: one bot token (chat:write, app_mentions:read) and signing secret per installation.", "Collector: reader token (channels:history/read), its own Floci key, a readonly SQLite handle.", "Coordinator: setup and per-user tokens; only it calls simulate/*."] },
+    { "dot": "amber", "title": "Enforced by process, not by the emulator", "items": ["L-019: Emulate accepts any valid token on simulate/*.", "The worker never learns an emulator URL; its allowlist drops emulator ports.", "Floci credential checks were not verified: treat key separation as labelling (UNKNOWN)."] },
+    { "dot": "cyan", "title": "Sources", "items": ["src/worker/config.ts, src/adapters/slack/emulator.ts", "src/adapters/slack/worker-proxy.ts, src/config/lifecycle.ts", "src/evaluator/collect-case.ts, src/collector/probe.ts"] }
+  ]
+}

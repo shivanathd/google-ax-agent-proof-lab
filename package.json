@@ -15,6 +15,7 @@
     "test:integration": "vitest run tests/integration",
     "verify:task": "tsx scripts/verify/task.ts",
     "mutate": "tsx scripts/mutations/run.ts",
+    "bench": "tsx scripts/bench/run.ts",
     "spike": "tsx spikes/w0-spike.ts"
   },
   "dependencies": {
