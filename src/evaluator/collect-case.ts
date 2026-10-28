@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from "node:
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { createInterface } from "node:readline";
-import { childEnv } from "../config/env.ts";
+import { childEnv, browsersPath } from "../config/env.ts";
 import { dockerAvailable, startRun, type RunHandle } from "../config/lifecycle.ts";
 import { runDir } from "../config/manifest.ts";
 import { createRunConfig, candidateIdentity, ROOT } from "../config/run-config.ts";
@@ -35,7 +35,7 @@ export function collectorConfig(h: RunHandle, caseId: string, output: string, de
 
 // HOME is a run-owned dir next to the run manifest, never the developer's.
 const collectorHome = (cfg: CollectorConfig) => join(dirname(cfg.manifest_path), "collector-home");
-export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg), HOME: collectorHome(cfg) });
+export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg), HOME: collectorHome(cfg), PLAYWRIGHT_BROWSERS_PATH: browsersPath(ambient) });
 
 function spawnCollector(cfg: CollectorConfig) {
   mkdirSync(collectorHome(cfg), { recursive: true });

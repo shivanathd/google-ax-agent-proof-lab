@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createRunConfig, validateRunConfig } from "../../src/config/run-config.ts";
 import { assertAllowedEndpoint, EndpointRejected, guardAwsClient, guardedFetch, type Rejection } from "../../src/config/endpoints.ts";
-import { childEnv, sanitizeProcessEnv } from "../../src/config/env.ts";
+import { browsersPath, childEnv, sanitizeProcessEnv } from "../../src/config/env.ts";
 import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { composeProject, runDir } from "../../src/config/manifest.ts";
 import { laneStatuses, profileDoctor, profileRun } from "../../src/config/profiles.ts";
@@ -130,9 +130,11 @@ describe("credential hygiene (F1-R3)", () => {
     expect(env.HOME).toBeDefined();
     expect(env.HOME).not.toBe("/home/lab");
     expect(childEnv(ambient, { HOME: "/run-owned/home" }).HOME).toBe("/run-owned/home");
-    // A scoped HOME must not hide the browser cache: the collector's Chromium lives there (S4 regression).
-    expect(childEnv(ambient, { HOME: "/run-owned/home" }).PLAYWRIGHT_BROWSERS_PATH).toMatch(/ms-playwright$/);
-    expect(childEnv({ ...ambient, PLAYWRIGHT_BROWSERS_PATH: "/opt/pw" }, { HOME: "/x" }).PLAYWRIGHT_BROWSERS_PATH).toBe("/opt/pw");
+    // The collector drives a browser under a scoped HOME, so it is given the real browser cache path (S4 regression);
+    // generic child envs (the worker's included) do not carry it.
+    expect(browsersPath({})).toMatch(/ms-playwright$/);
+    expect(browsersPath({ PLAYWRIGHT_BROWSERS_PATH: "/opt/pw" })).toBe("/opt/pw");
+    expect(childEnv(ambient, { HOME: "/run-owned/home" })).not.toHaveProperty("PLAYWRIGHT_BROWSERS_PATH");
     const w = workerConfig({ run_id: "0f8fad5b-d9cb-469f-a165-70867728950e", db_path: "/runs/r1/ledger.db", http_port: 9, allowlist: [] }, []);
     expect(workerEnv(w, ambient).HOME).toBe("/runs/r1/worker-home");
     // Docker's CLI context and credential store live under HOME; only the docker CLI child keeps it.

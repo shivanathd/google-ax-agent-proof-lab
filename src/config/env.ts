@@ -31,11 +31,11 @@ export function childEnv(ambient: NodeJS.ProcessEnv, inject: Record<string, stri
     if (PASS_THROUGH.includes(k) || (opts.docker && (DOCKER_KEYS.test(k) || k === "HOME"))) env[k] = v;
   }
   if (!opts.docker && !inject.HOME) env.HOME = emptyHome();
-  env.PLAYWRIGHT_BROWSERS_PATH = browsersPath(ambient);
   return { ...env, ...FAKE_AWS, ...inject };
 }
-// Playwright locates Chromium under HOME; with HOME scoped, point it at the real browser cache (a path, not a config).
-const browsersPath = (ambient: NodeJS.ProcessEnv) =>
+// Playwright locates Chromium under HOME; a process that drives a browser under a scoped HOME (only the collector)
+// gets the real browser cache path explicitly. It is a path, not a config, and the worker never receives it.
+export const browsersPath = (ambient: NodeJS.ProcessEnv) =>
   ambient.PLAYWRIGHT_BROWSERS_PATH ??
   join(homedir(), process.platform === "darwin" ? "Library/Caches/ms-playwright" : process.platform === "win32" ? "AppData/Local/ms-playwright" : ".cache/ms-playwright");
 const emptyHome = () => {
