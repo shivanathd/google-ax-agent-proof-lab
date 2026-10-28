@@ -2,7 +2,7 @@
   "note": "Synthetic grants and CRM accounts. Grants name fictional Slack users; IDs are resolved per run through users.list.",
   "grants": {
     "T_LAB_A": {
-      "dana": ["ticket.create", "approval.request"],
+      "dana": ["ticket.create", "approval.request", "approval.resolve"],
       "eli": ["ticket.create", "approval.resolve"],
       "fran": ["ticket.create", "crm.description.update"],
       "gus": []

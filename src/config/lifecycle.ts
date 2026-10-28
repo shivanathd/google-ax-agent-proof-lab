@@ -8,6 +8,8 @@ import { candidateIdentity, createRunConfig, ROOT, type Endpoint } from "./run-c
 import { createManifest, freePort, loadManifest, recordResource, runDir, saveManifest, type Manifest } from "./manifest.ts";
 import { ensureRunResources, flociClients } from "../adapters/floci/clients.ts";
 import { loadSlackFixture, startWorkspace, type Workspace } from "../adapters/slack/emulator.ts";
+import { startWorkerSlackProxy } from "../adapters/slack/worker-proxy.ts";
+import type { FaultProxy } from "../adapters/faults/proxy.ts";
 import { seedLedger } from "../ledger/seed.ts";
 import { workerConfig, workerEnv, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
 
@@ -42,6 +44,7 @@ export interface RunHandle {
   workspaces: Workspace[];
   worker?: ChildProcess;
   workerConfig?: WorkerConfig;
+  slackProxies: FaultProxy[];
   startWorker: (w?: WorkerOptions) => Promise<void>;
   stopWorker: () => Promise<void>;
   stop: () => Promise<Manifest>;
@@ -52,7 +55,11 @@ export interface RunHandle {
 export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?: WorkerOptions | false; extraPorts?: string[] } = {}): Promise<RunHandle> {
   const withFloci = opts.floci ?? true;
   const fx = loadSlackFixture();
-  const names = [...(withFloci ? ["floci"] : []), ...(opts.slack ? [...fx.workspaces.map((w) => `slack_${w.installation_id}`), "worker"] : []), ...(opts.extraPorts ?? [])];
+  const names = [
+    ...(withFloci ? ["floci"] : []),
+    ...(opts.slack ? [...fx.workspaces.flatMap((w) => [`slack_${w.installation_id}`, `slack_proxy_${w.installation_id}`]), "worker"] : []),
+    ...(opts.extraPorts ?? []),
+  ];
   const ports: Record<string, number> = {};
   for (const name of names) ports[name] = await freePort();
   const config = createRunConfig({ endpoint_allowlist: Object.values(ports).flatMap(loopback) });
@@ -60,7 +67,7 @@ export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?
   manifest.ports = ports;
   const allowlist = config.endpoint_allowlist;
   const h: RunHandle = {
-    manifest, flociEndpoint: withFloci ? `http://127.0.0.1:${ports.floci}` : "", workspaces: [],
+    manifest, flociEndpoint: withFloci ? `http://127.0.0.1:${ports.floci}` : "", workspaces: [], slackProxies: [],
     startWorker: (w = {}) => startWorker(h, w),
     stopWorker: () => stopWorker(h),
     stop: async () => {
@@ -96,14 +103,23 @@ export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?
 
 async function startWorker(h: RunHandle, w: WorkerOptions) {
   const m = h.manifest;
+  // The worker knows only its Slack proxy's URL (worker-proxy.ts); emulator ports are not on its allowlist.
+  const overrides: Record<string, InstallationOverride> = {};
+  for (const ws of h.workspaces) {
+    const own = w.overrides?.[ws.installation_id];
+    const proxy = await startWorkerSlackProxy(m.ports[`slack_proxy_${ws.installation_id}`]!, own?.api_url ?? ws.url);
+    h.slackProxies.push(proxy);
+    overrides[ws.installation_id] = { ...own, api_url: proxy.url };
+  }
+  const emulatorPorts = h.workspaces.map((ws) => Number(new URL(ws.url).port));
   const cfg = workerConfig(
     {
-      run_id: m.config.run_id, db_path: m.db_path, http_port: m.ports.worker!, allowlist: m.config.endpoint_allowlist,
+      run_id: m.config.run_id, db_path: m.db_path, http_port: m.ports.worker!, allowlist: m.config.endpoint_allowlist.filter((e) => !emulatorPorts.includes(e.port)),
       max_retries: m.config.limits.max_retries, ...(w.slack_timeout_ms ? { slack_timeout_ms: w.slack_timeout_ms } : {}),
       ...(w.approval_ttl_ms ? { approval_ttl_ms: w.approval_ttl_ms } : {}),
       ...(h.floci ? { floci: { endpoint: w.floci_endpoint ?? h.flociEndpoint, queue_url: h.floci.queueUrl, bucket: h.floci.bucket } } : {}),
     },
-    h.workspaces, w.overrides,
+    h.workspaces, overrides,
   );
   const child = spawn(process.execPath, ["--import", "tsx", "src/worker/main.ts", "--run-id", m.config.run_id], {
     cwd: ROOT, env: workerEnv(cfg), stdio: ["ignore", "pipe", "pipe"],
@@ -124,13 +140,15 @@ async function startWorker(h: RunHandle, w: WorkerOptions) {
 
 async function stopWorker(h: RunHandle) {
   const child = h.worker;
-  if (!child || child.exitCode !== null) return;
-  const exited = new Promise((r) => child.once("exit", r));
-  child.kill("SIGTERM");
-  const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
-  await exited;
-  clearTimeout(timer);
+  if (child && child.exitCode === null) {
+    const exited = new Promise((r) => child.once("exit", r));
+    child.kill("SIGTERM");
+    const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+    await exited;
+    clearTimeout(timer);
+  }
   h.worker = undefined;
+  await Promise.all(h.slackProxies.splice(0).map((p) => p.close()));
 }
 
 export async function waitHttp(url: string, ms: number) {

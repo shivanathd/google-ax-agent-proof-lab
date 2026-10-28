@@ -2,7 +2,7 @@
 // The completion reply is written only in the transaction that marks the receipt committed.
 import type { Message } from "@aws-sdk/client-sqs";
 import { audit, enqueueOutbox, finishInbox } from "../ledger/db.ts";
-import { assertAllowed, envelope, type ActionEnvelope } from "../policy/index.ts";
+import { assertAllowed, decide, envelope, type ActionEnvelope } from "../policy/index.ts";
 import { deleteJob } from "../adapters/floci/ops.ts";
 import type { InboxRow } from "../worker/worker.ts";
 import { denyRequest, putWithRetries, receiptBody, recordAction, reply, type Ctx } from "./context.ts";
@@ -30,7 +30,18 @@ export async function onJob(ctx: Ctx, msg: Message) {
   const job = JSON.parse(msg.Body!) as Job;
   const env = job.envelope;
   assertAllowed(env, "ticket.create");
+  const existing = () => ctx.db.prepare("SELECT id FROM tickets WHERE run_id = ? AND tenant_id = ? AND action_key = ?").get(env.run_id, env.tenant_id, env.idempotency_key) as { id: number } | undefined;
   const ticketId = ctx.db.transaction(() => {
+    // Authority is the CURRENT grant at job time, not the request-time envelope decision (a grant may be
+    // revoked while the job waits in SQS). A redelivery of an already created ticket is not re-judged.
+    const current = existing() ? undefined : decide(ctx.db, { tenant_id: env.tenant_id, actor_id: env.actor_id, operation: "ticket.create" });
+    if (current?.decision === "deny") {
+      audit(ctx.db, env.run_id, env.tenant_id, "job_denied", { action_key: env.idempotency_key, reason: current.reason });
+      reply(ctx, { tenant_id: env.tenant_id, installation_id: job.installation_id }, `reply:job-denied:${env.idempotency_key}`, {
+        channel: job.channel, thread_ts: job.thread_ts, text: `Not performed (ticket.create): ${current.reason} at job time. Nothing was changed.`,
+      });
+      return undefined;
+    }
     const ins = ctx.db
       .prepare(
         `INSERT INTO tickets (run_id, tenant_id, installation_id, action_key, action_id, inbox_id, requester_id, summary, channel_id, thread_ts, status, created_at)
@@ -43,11 +54,12 @@ export async function onJob(ctx: Ctx, msg: Message) {
       audit(ctx.db, env.run_id, env.tenant_id, "ticket_created", { ticket_id: ins.id, action_key: env.idempotency_key });
       return ins.id;
     }
-    const existing = ctx.db.prepare("SELECT id FROM tickets WHERE run_id = ? AND tenant_id = ? AND action_key = ?").get(env.run_id, env.tenant_id, env.idempotency_key) as { id: number };
-    audit(ctx.db, env.run_id, env.tenant_id, "duplicate_job", { ticket_id: existing.id, receive_count: Number(msg.Attributes?.ApproximateReceiveCount ?? 0) || null });
-    return existing.id;
+    const dup = existing()!;
+    audit(ctx.db, env.run_id, env.tenant_id, "duplicate_job", { ticket_id: dup.id, receive_count: Number(msg.Attributes?.ApproximateReceiveCount ?? 0) || null });
+    return dup.id;
   })();
-  await ensureReceipt(ctx, ticketId);
+  if (ticketId === undefined) ctx.kick(); // publish the denial; the job is acked below and never retried
+  else await ensureReceipt(ctx, ticketId);
   try {
     await deleteJob(ctx.floci!, ctx.floci!.queueUrl, msg.ReceiptHandle!);
   } catch (e) {
