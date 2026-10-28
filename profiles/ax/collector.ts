@@ -5,6 +5,7 @@
 // AX's task phase is copied into the bundle as `ax_task_phase` so it can be compared, and is never an
 // assertion: profiles/ax/cases.ax.json lists it under recorded_not_asserted (L-006).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { request } from "node:https";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { ROOT, fixtureSha256 } from "../../src/config/run-config.ts";
@@ -18,6 +19,9 @@ interface CollectorEnv {
   slack: { url: string; reader_token: string; channel: string };
   floci: { endpoint: string; credentials: { accessKeyId: string; secretAccessKey: string } };
   router_url: string;
+  // Substrate v0.6.0 serves actors only over mTLS to allowlisted SPIFFE IDs (L-045): the collector's own pod
+  // certificate (podidentity signer) and the servicedns CA that signs the router's serving certificate.
+  router_tls?: { credential_bundle: string; ca: string };
 }
 
 const { positionals: [mode], values: a } = parseArgs({
@@ -30,9 +34,23 @@ const target = `${a.atespace}/${a.task}`;
 
 // The router is outside the lab allowlist on purpose: it is the collector's own read path, not the worker's.
 async function getResult() {
-  const r = await fetch(`${env.router_url}/apl/result`, { headers: { "ate-target-actor": target }, signal: AbortSignal.timeout(5000) });
-  const body = await r.text();
-  return { http_status: r.status, body: r.status === 200 ? JSON.parse(body) : body.slice(0, 200) };
+  const { status, body } = env.router_tls ? await mtlsGet(`${env.router_url}/apl/result`, env.router_tls) : await plainGet(`${env.router_url}/apl/result`);
+  return { http_status: status, body: status === 200 ? JSON.parse(body) : body.slice(0, 200) };
+}
+async function plainGet(url: string) {
+  const r = await fetch(url, { headers: { "ate-target-actor": target }, signal: AbortSignal.timeout(5000) });
+  return { status: r.status, body: await r.text() };
+}
+// Files are re-read per request: the kubelet rotates the pod certificate in place.
+function mtlsGet(url: string, t: { credential_bundle: string; ca: string }) {
+  const bundle = readFileSync(t.credential_bundle);
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const req = request(url, { key: bundle, cert: bundle, ca: readFileSync(t.ca), headers: { "ate-target-actor": target }, timeout: 5000 }, (res) => {
+      let body = "";
+      res.setEncoding("utf8").on("data", (c: string) => (body += c)).on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+    });
+    req.on("timeout", () => req.destroy(new Error("timeout"))).on("error", reject).end();
+  });
 }
 
 if (mode === "result") {
@@ -58,7 +76,7 @@ const p = new Probe(
   join(a.out, "evidence"),
 );
 
-await p.capture("ax-result", "HTTP GET :80/apl/result via atenet-router (collector pod)", getResult);
+await p.capture("ax-result", "HTTP GET /apl/result via atenet-router (collector pod, own pod certificate)", getResult);
 p.fact("command_exit_code", ["ax-result"], () => p.data("ax-result").body.exit_code);
 if (a["ax-phase-file"]) {
   await p.capture("ax-phase", "ax get task (operator CLI, recorded before collection; never an assertion)", () => JSON.parse(readFileSync(a["ax-phase-file"]!, "utf8")));

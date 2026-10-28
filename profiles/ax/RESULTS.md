@@ -1,8 +1,10 @@
-# AX lane: first authorized cluster run
+# AX lane: authorized cluster runs
 
 Run `6882d106-…` on 2026-10-28, on the owner's existing GKE cluster running Agent Substrate. Identifiers are placeholders: `<project>`, `<cluster>`, `<registry>` (a private Artifact Registry Docker repo created for this run), `<snapshot-bucket>`. Raw evidence, the owned-resource list and the pre-snapshot are in the gitignored `private-runs/ax/<run_id>/`.
 
-**Lane status: BLOCKED.** A second attempt (run 2, below) to upgrade Substrate stopped on IAM prerequisites before changing anything. The AX control plane at the pinned commit cannot create anything on the cluster's Substrate. Its Substrate client (`go.ate.dev/substrate v0.6.0`) and the installed Substrate server (wire-compatible with v0.5.0) use the same gRPC service name with renumbered protobuf fields. The first `ax apply` of a Task failed in `CreateActorTemplate` (L-030). No AX task ever started, so items 2 to 6 have no cluster evidence. Nothing is PASS on the cluster.
+**Lane status after run 3: assertions PASS or FAIL individually, with cluster evidence (run 3, at the end).** Run 3 reinstalled Substrate at v0.6.0 with the owner-approved transfer service account. W01-H (F3-A1), the failing-command case and sandbox isolation PASS; SIGTERM never reaches the command on `ax suspend` or `ax delete task` (FAIL), only on worker eviction; timing met the expectation. Runs 1 and 2 below are kept as they were recorded.
+
+**Run 1 status: BLOCKED.** A second attempt (run 2, below) to upgrade Substrate stopped on IAM prerequisites before changing anything. The AX control plane at the pinned commit cannot create anything on the cluster's Substrate. Its Substrate client (`go.ate.dev/substrate v0.6.0`) and the installed Substrate server (wire-compatible with v0.5.0) use the same gRPC service name with renumbered protobuf fields. The first `ax apply` of a Task failed in `CreateActorTemplate` (L-030). No AX task ever started, so items 2 to 6 have no cluster evidence. Nothing is PASS on the cluster.
 
 ## 1. Compatibility checklist (observed)
 
@@ -79,11 +81,84 @@ Two more findings that matter even once IAM is granted:
 
 Before stopping, a rollback baseline was taken in the private run dir: image digests and args of every Substrate workload, CRDs (all `v1alpha1`), RBAC, the `sandboxconfig-assets` admission policy (Substrate has no webhooks), ConfigMap and Secret names, all WorkerPools, the Substrate API records (7 atespaces, 4 actors, all `SUSPENDED`, 9 templates, 9 tags), and a `pg_dump` of the bundled database. Nothing was changed, so nothing needs rolling back, and `teardown.sh` was not changed. Items 2 to 6 were not rerun: they need a working AX task, and none can be created until AX and Substrate agree.
 
-## What would unblock it
+## What would unblock it (as written after run 2)
 
-One of these, each needing owner approval:
+Run 3 took option 2. One of these, each needing owner approval:
 
 1. **Use AX commit `2bfbcb8d2f6b`** (2026-10-26), the last commit that pins Substrate v0.5.0, which matches the installed server. It needs a rebuild and re-push of `ax-server` and `ax-task-runner` (new digests) and a redeploy. The AX docs read for this lane were read at `4b7bf6f`, so they would need re-reading at that commit.
 2. **Upgrade Substrate in `ate-system` to v0.6.0**, which AX `4b7bf6f` expects. Approved in run 2, then blocked: it also needs the IAM grants above, and upstream supports it only as a reinstall (run 2 section).
 
 Everything else is in place and Running. Once one option is approved, each task is: render with `orchestrate.ts manifests`, `ax apply`, attach the egress policy as soon as the actor exists, `collector.ts result` and `observe` in the collector Pod, then `evaluate_ax.py`. The operator script that does this, with timestamps for the timing table, is kept with the run's private files because it names the cluster.
+
+## Run 3: Substrate reinstalled at v0.6.0, AX tests executed (2026-10-28)
+
+Owner approval for run 3, exact scope: create the snapshot transfer service account `<transfer-sa>` with three grants, and reinstall Substrate in `ate-system` at v0.6.0 (`d3f2363590a1`), accepting that the demo and benchmark atespaces and their four suspended actors are destroyed. Nothing else in IAM, no API enabling, no cluster or node-pool change. Raw evidence for every row below is in the private run dir (`tasks/<task>/`, `health-v060.txt`, `reinstall-timeline.txt`, `timing-summary.json`).
+
+### 3.1 IAM (approval (a))
+
+| Member | Role | Resource |
+|---|---|---|
+| ate-api-server Workload Identity principal (`ns/ate-system/sa/ate-api-server`) | `roles/iam.serviceAccountTokenCreator` | `<transfer-sa>` |
+| `<transfer-sa>` | `roles/storage.objectAdmin` | `<snapshot-bucket>` (bucket level) |
+| `<transfer-sa>` | `roles/storage.bucketViewer` | `<snapshot-bucket>` (bucket level) |
+
+Bucket and account policies were saved before and after; the bucket diff is exactly the two added bindings, nothing removed. All four objects are recorded in `owned-resources.json` (`iam`). They worked: AX suspends wrote snapshot objects under the new cluster snapshot location.
+
+### 3.2 Reinstall (approval (b))
+
+Steps, all with Substrate's own installer, `ate-setup`, and a dedicated kubeconfig:
+
+1. Rollback snapshot right before the change (`substrate-rollback/pre-reinstall-<timestamp>/`): image digests and args, manifests (both Substrate namespaces with ConfigMaps, CRDs, RBAC, admission policy, SandboxConfigs, WorkerPools as YAML and JSON), API records read with `kubectl-ate` v0.5.0 (7 atespaces, 4 actors all `SUSPENDED`, 9 templates, 9 tags), `pg_dump -Fc` (mode 0600).
+2. Images: no public v0.6.0 release images exist (`ghcr.io/agent-substrate/substrate/*` denies anonymous pulls), so `VERSION=v0.6.0 ate-setup publish release-images` built every image from the `d3f2363` checkout into the cluster's existing Substrate image repo (8 min; the Envoy egress module is Rust, built under amd64 emulation).
+3. `ate-setup delete ate-system` from the `603e006` checkout, the build that installed it (68 s).
+4. `ate-setup deploy ate-system --config substrate-v060-install.yaml` from the `d3f2363` checkout: the old install record's settings plus what v0.6.0 requires (L-046). The first deploy timed out: atelet refused the nodes' image cache. After deleting `/var/lib/ate/image-cache` on both nodes, as its error says, the retry succeeded.
+5. `deploy atenet` once more to add the collector's SPIFFE ID to the router allowlist (L-045).
+
+| | Before | After |
+|---|---|---|
+| Build | `main` @ `603e006236f5` (v0.5.0-45) | `v0.6.0` @ `d3f2363590a1` |
+| Components | api-server 2/2, controller, router, egress, credential provider, atelet 2/2, postgres | same plus `ate-idp-server` 2/2; all Ready, every image `…:v0.6.0@sha256` |
+| `kubectl-ate` | v0.5.0 | v0.6.0 lists atespaces, actors, workers, egress policies |
+| Router | plain HTTP open to any Pod (L-035) | mTLS only, SPIFFE allowlist (L-045) |
+| Authorization | none | enforced; `ate-client` and AX's `ax-server` are bootstrap owners (L-046) |
+
+What survived: nothing of the old Substrate state. All 7 atespaces, 4 suspended actors, 9 templates and 9 tags are gone with the database volume, and deleting the CRDs deleted every WorkerPool: the four demo and benchmark pools (already scaled to 0) and the lab's own pool. The demo namespaces remain, empty of workloads. The lab namespace (Emulate, Floci, collector) and `ax-system` were untouched; `ax-server` was restarted. The lab's gVisor WorkerPool was recreated with the v0.6.0 worker image (Ready in 6 s). The pre-reinstall `pg_dump` and manifests are the only copy of the old records; `teardown.sh --restore-substrate-v05` uses them.
+
+### 3.3 Results
+
+AX creates every task suspended; the operator script resumes it right after attaching the egress policy (L-047). The task image is the lab image built from commit `d10d3e6`. Every task ran in a gVisor sandbox (`sandboxClass: gvisor` on the actor) on the run's single worker.
+
+| Test | Result | Evidence |
+|---|---|---|
+| (2) W01-H as an AX Task (F3-A1) | **PASS** | `evaluate_ax.py F3-A1`: ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1, command_exit_code 0. Bundle `profile: "ax"`, collected by the collector Pod with its own reader token, S3 keys and pod certificate. `ax_task_phase` recorded (`Running`), not asserted |
+| (3) Failing command (AX-R1) | **PASS** | `result.json` exit_code 3; AX phase `Running` at the same moment. Phase and outcome disagree, as expected (L-006) |
+| (4a) `ax suspend` delivers SIGTERM | **FAIL** | Suspend is a 40 ms checkpoint; no SIGTERM, no `result.json` (`404` before and after) |
+| (4b) `ax delete task` delivers SIGTERM | **FAIL** | Actor log goes from the command's boot line straight to `Actor terminated` |
+| (4c) Worker eviction delivers SIGTERM | **PASS** (logs) | Deleting the worker Pod: runner logged `stop requested` 0.65 s later; trap exited 42; the SIGTERM-ignoring command was killed after exactly 10.0 s, exit 137 |
+| (4d) Resume after `ax suspend` keeps the prepare-once marker and the workspace | **PASS** | Same marker timestamp on both boots, `workspace already prepared; skipping`, new process (pid 9 → 8) |
+| (4e) State after eviction, then `ax suspend` and resume | **FAIL** | The actor crashed when the runner exited; AX reverted it to its last snapshot, and the next start had a new marker and no `result.json` (L-048) |
+| (5) Isolation from inside the sandbox | **PASS** | `169.254.169.254` (HTTP and raw TCP) `EHOSTUNREACH`; `metadata.google.internal`, `example.com` (HTTP and HTTPS), `kubernetes.default.svc`, `api.ate-system.svc`, `ax-server.ax-system…` `ENOTFOUND`; raw TCP to the `ax-postgres` and `ax-server` ClusterIPs answered only by the egress gateway's own `400` (Envoy `upstream` null); unlisted Emulate port `403`. Allowed control (Emulate API) reached. L-049 |
+| (5) Router identity | **PASS** | From the collector Pod: no client certificate → TLS alert `certificate required`; its own allowlisted certificate → `200` |
+| (5) Secrets (L-034) | observed | `ax get task` still returns the worker token, setup token and signing secret in clear; the collector's reader token and S3 key are absent (string search, output not stored) |
+| (6) Timing, n = 5 | **met** | Table below |
+
+Timing, W01-H tasks `apl-t1`…`apl-t5`, run back to back, each deleted before the next. Laptop clock for submit (start of `ax apply`) and phase (0.5 s polling of `ax get tasks`); collector Pod clock for the result. Nodes: 2 × c3-standard-4 (4 vCPU, 16 GiB, amd64, GKE 1.36.4). The only WorkerPool was the run's (1 worker, 3 CPU); demo and benchmark pools no longer existed.
+
+| ms | run 1 | 2 | 3 | 4 | 5 | min | median | max |
+|---|---|---|---|---|---|---|---|---|
+| submit → Running | 17042 | 16977 | 16808 | 16968 | 16874 | 16808 | 16968 | 17042 |
+| submit → result observed | 19876 | 19720 | 19613 | 19807 | 19696 | 19613 | 19720 | 19876 |
+| of which submit → egress policy attached | 8800 | 8916 | 8845 | 8940 | 8817 | 8800 | 8845 | 8940 |
+| of which resume issued → Running seen | 4015 | 3979 | 3988 | 3944 | 3935 | 3935 | 3979 | 4015 |
+| Running → result observed | 2834 | 2743 | 2805 | 2839 | 2822 | 2743 | 2822 | 2839 |
+| ax-server log: resume → running | 2162 | 2141 | 2138 | 2130 | 2119 | 2119 | 2138 | 2162 |
+
+Against the pre-registered expectation "Task reaches Running in tens of seconds": **met**, at 17 s. Most of it is operator tooling, not AX or Substrate: every `kubectl ate` call opens its own port-forward, and the policy step takes about 9 s. AX's own server logs put create → suspended at about 15 ms and resume → running at about 2.1 s.
+
+### 3.4 Still running, and teardown
+
+Running: Substrate v0.6.0 in `ate-system`; AX in `ax-system`; the lab namespace (Emulate, Floci, collector, one gVisor worker); the transfer service account and its grants. No task is running. Teardown was not run; `--dry-run` was tested for each mode:
+
+- `teardown.sh <run-dir>`: deletes the AX tasks and workspaces, the run's atespace, the lab namespace and `ax-system` with the AX ClusterRole, ClusterRoleBinding and PV, the run's snapshot prefixes and the Artifact Registry repo. It leaves Substrate v0.6.0 and the transfer service account and grants in place and prints them, because the v0.6.0 api-server will not start without them. Its diff treats the reinstall's own changes (`reinstall-delta.json`) as expected.
+- `--remove-substrate-iam`: also removes exactly the three recorded grants, then the account. It warns that Substrate v0.6.0 breaks.
+- `--restore-substrate-v05`: also deletes v0.6.0, clears the nodes' image cache, deploys the recorded `603e006` build with its install record, restores the pre-reinstall `pg_dump`, recreates the demo WorkerPools at their recorded replicas, switches `kubectl-ate` back to v0.5.0, then removes the account and grants. Never executed. Whether the restored suspended actors resume is UNKNOWN, because the actor-identity keys are regenerated on install.

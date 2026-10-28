@@ -11,11 +11,11 @@ This lane runs one existing lab case inside an AX task on Agent Substrate, then 
 | `result.json` written for passing, failing and terminated commands | EXECUTED (locally) | same |
 | Manifest rendering and `apl-run` labelling | EXECUTED (locally, text checks only) | same |
 | In-cluster Emulate + Floci, NetworkPolicy, run-owned WorkerPool, collector Pod | EXECUTED (cluster, 2026-10-28) | `RESULTS.md` |
-| `ax apply` of Task + Workspace | ATTEMPTED, BLOCKED: AX ↔ Substrate protobuf skew (LEARNINGS L-030) | `RESULTS.md` §2 |
-| W01-H case, collector bundle, `evaluate_ax.py` | EXECUTED (locally, runc rehearsal only) | `RESULTS.md` §2 |
-| Behaviour under gVisor / microVM, Substrate egress, suspend/resume | DESIGNED, never run | `RESULTS.md` §3–6 |
+| `ax apply` of Task + Workspace | EXECUTED (cluster, run 3, after reinstalling Substrate at v0.6.0); run 1 was BLOCKED by protobuf skew (L-030) | `RESULTS.md` run 3 |
+| W01-H case, collector bundle, `evaluate_ax.py` | EXECUTED (cluster, gVisor, run 3): F3-A1 and AX-R1 PASS | `RESULTS.md` run 3 |
+| Behaviour under gVisor, Substrate egress, suspend/resume, eviction | EXECUTED (cluster, run 3); microVM never run | `RESULTS.md` run 3 |
 
-One authorized cluster run happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox, and a local pass says nothing about gVisor syscall coverage.
+Three authorized cluster runs happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox; only run 3's cluster results say anything about gVisor. On Substrate v0.6.0 the collector reads `/apl/result` through the router over mTLS with its own pod certificate (L-045).
 
 ## Pinned upstream revisions (read 2026-10-28)
 

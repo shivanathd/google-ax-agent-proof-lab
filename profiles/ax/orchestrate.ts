@@ -71,7 +71,8 @@ if (cmd === "init") {
   writeFileSync(join(dir, `task-${a.task}.yaml`), `${yaml}\n`, { mode: 0o600 });
   writeFileSync(join(dir, "collector-env.json"), JSON.stringify({
     APL_AX_COLLECTOR: JSON.stringify({ run_id: sec.run_id, slack: { url: `http://${emulate}:8080`, reader_token: sec.slack.tokens.reader, channel: wsA.channel },
-      floci: { endpoint: `http://${floci}:4566`, credentials: sec.collector_s3 }, router_url: "http://atenet-router.ate-system.svc.cluster.local" }),
+      floci: { endpoint: `http://${floci}:4566`, credentials: sec.collector_s3 }, router_url: "https://atenet-router.ate-system.svc",
+      router_tls: { credential_bundle: "/run/podidentity/credential-bundle.pem", ca: "/run/servicedns-ca/trust-bundle.pem" } }),
     APL_AX_ALLOWLIST: JSON.stringify(allow.filter((e) => e.port !== 8081)),
   }), { mode: 0o600 });
   console.log(JSON.stringify({ written: [`task-${a.task}.yaml`, "collector-env.json"], bytes: Buffer.byteLength(yaml) }));

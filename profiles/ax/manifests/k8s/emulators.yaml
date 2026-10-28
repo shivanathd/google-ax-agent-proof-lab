@@ -119,7 +119,16 @@ spec:
       limits: { cpu: "3", memory: 4Gi }
       requests: { cpu: "1", memory: 4Gi }
 ---
-# Independent collector: a plain Pod outside the sandbox with its own reader token and S3 credentials.
+# Independent collector: a plain Pod outside the sandbox with its own reader token and S3 credentials, and its own
+# pod certificate for the Substrate router (its SPIFFE ID must be in the router's --ingress-allowed-spiffe-ids).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: apl-collector
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+automountServiceAccountToken: false
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -127,6 +136,7 @@ metadata:
   namespace: apl-ax-${APL_SHORT_ID}
   labels: { apl-run: "${APL_RUN_ID}", app: apl-collector }
 spec:
+  serviceAccountName: apl-collector
   automountServiceAccountToken: false
   enableServiceLinks: false
   restartPolicy: Never
@@ -137,3 +147,18 @@ spec:
       envFrom: [{ secretRef: { name: collector-env } }]
       resources:
         limits: { cpu: "500m", memory: "512Mi" }
+      volumeMounts:
+        - { name: podidentity, mountPath: /run/podidentity, readOnly: true }
+        - { name: servicedns-ca, mountPath: /run/servicedns-ca, readOnly: true }
+  volumes:
+    - name: podidentity
+      projected:
+        sources:
+          - podCertificate: { signerName: podidentity.podcert.ate.dev/identity, keyType: ECDSAP256, credentialBundlePath: credential-bundle.pem }
+    - name: servicedns-ca
+      projected:
+        sources:
+          - clusterTrustBundle:
+              signerName: servicedns.podcert.ate.dev/identity
+              labelSelector: { matchLabels: { podcert.ate.dev/canarying: live } }
+              path: trust-bundle.pem

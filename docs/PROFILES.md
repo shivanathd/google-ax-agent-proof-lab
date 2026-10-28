@@ -1,6 +1,6 @@
 # Optional profiles
 
-The local profile is the lab. Four optional lanes can add evidence later: Salesforce, CodeRabbit, AX and live-model. Each one is off until the owner meets its prerequisites and authorizes a run. Right now every optional lane is BLOCKED. For Salesforce, CodeRabbit and live-model that is deliberate: the owner has not approved any account, org, app install, API key or provider call. AX was approved and attempted on a cluster, and is BLOCKED by a version mismatch (see below).
+The local profile is the lab. Four optional lanes can add evidence later: Salesforce, CodeRabbit, AX and live-model. Each one is off until the owner meets its prerequisites and authorizes a run. Salesforce, CodeRabbit and live-model are BLOCKED on purpose: the owner has not approved any account, org, app install, API key or provider call. AX was approved and has run on a cluster; its assertions are PASS or FAIL individually (see below).
 
 A blocked optional lane blocks only itself (F5-R6). It never changes the local-core result, and the report shows it as a separate line.
 
@@ -72,17 +72,21 @@ No adapter reads ambient credentials. `SF_TARGET_ORG`, a default Salesforce org,
 
 ## AX (`profiles/ax/`)
 
-**Status: BLOCKED** (cluster run attempted 2026-10-28 with owner approval). AX at the pinned commit could not provision any task on the cluster's Substrate: the AX client and the installed server speak incompatible versions of the same protobuf API (LEARNINGS L-030). No AX task ran, so no AX assertion has cluster evidence and none is PASS. A second approved attempt, upgrading Substrate to v0.6.0, stopped before any change: v0.6.0 needs a new Google service account and IAM grants, which were not approved (L-043). Details, the observed compatibility checklist and the ways to unblock are in `profiles/ax/RESULTS.md`.
+**Status: FAIL** on the termination assertions, PASS on the rest (run 3, 2026-10-28, owner-approved). Run 1 was BLOCKED by AX ↔ Substrate protobuf skew (L-030), and run 2 stopped on IAM (L-043). Run 3 created the approved snapshot transfer service account and grants, reinstalled Substrate at v0.6.0 (the release AX `4b7bf6f` pins), and ran every test on the cluster under gVisor. Each row below is PASS or FAIL only where the cluster produced direct evidence. Details are in `profiles/ax/RESULTS.md` (run 3).
 
 | Assertion | Status | Evidence |
 |---|---|---|
-| Compatibility checklist recorded | done | `profiles/ax/RESULTS.md` §1 |
-| F3-A1 (W01-H) through an AX Task, same assertions | BLOCKED | `ax apply` failed in `CreateActorTemplate` (L-030) |
-| Failing command: AX phase vs `result.json` | BLOCKED | no task started |
-| SIGTERM reaches the command; resume keeps the prepare-once marker | BLOCKED | no task started |
-| Egress isolation from inside the sandbox | BLOCKED | no sandbox started |
-| Collector's credentials absent from the task | observed | string search of the stored Task (`RESULTS.md` §5) |
-| submit → Running → result timing (n=5) | BLOCKED | no task reached Running |
+| Compatibility checklist recorded | done | `profiles/ax/RESULTS.md` §1, run 3 §3.2 |
+| F3-A1 (W01-H) through an AX Task, same assertions | PASS | `evaluate_ax.py F3-A1` on a collector bundle (`profile: "ax"`), gVisor sandbox |
+| Failing command: AX phase vs `result.json` | PASS | AX-R1: exit 3 while AX reports `Running` (L-006) |
+| SIGTERM reaches the command on `ax suspend` or `ax delete task` | FAIL | neither sends a signal: a 40 ms checkpoint, or `Actor terminated` (L-048) |
+| SIGTERM reaches the command on worker eviction (trap 42, ignore → 137 after 10 s) | PASS | actor logs only; the result is not readable afterwards |
+| Resume after `ax suspend` keeps the prepare-once marker and the workspace | PASS | same marker on both boots, new process tree |
+| Workspace survives eviction followed by `ax suspend` | FAIL | AX reverted the crashed actor; fresh marker, no `result.json` (L-048) |
+| Egress isolation from inside the sandbox | PASS | metadata, public hosts, Kubernetes, Substrate and AX APIs, `ax-postgres` refused (L-049) |
+| Collector's credentials absent from the task | observed | string search of `ax get task` (L-034 still holds for the task's own secrets) |
+| submit → Running → result timing (n=5) | PASS (expectation met) | median 17.0 s to Running, 19.7 s to result; most of it operator tooling (L-050) |
+| microVM sandboxes | NOT_RUN | the lab uses gVisor only |
 
 Not cluster evidence, recorded separately: a local rehearsal under runc (no AX, no gVisor) of the same image, case, collector and `evaluate_ax.py` passed F3-A1. The doctor and run gates are unchanged: BLOCKED doctor, zero external calls, and no run without authorization.
 
