@@ -5,7 +5,7 @@ import type { Command } from "commander";
 import { chromium } from "@playwright/test";
 import { emit } from "../registry.ts";
 import { localPrerequisites } from "./doctor.ts";
-import { ROOT } from "../../config/run-config.ts";
+import { candidateIdentity, ROOT } from "../../config/run-config.ts";
 import { captureSuite } from "../../media/capture.ts";
 import { optimizeSuite } from "../../media/optimize.ts";
 import { verifyMedia } from "../../media/verify.ts";
@@ -53,10 +53,13 @@ export function register(program: Command) {
   });
   media.command("capture").description("run the scenarios in the console and record raw captures (recordings/raw/)").requiredOption("--suite <name>")
     .option("--only <shots...>", "subset of shot names (development only)")
-    .action(async (o: { suite: string; only?: string[] }) => {
+    .option("--allow-dirty", "capture from an uncommitted tree (results will fail media verify)")
+    .action(async (o: { suite: string; only?: string[]; allowDirty?: boolean }) => {
       suite(o.suite);
       const d = mediaDoctor();
       if (d.status === "BLOCKED") return emit({ status: "BLOCKED", prerequisites: d.prerequisites.filter((p) => !p.satisfied) }, 2);
+      // Runs record the whole-tree dirty flag; a dirty capture can never satisfy media verify, so refuse early.
+      if (candidateIdentity().dirty && !o.allowDirty) return emit({ status: "FAIL", reason: "working tree has uncommitted changes; commit first (or --allow-dirty for a throwaway capture)" }, 1);
       const s = await captureSuite({ only: o.only });
       emit({ status: "CAPTURED", session: `recordings/raw/${s.session}`, dirty: s.dirty, app_dirty_files: s.app_dirty_files, shots: s.shots.map((x) => ({ name: x.name, runs: x.runs, screenshots: x.screenshots.length, video: Boolean(x.video) })) });
     });

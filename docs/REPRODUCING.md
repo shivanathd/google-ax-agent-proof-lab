@@ -12,7 +12,7 @@ npm run lab -- media doctor
 
 ## One command sequence
 
-Commit the application code first: captures taken from an uncommitted application tree are marked dirty and fail `media verify`.
+Start from a clean working tree (`git status` empty): every run records the whole-tree dirty flag, so `media capture` refuses to start on uncommitted changes, and a capture forced with `--allow-dirty` fails `media verify`.
 
 ```bash
 npm run media:readme
