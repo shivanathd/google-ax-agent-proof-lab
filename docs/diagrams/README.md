@@ -114,7 +114,7 @@ Rules the flow depends on, each in code:
 ```mermaid
 flowchart LR
   operator["Operator laptop<br/>doctor gates; ax apply<br/>APL_AX_AUTHORIZED=1"]
-  subgraph K["cluster context $APL_AX_CONTEXT (owner-approved) — DESIGNED"]
+  subgraph K["cluster context $APL_AX_CONTEXT (owner-approved): DESIGNED"]
     axcp["AX control plane<br/>ax-system; Task + Workspace"]
     substrate["Agent Substrate<br/>ate-system; image by digest"]
     router["atenet-router<br/>ingress, SPIFFE allowlist"]

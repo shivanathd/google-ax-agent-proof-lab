@@ -19,7 +19,8 @@
     "media:readme": "npm run lab -- media doctor && npm run lab -- media capture --suite readme && npm run lab -- media optimize --suite readme && npm run lab -- readme build && npm run lab -- readme verify --local --record && npm run lab -- media verify --suite readme",
     "mutate": "tsx scripts/mutations/run.ts",
     "bench": "tsx scripts/bench/run.ts",
-    "spike": "tsx spikes/w0-spike.ts"
+    "spike": "tsx spikes/w0-spike.ts",
+    "validate:package": "bash scripts/validate/package.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1151.0",
