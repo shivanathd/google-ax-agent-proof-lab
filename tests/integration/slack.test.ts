@@ -1,4 +1,4 @@
-// Task 2.1 against real Emulate Slack instances and a separately spawned worker process.
+// Task 2.1 against real Emulate Slack instances, a per-run Floci container and a separately spawned worker.
 // Every assertion about Slack state uses conversations.history/replies with a separate read-only token.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startRun, type RunHandle } from "../../src/config/lifecycle.ts";
@@ -13,7 +13,7 @@ describe("signed events, threads, dedupe, bot loops and tenant binding", () => {
   let L: ReturnType<typeof ledger>;
   let first: { ts: string; event_id: string; inbox_id: number };
   beforeAll(async () => {
-    h = await startRun({ floci: false, slack: true });
+    h = await startRun({ slack: true });
     [A, B] = h.workspaces as [Workspace, Workspace];
     L = ledger(h);
   });
@@ -69,7 +69,7 @@ describe("signed events, threads, dedupe, bot loops and tenant binding", () => {
     const row = await waitFor(() => inboxFor(r.ts)[0], 5000, "bot event recorded");
     await settle();
     expect(row).toMatchObject({ status: "ignored", reason: "own_bot_message" });
-    expect(L.rows("outbox").filter((o) => o.action_key === `ack:${row.id}`)).toHaveLength(0);
+    expect(L.rows("outbox").filter((o) => o.payload.includes(r.ts))).toHaveLength(0);
     expect(await botReplies(h, A, r.ts)).toHaveLength(0);
   });
 
@@ -143,7 +143,7 @@ describe("signed events, threads, dedupe, bot loops and tenant binding", () => {
 describe("G-SCOPE: a token without chat:write is never escalated", () => {
   let h: RunHandle;
   beforeAll(async () => {
-    h = await startRun({ floci: false, slack: true, worker: { overrides: { A: { token: "narrow" } } } });
+    h = await startRun({ slack: true, worker: { overrides: { A: { token: "narrow" } } } });
   });
   afterAll(async () => h?.stop());
 
@@ -153,11 +153,11 @@ describe("G-SCOPE: a token without chat:write is never escalated", () => {
     expect(JSON.stringify(h.workerConfig)).not.toContain(A.tokens.worker);
     const L = ledger(h);
     const ts = await mention(h, A, "dana", "service-request stapler");
-    const out = await waitFor(() => L.rows("outbox").find((o) => o.status !== "pending"), 10000, "outbox settled");
+    const out = await waitFor(() => L.rows("outbox", { kind: "slack.reply" }).find((o) => o.status !== "pending"), 10000, "reply settled");
     await settle();
     expect(out).toMatchObject({ status: "failed", attempts: 1 });
     expect(JSON.parse(out.result)).toMatchObject({ error: "missing_scope", needed: "chat:write" });
-    expect(L.rows("outbox")).toHaveLength(1);
+    expect(L.rows("outbox", { kind: "slack.reply" })).toHaveLength(1);
     expect(await botReplies(h, A, ts)).toHaveLength(0);
     L.close();
   });
@@ -166,7 +166,7 @@ describe("G-SCOPE: a token without chat:write is never escalated", () => {
 describe("G-REVOKE: no provider action succeeds after the app is uninstalled", () => {
   let h: RunHandle;
   beforeAll(async () => {
-    h = await startRun({ floci: false, slack: true });
+    h = await startRun({ slack: true });
   });
   afterAll(async () => h?.stop());
 
@@ -188,7 +188,7 @@ describe("G-REVOKE: no provider action succeeds after the app is uninstalled", (
     await settle();
     const row = L.rows("inbox").find((r) => r.event_id === JSON.parse(late).event_id);
     expect(row).toMatchObject({ status: "denied", reason: "installation_revoked" });
-    expect(L.rows("outbox")).toHaveLength(1); // only the pre-revocation reply
+    expect(L.rows("outbox", { kind: "slack.reply" })).toHaveLength(1); // only the pre-revocation reply
     expect((await history(h, A)).length).toBe(before);
     L.close();
   });

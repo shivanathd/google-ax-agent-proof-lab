@@ -11,6 +11,7 @@ export interface Manifest {
   compose_project: string;
   ports: Record<string, number>;
   db_path: string;
+  slack_users?: Record<string, Record<string, string>>; // tenant -> user name -> generated id (not secret)
   cleanup_status: "NOT_RUN" | "CLEAN" | "INCOMPLETE" | "RETAINED_BY_REQUEST";
   remaining: string[];
   created_at: string;

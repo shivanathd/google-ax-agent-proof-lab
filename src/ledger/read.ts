@@ -17,3 +17,12 @@ export function rows<T = Record<string, any>>(db: DB, table: Table, where: Recor
 }
 
 export const count = (db: DB, table: Table, where: Record<string, string | number> = {}) => rows(db, table, where).length;
+
+// Whole-run snapshot for the independent collector (Task 4.1): every business table, read-only.
+export function observeRun(db: DB, runId: string) {
+  const r = (t: Table) => rows(db, t, { run_id: runId });
+  return {
+    inbox: r("inbox"), outbox: r("outbox"), tickets: r("tickets"), approval_requests: r("approval_requests"),
+    actions: r("actions"), run_audit: r("run_audit"), crm_accounts: rows(db, "crm_accounts"),
+  };
+}

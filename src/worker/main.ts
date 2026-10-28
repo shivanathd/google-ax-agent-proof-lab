@@ -11,10 +11,10 @@ if (!cfg) {
   process.exit(1);
 }
 const db = openLedger(cfg.db_path);
-const worker = createWorker(cfg, db);
+const worker = await createWorker(cfg, db);
 const app = buildSlackApp({ runId: cfg.run_id, db, installations: cfg.installations, onAccepted: worker.onAccepted, onBlockAction: worker.onBlockAction });
 await app.listen({ host: "127.0.0.1", port: cfg.http_port });
-worker.kick(); // recover anything accepted but unprocessed before a restart
+await worker.start(); // recover anything accepted or committed-but-unfinished before a restart
 console.log(JSON.stringify({ ready: true, pid: process.pid }));
 
 const stop = async () => {

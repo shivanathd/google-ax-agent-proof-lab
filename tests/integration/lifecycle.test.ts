@@ -8,7 +8,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { GetObjectCommand, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
 import { startRun, stopRun, RUN_LABEL, type RunHandle } from "../../src/config/lifecycle.ts";
 import { ensureRunResources, flociClients } from "../../src/adapters/floci/clients.ts";
-import { runDir } from "../../src/config/manifest.ts";
+import { loadManifest, runDir } from "../../src/config/manifest.ts";
+import { openReadOnly, rows } from "../../src/ledger/read.ts";
 import { ROOT } from "../../src/config/run-config.ts";
 
 const docker = (...args: string[]) => execFileSync("docker", args, { encoding: "utf8" }).trim();
@@ -78,6 +79,17 @@ describe("run isolation and scoped cleanup", () => {
     expect(status).toMatchObject({ run_id: started.run_id, profile: "local", mode: "scripted" });
     expect(new URL(status.services.floci.endpoint).hostname).toBe("127.0.0.1");
     expect(idsFor(started.run_id).length).toBe(1);
+    // F1-A1 shape: both Slack emulators and Floci are up, every endpoint is loopback, a workflow runs end to end.
+    expect(status.services.slack).toHaveLength(2);
+    const endpoints = [status.services.floci.endpoint, status.services.worker.endpoint, ...status.services.slack.map((s: any) => s.emulator)];
+    expect(endpoints.filter((u: string) => !["127.0.0.1", "localhost"].includes(new URL(u).hostname))).toEqual([]);
+    const ran = await readJson(lab("run", "--run-id", started.run_id, "--case", "W01-H"));
+    expect(ran).toMatchObject({ profile: "local", case: "W01-H", mode: "scripted", posted: true, tenant_id: "T_LAB_A" });
+    const L = openReadOnly(loadManifest(started.run_id).db_path);
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline && !rows(L, "tickets").some((t) => t.receipt_status === "committed")) await new Promise((r) => setTimeout(r, 100));
+    expect(rows(L, "tickets").map((t) => t.receipt_status)).toEqual(["committed"]);
+    L.close();
 
     const down = lab("down", "--run-id", started.run_id);
     const report = await readJson(down);

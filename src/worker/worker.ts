@@ -1,7 +1,12 @@
 // Worker runtime: claims accepted inbox rows, runs their business step in one transaction that also
-// writes the outbox, then publishes the outbox. Ambiguous remote outcomes become UNKNOWN, never retried.
+// writes the outbox, publishes the outbox, and consumes the SQS job queue. Ambiguous remote outcomes
+// become UNKNOWN and are never blindly retried.
 import { slackClient, SlackTransportError, type SlackCall } from "../adapters/slack/client.ts";
-import { audit, claimInbox, enqueueOutbox, finishInbox, isRevoked, settleOutbox, type DB } from "../ledger/db.ts";
+import { flociClients } from "../adapters/floci/clients.ts";
+import { receiveJobs, sendJob } from "../adapters/floci/ops.ts";
+import { audit, claimInbox, isRevoked, settleOutbox, type DB } from "../ledger/db.ts";
+import { handleEvent, w01, w02 } from "../workflows/index.ts";
+import type { Ctx } from "../workflows/context.ts";
 import type { Installation } from "../http/slack.ts";
 import type { WorkerConfig } from "./config.ts";
 
@@ -11,38 +16,26 @@ export interface InboxRow {
 }
 export interface OutboxRow { id: number; tenant_id: string; installation_id: string; action_key: string; kind: string; payload: string; attempts: number }
 
-export function createWorker(cfg: WorkerConfig, db: DB) {
+export async function createWorker(cfg: WorkerConfig, db: DB) {
+  const onReject = (tenant: string | null) => (r: { kind: string }) => audit(db, cfg.run_id, tenant, r.kind, r);
   const slack = new Map<string, SlackCall>(
-    cfg.installations.map((i) => [i.installation_id, slackClient({
-      baseUrl: i.api_url, token: i.bot_token, allowlist: cfg.allowlist, timeoutMs: cfg.slack_timeout_ms,
-      onReject: (r) => audit(db, cfg.run_id, i.tenant_id, r.kind, r),
-    })]),
+    cfg.installations.map((i) => [i.installation_id, slackClient({ baseUrl: i.api_url, token: i.bot_token, allowlist: cfg.allowlist, timeoutMs: cfg.slack_timeout_ms, onReject: onReject(i.tenant_id) })]),
   );
-  for (const i of cfg.installations) {
-    db.prepare("INSERT OR IGNORE INTO installations (installation_id, tenant_id) VALUES (?, ?)").run(i.installation_id, i.tenant_id);
-  }
-
-  // Business step for one accepted event; runs inside the claim transaction.
-  function handleEvent(row: InboxRow) {
-    enqueueOutbox(db, {
-      run_id: row.run_id, tenant_id: row.tenant_id, installation_id: row.installation_id, action_key: `ack:${row.id}`, kind: "slack.reply",
-      payload: { channel: row.channel_id, thread_ts: row.thread_ts ?? row.message_ts, text: `Request received (ref ${row.event_id.slice(-8)}).` },
-    });
-    finishInbox(db, row.id, "done");
-  }
+  for (const i of cfg.installations) db.prepare("INSERT OR IGNORE INTO installations (installation_id, tenant_id) VALUES (?, ?)").run(i.installation_id, i.tenant_id);
+  const floci = cfg.floci
+    ? { ...(await flociClients(cfg.floci.endpoint, cfg.allowlist, onReject(null))), queueUrl: cfg.floci.queue_url, bucket: cfg.floci.bucket }
+    : undefined;
+  const ctx: Ctx = { cfg, db, floci, kick: () => kick(), now: () => Date.now() };
 
   function processInbox(id: number) {
-    const step = db.transaction(() => {
-      if (!claimInbox(db, id)) return;
-      handleEvent(db.prepare("SELECT * FROM inbox WHERE id = ?").get(id) as InboxRow);
-    });
     try {
-      step();
+      db.transaction(() => {
+        if (claimInbox(db, id)) handleEvent(ctx, db.prepare("SELECT * FROM inbox WHERE id = ?").get(id) as InboxRow);
+      })();
     } catch (e) {
       db.prepare("UPDATE inbox SET status = 'failed', reason = ? WHERE id = ? AND status IN ('received','processing')").run(String((e as Error).message).slice(0, 200), id);
       audit(db, cfg.run_id, null, "inbox_failed", { inbox_id: id });
     }
-    kick();
   }
 
   async function publish(row: OutboxRow) {
@@ -50,18 +43,32 @@ export function createWorker(cfg: WorkerConfig, db: DB) {
       settleOutbox(db, row.id, status, result);
       if (status !== "sent") audit(db, cfg.run_id, row.tenant_id, `outbox_${status}`, { outbox_id: row.id, action_key: row.action_key, ...result });
     };
+    const retryOrFail = (e: unknown, ambiguous: boolean) => {
+      if (!ambiguous && row.attempts < cfg.max_retries) db.prepare("UPDATE outbox SET attempts = attempts + 1 WHERE id = ?").run(row.id);
+      else settle(ambiguous ? "unknown" : "failed", { error: (e as Error).message });
+    };
+    const payload = JSON.parse(row.payload);
+    if (row.kind === "sqs.send") {
+      if (!floci) return settle("failed", { error: "floci_not_configured" });
+      // Re-sending after an ambiguous SendMessage is safe: the consumer dedupes on the ticket action key.
+      try {
+        const r = await sendJob(floci!, floci!.queueUrl, row.payload);
+        settle("sent", { message_id: r.MessageId });
+      } catch (e) {
+        retryOrFail(e, false);
+      }
+      return;
+    }
     if (isRevoked(db, row.installation_id)) return settle("failed", { error: "installation_revoked" });
-    const call = slack.get(row.installation_id)!;
+    const { meta, ...message } = payload;
     try {
-      const r = await call("chat.postMessage", JSON.parse(row.payload));
+      const r = await slack.get(row.installation_id)!("chat.postMessage", message);
       // A provider refusal (e.g. missing_scope) is final: there is no broader credential to escalate to.
       settle(r.ok ? "sent" : "failed", r.ok ? { ts: r.ts, channel: r.channel } : { error: r.error, needed: r.needed ?? null });
+      if (r.ok && meta?.approval_id) w02.onButtonPosted(ctx, meta, r.ts);
     } catch (e) {
-      if (e instanceof SlackTransportError && !e.ambiguous && row.attempts < cfg.max_retries) {
-        db.prepare("UPDATE outbox SET attempts = attempts + 1 WHERE id = ?").run(row.id); // not delivered: safe to retry
-      } else {
-        settle(e instanceof SlackTransportError && e.ambiguous ? "unknown" : "failed", { error: (e as Error).message });
-      }
+      // Sent but no response (timeout/5xx) is UNKNOWN: the reply may exist, so it is never re-posted.
+      retryOrFail(e, e instanceof SlackTransportError && e.ambiguous);
     }
   }
 
@@ -73,19 +80,37 @@ export function createWorker(cfg: WorkerConfig, db: DB) {
     try {
       do {
         again = false;
-        for (const id of (db.prepare("SELECT id FROM inbox WHERE status = 'received' ORDER BY id").all() as { id: number }[])) processInbox(id.id);
-        for (const row of db.prepare("SELECT * FROM outbox WHERE status = 'pending' AND kind = 'slack.reply' ORDER BY id").all() as OutboxRow[]) await publish(row);
+        for (const { id } of db.prepare("SELECT id FROM inbox WHERE status = 'received' ORDER BY id").all() as { id: number }[]) processInbox(id);
+        for (const row of db.prepare("SELECT * FROM outbox WHERE status = 'pending' ORDER BY id").all() as OutboxRow[]) await publish(row);
       } while (again);
     } finally {
       draining = false;
     }
   }
-  const kick = () => void drain();
+  const kick = () => void drain().catch((e) => audit(db, cfg.run_id, null, "drain_error", { error: String(e) }));
   const timer = setInterval(kick, 250);
 
-  async function onBlockAction(inst: Installation, _payload: Record<string, any>) {
-    audit(db, cfg.run_id, inst.tenant_id, "block_action_unhandled", {});
+  let stopped = false;
+  async function consume() {
+    while (!stopped && floci) {
+      try {
+        for (const msg of await receiveJobs(floci, floci.queueUrl)) await w01.onJob(ctx, msg);
+      } catch (e) {
+        audit(db, cfg.run_id, null, "consume_error", { error: (e as Error).name });
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
   }
 
-  return { kick, onAccepted: kick, onBlockAction, stop: () => clearInterval(timer) };
+  async function start() {
+    if (floci) {
+      await w01.recover(ctx);
+      await w02.recover(ctx);
+    }
+    kick();
+    void consume();
+  }
+
+  const onBlockAction = (inst: Installation, payload: Record<string, any>) => w02.onBlockAction(ctx, inst, payload);
+  return { start, kick, onAccepted: kick, onBlockAction, stop: () => ((stopped = true), clearInterval(timer)) };
 }

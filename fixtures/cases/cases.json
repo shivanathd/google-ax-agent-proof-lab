@@ -1,0 +1,21 @@
+{
+  "note": "Synthetic stimuli for the CASEBOOK W01-W03 rows. `{n}` is replaced by the repetition number. All plans are scripted (mode: scripted), not live reasoning.",
+  "W01-H": { "workspace": "A", "user": "dana", "text": "service-request printer on floor two is offline (rep {n})" },
+  "W01-D": { "workspace": "A", "stimulus": "signed event-retry of the W01-H event" },
+  "W01-B": { "workspace": "A", "as": "bot", "text": "service-request posted by LabBot itself" },
+  "W01-S": { "workspace": "A", "user": "dana", "text": "service-request badge reader at loading dock", "fault": "S3 PUT /receipts/* returns 500" },
+  "W01-Q": { "workspace": "A", "user": "dana", "text": "service-request flickering light in room 7", "fault": "first SQS DeleteMessage returns 500" },
+  "W01-T": { "workspace": "A", "user": "dana", "text": "service-request jammed shredder", "fault": "completion chat.postMessage forwarded, response withheld" },
+  "W02-H": { "workspace": "A", "user": "dana", "approver": "eli", "text": "purchase-request 12500 standing desk for room 3 (rep {n})" },
+  "W02-U": { "workspace": "A", "user": "dana", "approver": "dana", "text": "purchase-request 12500 monitor arm" },
+  "W02-X": { "workspace": "A", "user": "dana", "approver": "eli", "text": "purchase-request 12500 label printer", "approval_ttl_ms": 800 },
+  "W02-R": { "workspace": "A", "stimulus": "second approve click on an approved W02-H request" },
+  "W02-C": { "workspace": "A", "user": "dana", "approver": "eli", "text": "purchase-request 12500 whiteboard", "edit": "purchase-edit {ref} 15000" },
+  "W02-P": { "workspace": "A", "user": "dana", "approver": "eli", "text": "purchase-request 12500 desk lamp", "revoke": "eli approval.resolve" },
+  "W02-F": { "workspace": "B", "user": "hana", "stimulus": "button carrying a T_LAB_A request id clicked in T_LAB_B" },
+  "W03-H": { "workspace": "A", "user": "fran", "text": "crm-update account=\"Northstar Demo\" expected-version={n} description=\"Workshop follow-up requested\"" },
+  "W03-V": { "workspace": "A", "user": "fran", "text": "crm-update account=\"Cedar Grove Demo\" expected-version=1 description=\"Workshop follow-up requested\"" },
+  "W03-U": { "workspace": "A", "user": "gus", "text": "crm-update account=\"Northstar Demo\" expected-version=6 description=\"Changed by a visitor\"" },
+  "W03-W": { "workspace": "A", "user": "fran", "text": "crm-update account=\"Harbor Lane Demo\" tenant=T_LAB_B expected-version=1 description=\"Workshop follow-up requested\"" },
+  "W03-N": { "workspace": "A", "user": "fran", "texts": ["crm-update description=\"Workshop follow-up requested\"", "crm-update account=\"Northstar Demo\" description=\"Workshop follow-up requested\"", "crm-update account=\"Northstar Demo\" expected-version=6 name=\"Renamed\" description=\"x\""] }
+}

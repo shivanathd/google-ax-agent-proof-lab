@@ -1,0 +1,20 @@
+{
+  "note": "Synthetic grants and CRM accounts. Grants name fictional Slack users; IDs are resolved per run through users.list.",
+  "grants": {
+    "T_LAB_A": {
+      "dana": ["ticket.create", "approval.request"],
+      "eli": ["ticket.create", "approval.resolve"],
+      "fran": ["ticket.create", "crm.description.update"],
+      "gus": []
+    },
+    "T_LAB_B": {
+      "ivan": ["ticket.create", "approval.request"],
+      "hana": ["approval.resolve", "crm.description.update"]
+    }
+  },
+  "crm_accounts": [
+    { "tenant_id": "T_LAB_A", "account_id": "acct-northstar", "name": "Northstar Demo", "description": "Trial account", "version": 1 },
+    { "tenant_id": "T_LAB_A", "account_id": "acct-cedar", "name": "Cedar Grove Demo", "description": "Trial account", "version": 2 },
+    { "tenant_id": "T_LAB_B", "account_id": "acct-harbor", "name": "Harbor Lane Demo", "description": "Pilot account", "version": 1 }
+  ]
+}

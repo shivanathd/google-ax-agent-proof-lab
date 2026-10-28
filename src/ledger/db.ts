@@ -28,16 +28,49 @@ CREATE TABLE IF NOT EXISTS outbox (
 CREATE TABLE IF NOT EXISTS installations (
   installation_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, revoked_at TEXT
 );
+CREATE TABLE IF NOT EXISTS tickets (
+  id INTEGER PRIMARY KEY, run_id TEXT NOT NULL, tenant_id TEXT NOT NULL, installation_id TEXT NOT NULL, action_key TEXT NOT NULL,
+  action_id TEXT NOT NULL, inbox_id INTEGER NOT NULL, requester_id TEXT NOT NULL, summary TEXT NOT NULL,
+  channel_id TEXT NOT NULL, thread_ts TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('open')),
+  receipt_status TEXT NOT NULL DEFAULT 'pending' CHECK (receipt_status IN ('pending','committed','failed')),
+  receipt_key TEXT, receipt_sha256 TEXT, receipt_attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+  UNIQUE (run_id, tenant_id, action_key)
+);
+CREATE TABLE IF NOT EXISTS approval_requests (
+  id TEXT PRIMARY KEY, run_id TEXT NOT NULL, tenant_id TEXT NOT NULL, installation_id TEXT NOT NULL, inbox_id INTEGER NOT NULL,
+  requester_id TEXT NOT NULL, item TEXT NOT NULL, amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0 AND amount_cents <= 10000000),
+  request_digest TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL CHECK (status IN ('requested','awaiting_approval','approved','rejected','expired')),
+  channel_id TEXT NOT NULL, thread_ts TEXT NOT NULL, message_ts TEXT, expires_at TEXT, approver_id TEXT, resolved_at TEXT,
+  action_id TEXT, receipt_status TEXT CHECK (receipt_status IN ('pending','committed','failed')), receipt_key TEXT, receipt_sha256 TEXT,
+  receipt_attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+);
+-- Exactly one terminal transition: a resolved request can never change status again.
+CREATE TRIGGER IF NOT EXISTS approval_terminal BEFORE UPDATE OF status ON approval_requests
+  WHEN OLD.status IN ('approved','rejected','expired') BEGIN SELECT RAISE(ABORT, 'approval already terminal'); END;
+CREATE TABLE IF NOT EXISTS crm_accounts (
+  tenant_id TEXT NOT NULL, account_id TEXT NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL,
+  version INTEGER NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (tenant_id, account_id)
+);
+CREATE TABLE IF NOT EXISTS actions (
+  id INTEGER PRIMARY KEY, run_id TEXT NOT NULL, tenant_id TEXT NOT NULL, action_key TEXT NOT NULL, action_id TEXT NOT NULL,
+  operation TEXT NOT NULL, envelope TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL,
+  UNIQUE (run_id, tenant_id, action_key)
+);
+CREATE TABLE IF NOT EXISTS grants (
+  tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, permission TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (tenant_id, user_id, permission)
+);
 CREATE TABLE IF NOT EXISTS run_audit (
   id INTEGER PRIMARY KEY, run_id TEXT NOT NULL, tenant_id TEXT, at TEXT NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL
 );
 `;
 
-export function openLedger(path: string, extraSchema = ""): DB {
+export function openLedger(path: string): DB {
   const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.pragma("busy_timeout = 5000");
-  db.exec(SCHEMA + extraSchema);
+  db.exec(SCHEMA);
   return db;
 }
 

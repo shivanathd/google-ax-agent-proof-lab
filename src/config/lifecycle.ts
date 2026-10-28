@@ -8,6 +8,7 @@ import { candidateIdentity, createRunConfig, ROOT, type Endpoint } from "./run-c
 import { createManifest, freePort, loadManifest, recordResource, runDir, saveManifest, type Manifest } from "./manifest.ts";
 import { ensureRunResources, flociClients } from "../adapters/floci/clients.ts";
 import { loadSlackFixture, startWorkspace, type Workspace } from "../adapters/slack/emulator.ts";
+import { seedLedger } from "../ledger/seed.ts";
 import { workerConfig, workerEnv, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
 
 const run = promisify(execFile);
@@ -81,6 +82,9 @@ export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?
         recordResource(manifest, { kind: "emulator", id: `slack-${ws.installation_id}@${ports[`slack_${ws.installation_id}`]}`, role: ws.tenant_id });
         h.workspaces.push(await startWorkspace(fx, ws, { port: ports[`slack_${ws.installation_id}`]!, eventsUrl: `${base}/events`, interactionsUrl: `${base}/interactions`, allowlist }));
       }
+      manifest.slack_users = Object.fromEntries(h.workspaces.map((w) => [w.tenant_id, w.users]));
+      saveManifest(manifest);
+      seedLedger(manifest.db_path, manifest.slack_users);
       if (opts.worker !== false) await h.startWorker(opts.worker || {});
     }
   } catch (e) {
