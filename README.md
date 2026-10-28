@@ -7,7 +7,7 @@ Everything below runs on one laptop with fictional workspaces, people and record
 <!-- BEGIN LAB MEDIA: overview -->
 ![Teaching console with the scenario list, an emulated Slack thread where Eli approves Dana's purchase request, the layer map and run details](docs/assets/screenshots/lab-overview.png)
 
-The teaching console after a real local run of the approval workflow. Run `d717040a` (W02-H, local profile, scripted mode, revision `3dd4af6`): local core PASS, 4 of 4 required assertions passed; observed approval_status "approved", approved_transition_count 1, approval_receipt_count 1, approval_receipt_matches true. Synthetic data.
+The teaching console after a real local run of the approval workflow. Run `04658407` (W02-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed approval_status "approved", approved_transition_count 1, approval_receipt_count 1, approval_receipt_matches true. Synthetic data.
 <!-- END LAB MEDIA: overview -->
 
 > **Synthetic data only.** Every workspace, person, company and record in the screenshots is fictional and lives in local emulators. The console labels its transcript "Emulated Slack (local Emulate instance)": it is not the Slack client and has no Slack branding.
@@ -19,13 +19,13 @@ A Slack mention reaches the scripted worker as a signed Events API callback. The
 <!-- BEGIN LAB MEDIA: workflow -->
 ![Animated capture: a service request is posted in emulated Slack, LabBot replies in the thread, and the collector's report turns PASS](docs/assets/gifs/slack-service-request.gif)
 
-The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread. Run `0fe7285f` (W01-H, local profile, scripted mode, revision `3dd4af6`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
+The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
 
 [View the static result (PNG poster)](docs/assets/posters/slack-service-request.png)
 
 ![Emulated Slack thread with Dana's service request and LabBot's ticket reply, beside before and after counts showing one ticket and one S3 receipt](docs/assets/screenshots/service-request-success.png)
 
-A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt. Run `0fe7285f` (W01-H, local profile, scripted mode, revision `3dd4af6`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
+A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
 <!-- END LAB MEDIA: workflow -->
 
 ## Understand the layers
@@ -84,19 +84,19 @@ Two challenges, each checked by the collector rather than by the worker's own re
 <!-- BEGIN LAB MEDIA: boundaries -->
 ![Animated capture: after the first ticket, the same signed event is re-delivered and the before and after counts stay unchanged](docs/assets/gifs/duplicate-event-safe.gif)
 
-Emulate re-delivers the same signed event; the collector compares before and after counts. Run `de624d93` (W01-D, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.
+Emulate re-delivers the same signed event; the collector compares before and after counts. Run `dc60b1dc` (W01-D, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.
 
 [View the static result (PNG poster)](docs/assets/posters/duplicate-event-safe.png)
 
 ![Animated capture: Dana and Gus click Approve on Dana's request, both clicks are refused, and the request stays awaiting approval](docs/assets/gifs/approval-denied.gif)
 
-Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused. Run `0bdf37f3` (W02-U, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
+Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused. Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
 
 [View the static result (PNG poster)](docs/assets/posters/approval-denied.png)
 
 ![Emulated Slack thread where Dana's self-approval and Gus's approval click are both refused, with the request still awaiting approval and no receipt](docs/assets/screenshots/approval-denied.png)
 
-A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged. Run `0bdf37f3` (W02-U, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
+A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged. Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
 <!-- END LAB MEDIA: boundaries -->
 
 ## Inspect the evidence
@@ -106,7 +106,7 @@ The console's evidence view is the C5 `report.json` as written: expected and obs
 <!-- BEGIN LAB MEDIA: evidence -->
 ![Evidence report table listing each required assertion with expected value, observed value, PASS status and evidence file, plus limitations](docs/assets/screenshots/evidence-report.png)
 
-The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations. Run `0fe7285f` (W01-H, local profile, scripted mode, revision `3dd4af6`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
+The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
 <!-- END LAB MEDIA: evidence -->
 
 ## Understand what remains unverified
@@ -114,7 +114,7 @@ The evidence report is the C5 report.json shown as written: expected and observe
 <!-- BEGIN LAB MEDIA: profiles -->
 ![Profile boundaries table: local core PASS, while Salesforce, CodeRabbit, AX and live-model lanes are BLOCKED with their missing prerequisites](docs/assets/screenshots/profile-boundaries.png)
 
-Optional lanes as their doctors report them: blocked lanes are not failures of the local demo and are not evidence of provider parity. Run `0fe7285f` (W01-H, local profile, scripted mode, revision `3dd4af6`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
+Optional lanes as their doctors report them on this machine: blocked lanes are not failures of the local demo and are not evidence of provider parity. AX reads BLOCKED here because no cluster is configured locally; its authorized cluster runs are reported in profiles/ax/RESULTS.md. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
 <!-- END LAB MEDIA: profiles -->
 
 A local CRM double cannot show Salesforce behaviour, and a passing local run is not evidence of real Slack transport, cloud IAM or an unexecuted code review. Those lanes report BLOCKED with their missing prerequisites, and Salesforce parity stays UNKNOWN. The GitHub-rendered view of this README has not been checked (NOT_RUN) because nothing has been published.
@@ -124,25 +124,25 @@ A local CRM double cannot show Salesforce behaviour, and a passing local run is 
 <!-- BEGIN LAB MEDIA: videos -->
 [![Poster of the mental-model clip: a verified service request run in the teaching console](docs/assets/videos/mental-model.png)](docs/assets/videos/mental-model.mp4)
 
-Mental model: the reply is not the acceptance test (MP4 clip, 33 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Shown in order (local profile, scripted mode, revision `3dd4af6`): happy-path run `2cd3a116` (W01-H): local core PASS, 4 of 4 required assertions passed; then injected-fault run `5f03f95b` (W01-F): local core FAIL, 2 of 4 required assertions passed, not a success (failing: receipt_count 0, receipt_matches_request false). Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). The poster is a frame of the first run. Synthetic data.
+Mental model: the reply is not the acceptance test (MP4 clip, 33 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Shown in order (local profile, scripted mode, revision `0d7173b`): happy-path run `60722942` (W01-H): local core PASS, 4 of 4 required assertions passed; then injected-fault run `1ff864a9` (W01-F): local core FAIL, 2 of 4 required assertions passed, not a success (failing: receipt_count 0, receipt_matches_request false). Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). The poster is a frame of the first run. Synthetic data.
 
 [Download the MP4](docs/assets/videos/mental-model.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/mental-model.vtt) · [capture record](docs/assets/videos/mental-model.json)
 
 [![Poster of the duplicate-delivery clip: the retried event leaves ticket and reply counts unchanged](docs/assets/videos/duplicate-delivery.png)](docs/assets/videos/duplicate-delivery.mp4)
 
-Duplicate delivery (MP4 clip, 16 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `de624d93` (W01-D, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.
+Duplicate delivery (MP4 clip, 15 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `dc60b1dc` (W01-D, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.
 
 [Download the MP4](docs/assets/videos/duplicate-delivery.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/duplicate-delivery.vtt) · [capture record](docs/assets/videos/duplicate-delivery.json)
 
 [![Poster of the permission-boundary clip: the self-approval is refused and the record is unchanged](docs/assets/videos/permission-boundary.png)](docs/assets/videos/permission-boundary.mp4)
 
-Permission boundary (MP4 clip, 13 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `0bdf37f3` (W02-U, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
+Permission boundary (MP4 clip, 13 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
 
 [Download the MP4](docs/assets/videos/permission-boundary.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/permission-boundary.vtt) · [capture record](docs/assets/videos/permission-boundary.json)
 
 [![Poster of the emulator-versus-real-org clip: optional lanes shown as BLOCKED with parity UNKNOWN](docs/assets/videos/emulator-vs-real-org.png)](docs/assets/videos/emulator-vs-real-org.mp4)
 
-Emulator versus real org (MP4 clip, 22 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `bbfafa8f` (W03-V, local profile, scripted mode, revision `3dd4af6`): local core PASS, 3 of 3 required assertions passed; observed result "CONFLICT", description_unchanged true, write_count 0. Synthetic data.
+Emulator versus real org (MP4 clip, 22 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `18967808` (W03-V, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed result "CONFLICT", description_unchanged true, write_count 0. Synthetic data.
 
 [Download the MP4](docs/assets/videos/emulator-vs-real-org.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/emulator-vs-real-org.vtt) · [capture record](docs/assets/videos/emulator-vs-real-org.json)
 

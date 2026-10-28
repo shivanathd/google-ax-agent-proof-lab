@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "case_id": "W01-H",
-  "run_id": "2cd3a116-982b-4562-8c37-36acae6ebe78",
+  "case_id": "W01-F",
+  "run_id": "1ff864a9-9e81-4346-b9eb-7e7a09150846",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
-  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
+  "candidate_revision": "0d7173b97ab3f5bc9a101165dcd65151dc6f650e",
+  "tree_sha": "f168658041339b3335b646283132718c89561711",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
@@ -16,12 +16,14 @@
     "Slack conversations.replies (reader token)",
     "read-only SQLite query (tickets, inbox, actions)"
   ],
-  "observed_at": "2026-10-28T16:15:06.657Z",
-  "simulated_faults": [],
+  "observed_at": "2026-10-28T18:40:02.517Z",
+  "simulated_faults": [
+    "receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)"
+  ],
   "observations": {
     "ticket_count": 1,
-    "receipt_count": 1,
-    "receipt_matches_request": true,
+    "receipt_count": 0,
+    "receipt_matches_request": false,
     "completion_reply_count": 1
   },
   "unobserved": {}

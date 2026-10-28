@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "case_id": "W01-F",
-  "run_id": "5f03f95b-6ea4-4d08-aef6-7c6ba8c6c49d",
+  "run_id": "1ff864a9-9e81-4346-b9eb-7e7a09150846",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
-  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
+  "candidate_revision": "0d7173b97ab3f5bc9a101165dcd65151dc6f650e",
+  "tree_sha": "f168658041339b3335b646283132718c89561711",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
-  "collector": "apl-collector pid=93160 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T16:15:22.508Z",
+  "collector": "apl-collector pid=44890 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T18:40:02.517Z",
   "execution": "EXECUTED",
   "mutation": "none",
   "simulated_faults": [
@@ -114,11 +114,11 @@
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T16:15:20.810Z",
-  "ended_at": "2026-10-28T16:15:23.444Z",
+  "started_at": "2026-10-28T18:40:00.779Z",
+  "ended_at": "2026-10-28T18:40:03.426Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 2.634,
+      "value": 2.647,
       "reason": null
     }
   }

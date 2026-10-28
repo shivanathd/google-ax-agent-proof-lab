@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "case_id": "W03-V",
-  "run_id": "bbfafa8f-3aa4-4d17-bd3b-68146e4fb232",
+  "case_id": "W02-U",
+  "run_id": "7a941810-c422-4867-9101-3bae695babd8",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
-  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
+  "candidate_revision": "0d7173b97ab3f5bc9a101165dcd65151dc6f650e",
+  "tree_sha": "f168658041339b3335b646283132718c89561711",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
-  "collector": "apl-collector pid=93755 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T16:15:40.141Z",
+  "collector": "apl-collector pid=43056 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T18:39:26.234Z",
   "execution": "EXECUTED",
   "mutation": "none",
   "simulated_faults": [],
@@ -48,37 +48,34 @@
   },
   "assertions": [
     {
-      "id": "result",
+      "id": "approval_status",
       "required": true,
-      "expected": "CONFLICT",
-      "observed": "CONFLICT",
+      "expected": "awaiting_approval",
+      "observed": "awaiting_approval",
       "evidence_refs": [
-        "evidence/inbox.json",
-        "evidence/thread.json"
+        "evidence/approval-ledger.json"
       ],
       "status": "PASS",
       "reason": null
     },
     {
-      "id": "description_unchanged",
-      "required": true,
-      "expected": true,
-      "observed": true,
-      "evidence_refs": [
-        "evidence/before-crm.json",
-        "evidence/after-crm.json"
-      ],
-      "status": "PASS",
-      "reason": null
-    },
-    {
-      "id": "write_count",
+      "id": "unauthorized_write_count",
       "required": true,
       "expected": 0,
       "observed": 0,
       "evidence_refs": [
-        "evidence/before-crm.json",
-        "evidence/after-crm.json"
+        "evidence/approval-ledger.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "approval_receipt_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/approval-s3.json"
       ],
       "status": "PASS",
       "reason": null
@@ -101,11 +98,11 @@
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T16:15:37.737Z",
-  "ended_at": "2026-10-28T16:15:41.350Z",
+  "started_at": "2026-10-28T18:39:24.330Z",
+  "ended_at": "2026-10-28T18:39:26.917Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 3.613,
+      "value": 2.587,
       "reason": null
     }
   }
