@@ -2,7 +2,8 @@
 // path (Emulate + Floci + worker + separate collector process); G-UNKNOWN spawns the real collector against an
 // unreachable dependency; G-EXPORT, tamper, aggregation and schema checks run on generated artifacts.
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -13,7 +14,7 @@ import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { assertContract } from "../../src/contracts/validate.ts";
 import { collectCase, collectorConfig, collectorEnv, COLLECTOR_AWS } from "../../src/evaluator/collect-case.ts";
 import { CASES } from "../../src/collector/cases/index.ts";
-import { aggregate, assess, buildReport, lanesFrom, writeChecksums, type Bundle } from "../../src/reports/report.ts";
+import { aggregate, assess, buildReport, lanesFrom, verifyChecksums, writeChecksums, type Bundle } from "../../src/reports/report.ts";
 import { generateReport } from "../../src/reports/artifacts.ts";
 import { exportRun } from "../../src/reports/export.ts";
 import { verifyRun } from "../../src/cli/commands/verify.ts";
@@ -23,6 +24,7 @@ import type { CaseDef } from "../../src/collector/types.ts";
 
 const tmp = mkdtempSync(join(tmpdir(), "apl-evidence-"));
 const read = (p: string) => JSON.parse(readFileSync(p, "utf8"));
+const sha256Hex = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 
 function bundle(over: Partial<Bundle> = {}): Bundle {
   const id = candidateIdentity();
@@ -77,6 +79,67 @@ describe("C4/C5 schema validation", () => {
     ]) expect(() => assertContract("observation-bundle", JSON.parse(JSON.stringify(bad)))).toThrow();
     expect(() => assertContract("run-report", { ...report, schema_version: 2 })).toThrow();
     expect(() => assertContract("run-report", { ...report, status: "GREEN" })).toThrow();
+  });
+});
+
+describe("C4 symlink escape (no Docker)", () => {
+  // An artifact dir whose files hash cleanly, plus a file outside it that a symlink can point at.
+  function artifactRun() {
+    const root = mkdtempSync(join(tmpdir(), "apl-symlink-"));
+    const b = bundle({ case_id: "F4-A1", evidence: [{ path: "evidence/ledger.json", sha256: "1".repeat(64), source: "read-only SQLite query", observations: ["ticket_count"] }] });
+    const dir = join(root, "runs", b.run_id);
+    mkdirSync(join(dir, "evidence"), { recursive: true });
+    writeFileSync(join(dir, "observations.json"), JSON.stringify(b));
+    writeFileSync(join(dir, "report.json"), "{}");
+    writeFileSync(join(dir, "evidence", "ledger.json"), "[]");
+    const outside = join(root, "outside-secret.txt");
+    writeFileSync(outside, "outside the artifact dir\n");
+    return { root, dir, runId: b.run_id, outside };
+  }
+
+  it("verifyChecksums rejects a symlink inside the artifact dir that points outside it, even after re-binding", () => {
+    const { dir, outside } = artifactRun();
+    writeChecksums(dir);
+    expect(verifyChecksums(dir)).toEqual({ ok: true, problems: [] });
+    symlinkSync(outside, join(dir, "evidence", "escape.json"));
+    expect(verifyChecksums(dir).problems).toContain("escapes artifact dir: evidence/escape.json");
+    // Blessing the escape with fresh checksums is refused, not hashed through the link.
+    expect(() => writeChecksums(dir)).toThrow(/escapes artifact dir: evidence\/escape.json/);
+  });
+
+  it("a listed evidence file replaced by an outward symlink fails verification, report regeneration and export", async () => {
+    const { root, dir, runId, outside } = artifactRun();
+    writeChecksums(dir);
+    const listed = readFileSync(join(dir, "checksums.sha256"), "utf8");
+    rmSync(join(dir, "evidence", "ledger.json"));
+    symlinkSync(outside, join(dir, "evidence", "ledger.json"));
+    writeFileSync(join(dir, "checksums.sha256"), listed.replace(/^[0-9a-f]{64}(?=  evidence\/ledger\.json$)/m, sha256Hex(readFileSync(outside))));
+    expect(verifyChecksums(dir)).toMatchObject({ ok: false, problems: expect.arrayContaining(["escapes artifact dir: evidence/ledger.json"]) });
+    process.env.APL_ARTIFACTS_DIR = join(root, "runs");
+    try {
+      await expect(generateReport(runId)).rejects.toThrow(/escapes artifact dir/);
+      const terms = join(root, "terms.txt");
+      writeFileSync(terms, "fictional-private-term-zz\n");
+      expect(exportRun(runId, { termsPath: terms, outRoot: join(root, "exports"), quarantineRoot: join(root, "q") })).toMatchObject({ status: "REJECTED" });
+      expect(existsSync(join(root, "exports"))).toBe(false);
+    } finally {
+      delete process.env.APL_ARTIFACTS_DIR;
+    }
+  });
+
+  it("a bundle evidence path that resolves outside the artifact dir is refused when the report is generated", async () => {
+    const { root, dir, runId, outside } = artifactRun();
+    symlinkSync(join(root), join(dir, "evidence", "up")); // a directory link: evidence/up/... escapes
+    const b = read(join(dir, "observations.json"));
+    b.evidence = [{ path: "evidence/up/outside-secret.txt", sha256: "1".repeat(64), source: "read-only SQLite query", observations: ["ticket_count"] }];
+    writeFileSync(join(dir, "observations.json"), JSON.stringify(b));
+    expect(existsSync(outside)).toBe(true);
+    process.env.APL_ARTIFACTS_DIR = join(root, "runs");
+    try {
+      await expect(generateReport(runId)).rejects.toThrow(/escapes artifact dir/);
+    } finally {
+      delete process.env.APL_ARTIFACTS_DIR;
+    }
   });
 });
 

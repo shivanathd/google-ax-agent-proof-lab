@@ -7,7 +7,7 @@ import { laneStatuses } from "../config/profiles.ts";
 import { ROOT } from "../config/run-config.ts";
 import { assertContract } from "../contracts/validate.ts";
 import type { ProfileName } from "../contracts/profile.ts";
-import { buildReport, reportMarkdown, verifyChecksums, writeChecksums, type Bundle } from "./report.ts";
+import { buildReport, containedPath, reportMarkdown, verifyChecksums, writeChecksums, type Bundle } from "./report.ts";
 import { scenario } from "./scenarios.ts";
 
 export const SPEC_CASES = join(ROOT, "docs/spec/active/2026-10-28-agent-proof-lab/evals/cases.json");
@@ -40,6 +40,9 @@ export async function generateReport(runId: string, o: { cleanup_status?: "CLEAN
     if (bad.length) throw new Error(`run ${runId} artifacts fail integrity check: ${bad.join("; ")}`);
   }
   const bundle = readBundle(dir);
+  // C4: every evidence path must resolve inside this artifact dir (schema already refuses absolute and `..`).
+  const outside = (bundle.evidence ?? []).filter((e) => !containedPath(dir, e.path)).map((e) => e.path);
+  if (outside.length) throw new Error(`run ${runId} evidence escapes artifact dir: ${outside.join("; ")}`);
   const meta = existsSync(join(dir, "manifest.json")) ? JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) : {};
   const optional = await laneStatuses((bundle.selected_profiles ?? []) as ProfileName[], process.env);
   const report = buildReport({

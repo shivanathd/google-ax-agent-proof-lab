@@ -1,8 +1,8 @@
 // C5 RunReport generation (F4-R3, F4-R4). Pure functions over a C4 bundle plus fixed expectations; the
 // worker's own claims never enter here. Status precedence: FAIL > UNKNOWN > BLOCKED > NOT_RUN > PASS.
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { assertContract } from "../contracts/validate.ts";
 import type { DoctorResult, LaneStatus } from "../contracts/profile.ts";
 
@@ -133,20 +133,38 @@ export function reportMarkdown(r: ReturnType<typeof buildReport>) {
 
 export const sha256File = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
 
-function filesUnder(dir: string): string[] {
+// C4: `rel` must name something whose real path stays inside `dir` — no absolute path, no `..`, no symlink
+// (file or directory) leading out. Returns the joined path, or null when it escapes or does not resolve.
+export function containedPath(dir: string, rel: string): string | null {
+  if (isAbsolute(rel) || rel.split(/[\\/]/).includes("..")) return null;
+  const p = join(dir, rel);
+  try {
+    const root = realpathSync(dir);
+    const real = realpathSync(p);
+    return real === root || real.startsWith(root + sep) ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+// lstat walk: symlinks are listed as entries (never followed), so a link cannot pull outside files in.
+export function filesUnder(dir: string): string[] {
   const out: string[] = [];
   const walk = (d: string) => {
     for (const name of readdirSync(d).sort()) {
       const p = join(d, name);
-      statSync(p).isDirectory() ? walk(p) : out.push(p);
+      lstatSync(p).isDirectory() ? walk(p) : out.push(p);
     }
   };
   walk(dir);
   return out;
 }
+const escapes = (dir: string) => filesUnder(dir).map((p) => relative(dir, p)).filter((rel) => !containedPath(dir, rel)).map((rel) => `escapes artifact dir: ${rel}`);
 
 // checksums.sha256 in `sha256sum` format over every other file in the run directory.
 export function writeChecksums(dir: string) {
+  const bad = escapes(dir);
+  if (bad.length) throw new Error(`refusing to checksum: ${bad.join("; ")}`);
   const lines = filesUnder(dir).filter((p) => relative(dir, p) !== "checksums.sha256").map((p) => `${sha256File(p)}  ${relative(dir, p)}`);
   writeFileSync(join(dir, "checksums.sha256"), `${lines.join("\n")}\n`);
 }
@@ -156,11 +174,12 @@ export function verifyChecksums(dir: string) {
   const file = join(dir, "checksums.sha256");
   if (!existsSync(file)) return { ok: false, problems: ["checksums.sha256 missing"] };
   const listed = new Map(readFileSync(file, "utf8").split("\n").filter(Boolean).map((l) => [l.slice(66), l.slice(0, 64)] as const));
-  const problems: string[] = [];
+  const problems: string[] = escapes(dir);
   for (const [path, hash] of listed) {
-    const p = join(dir, path);
-    if (path.includes("..") || !existsSync(p)) problems.push(`missing: ${path}`);
-    else if (sha256File(p) !== hash) problems.push(`hash mismatch: ${path}`);
+    const p = containedPath(dir, path);
+    if (p) {
+      if (sha256File(p) !== hash) problems.push(`hash mismatch: ${path}`);
+    } else if (!problems.includes(`escapes artifact dir: ${path}`)) problems.push(existsSync(join(dir, path)) ? `escapes artifact dir: ${path}` : `missing: ${path}`);
   }
   for (const p of filesUnder(dir)) {
     const rel = relative(dir, p);

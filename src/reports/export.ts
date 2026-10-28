@@ -2,11 +2,11 @@
 // → private-terms scan. Any finding quarantines the candidate export under private-runs/quarantine/ and
 // publishes nothing. Findings name the file and rule, never the matched value.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { ROOT } from "../config/run-config.ts";
 import { artifactDir } from "./artifacts.ts";
-import { verifyChecksums, writeChecksums } from "./report.ts";
+import { filesUnder, verifyChecksums, writeChecksums } from "./report.ts";
 
 export const SECRET_RULES: [string, RegExp][] = [
   ["slack-token", /xox[abposr]-[A-Za-z0-9-]{8,}/],
@@ -33,10 +33,6 @@ const BUNDLE_FIELDS = ["schema_version", "case_id", "run_id", "profile", "mode",
   "fixture_sha256", "dependencies_sha256", "mutation", "collector_methods", "observed_at", "simulated_faults", "observations", "unobserved"] as const;
 const pick = (o: Record<string, unknown>, keys: readonly string[]) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 
-function files(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : [join(dir, n)]));
-}
-
 export interface ExportResult { status: "EXPORTED" | "QUARANTINED" | "REJECTED"; run_id: string; findings: { file: string; rule: string }[]; output: string | null }
 
 export function exportRun(runId: string, o: { termsPath?: string; outRoot?: string; quarantineRoot?: string } = {}): ExportResult {
@@ -51,7 +47,7 @@ export function exportRun(runId: string, o: { termsPath?: string; outRoot?: stri
 
   // Scan every captured file, not only the projection: a secret anywhere in the capture blocks the export.
   const findings: ExportResult["findings"] = [];
-  for (const f of files(src)) {
+  for (const f of filesUnder(src)) {
     const text = readFileSync(f, "utf8");
     const rel = relative(src, f);
     for (const [rule, re] of SECRET_RULES) if (re.test(text)) findings.push({ file: rel, rule });
