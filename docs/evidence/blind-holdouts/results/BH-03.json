@@ -1,0 +1,27 @@
+{
+  "id": "BH-03",
+  "observed": {
+    "http": [
+      404,
+      200,
+      401
+    ],
+    "inbox_rows": [
+      0,
+      1,
+      0
+    ],
+    "tickets": [
+      0,
+      0,
+      0
+    ],
+    "audits": [
+      "signature_rejected",
+      "signature_rejected",
+      "signature_rejected"
+    ]
+  },
+  "verdict": "FAIL",
+  "observed_at": "2026-10-28T15:18:34.540Z"
+}

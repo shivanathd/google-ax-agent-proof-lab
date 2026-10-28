@@ -1,0 +1,25 @@
+{
+  "id": "BH-01",
+  "observed": {
+    "minus300": {
+      "http": 200,
+      "inbox_rows": 1,
+      "tickets": 1,
+      "stale_audit": false
+    },
+    "minus301": {
+      "http": 401,
+      "inbox_rows": 0,
+      "tickets": 0,
+      "stale_audit": true
+    },
+    "plus301": {
+      "http": 401,
+      "inbox_rows": 0,
+      "tickets": 0,
+      "stale_audit": true
+    }
+  },
+  "verdict": "PASS",
+  "observed_at": "2026-10-28T15:18:29.512Z"
+}
