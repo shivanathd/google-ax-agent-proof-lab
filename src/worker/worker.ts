@@ -2,6 +2,7 @@
 // writes the outbox, publishes the outbox, and consumes the SQS job queue. Ambiguous remote outcomes
 // become UNKNOWN and are never blindly retried.
 import { slackClient, SlackTransportError, type SlackCall } from "../adapters/slack/client.ts";
+import { EndpointRejected } from "../config/endpoints.ts";
 import { flociClients } from "../adapters/floci/clients.ts";
 import { receiveJobs, sendJob } from "../adapters/floci/ops.ts";
 import { audit, claimInbox, isRevoked, settleOutbox, type DB } from "../ledger/db.ts";
@@ -43,8 +44,9 @@ export async function createWorker(cfg: WorkerConfig, db: DB) {
       settleOutbox(db, row.id, status, result);
       if (status !== "sent") audit(db, cfg.run_id, row.tenant_id, `outbox_${status}`, { outbox_id: row.id, action_key: row.action_key, ...result });
     };
+    // Only a not-delivered transport failure is retried; an endpoint-policy rejection is final.
     const retryOrFail = (e: unknown, ambiguous: boolean) => {
-      if (!ambiguous && row.attempts < cfg.max_retries) db.prepare("UPDATE outbox SET attempts = attempts + 1 WHERE id = ?").run(row.id);
+      if (!ambiguous && !(e instanceof EndpointRejected) && row.attempts < cfg.max_retries) db.prepare("UPDATE outbox SET attempts = attempts + 1 WHERE id = ?").run(row.id);
       else settle(ambiguous ? "unknown" : "failed", { error: (e as Error).message });
     };
     const payload = JSON.parse(row.payload);
