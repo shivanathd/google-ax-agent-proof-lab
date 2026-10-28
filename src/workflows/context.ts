@@ -26,9 +26,14 @@ export function canonical(v: unknown): string {
   return JSON.stringify(v);
 }
 
-// Replies are outbox rows written in the caller's transaction; the publisher sends them later.
+// Replies are C3 slack.reply envelopes (policy decision, schema rejecting unknown fields) stored as outbox rows
+// in the caller's transaction; the publisher re-validates the envelope before sending.
 export function reply(ctx: Ctx, t: { tenant_id: string; installation_id: string }, actionKey: string, p: ReplyPayload) {
-  enqueueOutbox(ctx.db, { run_id: ctx.cfg.run_id, tenant_id: t.tenant_id, installation_id: t.installation_id, action_key: actionKey, kind: "slack.reply", payload: { ...p, text: `[${DRIVER.mode}] ${p.text}` } });
+  const { env } = envelope(ctx.db, {
+    run_id: ctx.cfg.run_id, tenant_id: t.tenant_id, actor_id: SYSTEM_ACTOR, connection_ref: `local:slack:${t.installation_id}`,
+    operation: "slack.reply", idempotency_key: actionKey, input: { ...p, text: `[${DRIVER.mode}] ${p.text}` },
+  });
+  enqueueOutbox(ctx.db, { run_id: ctx.cfg.run_id, tenant_id: t.tenant_id, installation_id: t.installation_id, action_key: actionKey, kind: "slack.reply", payload: env });
 }
 
 export function recordAction(ctx: Ctx, env: ActionEnvelope, result: object) {

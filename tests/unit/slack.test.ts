@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import { sign, verifySlackRequest } from "../../src/adapters/slack/signature.ts";
 import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { createWorker } from "../../src/worker/worker.ts";
-import { enqueueOutbox, openLedger } from "../../src/ledger/db.ts";
+import { openLedger } from "../../src/ledger/db.ts";
+import { reply, type Ctx } from "../../src/workflows/context.ts";
 import type { Workspace } from "../../src/adapters/slack/emulator.ts";
 
 describe("Slack request verification", () => {
@@ -62,7 +63,7 @@ describe("worker environment (BUILD_PLAN §8.5)", () => {
     const db = openLedger(join(mkdtempSync(join(tmpdir(), "apl-worker-")), "ledger.db"));
     // Empty allowlist: the installation's api_url is refused before any socket opens.
     const worker = await createWorker(workerConfig({ ...base, max_retries: 2 }, [ws("A")]), db);
-    enqueueOutbox(db, { run_id: base.run_id, tenant_id: "T_LAB_A", installation_id: "A", action_key: "reply:probe", kind: "slack.reply", payload: { channel: "C1", thread_ts: "1.1", text: "probe" } });
+    reply({ cfg: { run_id: base.run_id }, db } as Ctx, { tenant_id: "T_LAB_A", installation_id: "A" }, "reply:probe", { channel: "C1", thread_ts: "1.1", text: "probe" });
     worker.kick();
     const end = Date.now() + 5000;
     const row = () => db.prepare("SELECT status, attempts FROM outbox WHERE action_key = 'reply:probe'").get() as { status: string; attempts: number };
