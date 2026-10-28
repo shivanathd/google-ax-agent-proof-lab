@@ -11,7 +11,7 @@ An agent demo usually ends with a green check and a friendly message: "Your requ
 
 These are four different claims. A demo that answers the first one is often presented as if it answered all four.
 
-<!-- media: lab-overview -->
+<!-- media: lab-overview (run d1141e88, W02-H; C-40) -->
 
 ## The setup
 
@@ -30,16 +30,17 @@ The worker can say "done". In this lab that statement is one observation among s
 
 A separate collector process reads the outcome. It has its own Slack token, which can only read conversations. It has its own S3 client and opens the ledger read-only. It never talks to the worker. For W01 it checks three stores: is there exactly one ticket, does the S3 receipt match the request, and is there exactly one completion reply in the original thread? Those facts go into an observation bundle, and an evaluator compares them with expectations fixed in the specification.
 
-The case that matters is the one where they disagree. In one test the receipt is deleted after the worker has committed it, and the worker still claims success. The required assertion fails, and the report shows no success banner (C-08).
+The case that matters is the one where they disagree. In one test the receipt is deleted after the worker has committed it, and the worker still claims success. The required assertion fails, and the report shows no success banner (C-08). The console shows the same failure without a success badge (C-30).
 
-<!-- media: service-request-success -->
-<!-- media: evidence-report -->
+<!-- media: service-request-success (run d7b27d50, W01-H; C-41) -->
+<!-- media: evidence-report (run d7b27d50; C-41) -->
+<!-- media: clip-mental-model (runs fed9685f W01-H PASS and ca8e55fb W01-F FAIL; C-44) -->
 
 A rule from the specification turned out to be harder to keep than to state: **missing evidence is not zero.** If the collector cannot read the ledger, it does not know which receipt to look for. An early version recorded `receipt_count: 0` anyway, which reads as "no receipt". The test for the unreadable-ledger case caught it. The fact is now absent with a reason, and the report says UNKNOWN (L-021).
 
 ## Emulated is not real, in specific ways
 
-An emulator is useful when you can say exactly which question it answers. Emulate answered mine: signed event callbacks, thread replies, button clicks, strict scopes, an explicit retry simulator. It also has documented gaps, including Socket Mode, slash commands and exact rate limiting (C-36). None of the lab's claims depend on those.
+An emulator is useful when you can say exactly which question it answers. Emulate answered mine: signed event callbacks, thread replies, button clicks, strict scopes, an explicit retry simulator. It also has documented gaps, including Socket Mode, slash commands and exact rate limiting (C-56). None of the lab's claims depend on those.
 
 The surprises came from where the documentation and the behavior differed:
 
@@ -49,7 +50,9 @@ The surprises came from where the documentation and the behavior differed:
 
 The last finding changed the design. The worker no longer gets an emulator URL at all. It gets a loopback proxy that forwards one Slack method and refuses everything else. That fixes the worker's path, not the emulator. Anyone who knows an emulator URL and holds any valid token can still simulate clicks. The boundary is process separation, and the ledger says so (C-16).
 
-The same discipline applies to the CRM. W03 runs against a local contract double that is good for version conflicts and input validation (C-07). It is not Salesforce. The Salesforce lane is designed and blocked, and parity is reported as UNKNOWN rather than implied (C-09, C-32).
+The same discipline applies to the CRM. W03 runs against a local contract double that is good for version conflicts and input validation (C-07). It is not Salesforce. The Salesforce lane is designed and blocked, and parity is reported as UNKNOWN rather than implied (C-09, C-51).
+
+<!-- media: clip-emulator-vs-real-org (run 581e434c, W03-V; C-45) -->
 
 ## Authorized is not the same as delivered through Slack
 
@@ -62,11 +65,14 @@ The lab's results for the denied paths, all with zero writes:
 - a button copied into the other workspace (C-14);
 - an approver whose permission was revoked before the click (C-14).
 
-<!-- media: approval-denied -->
+<!-- media: approval-denied (run 493034f5, W02-U; C-43) -->
+<!-- media: approval-denied-gif (run 493034f5; C-43) -->
+<!-- media: clip-permission-boundary (run 493034f5; C-43) -->
 
 Duplicate delivery is part of the same question. A signed retry of the same event creates no second ticket and no second reply (C-04). If a reply is sent and the response never comes back, the outcome is recorded as UNKNOWN and never re-posted. With least-privilege scopes the worker cannot read history to check, so the lab trades reconcilability for privilege and says so (L-017).
 
-<!-- media: duplicate-event-safe -->
+<!-- media: duplicate-event-safe (run 8c577551, W01-D; C-42) -->
+<!-- media: clip-duplicate-delivery (run 8c577551; C-42) -->
 
 ## Tests that cannot fail
 
@@ -90,19 +96,19 @@ Measured on one laptop (macOS arm64, 18 cores) with other workloads running, n=5
 | W02 approval | 27, 23, 22, 23, 20 ms | 23 ms |
 | W03 CRM update | 41, 15, 14, 14, 13 ms | 14 ms |
 
-The clock starts when the worker records the signed callback and stops when the collector first sees the complete final state (C-17 to C-19). The first repetition was the slowest every time. A cold `npm ci` with an empty cache took about 4 seconds here (C-20). The image pull was not measured. One independent observation pass costs a few milliseconds; the whole `collect-case` command takes about 3 seconds, mostly starting and stopping the stack (C-21). The full supplied harness took 260.6 seconds (C-22).
+The clock starts when the worker records the signed callback and stops when the collector first sees the complete final state (C-17 to C-19). The first repetition was the slowest every time. A cold `npm ci` with an empty cache took about 4 seconds here (C-20). The image pull was not measured. One independent observation pass costs a few milliseconds; the whole `collect-case` command takes about 3 seconds, mostly starting and stopping the stack (C-21). The supplied harness took 260.6 seconds before the console cases were added (C-22); the current, longer run was not timed.
 
 These are descriptive numbers from a small sample on a busy machine. They are not a performance claim about Emulate, Floci or anything else.
 
 ## What is not done
 
-- **The console and README media** are being built in a parallel task. In the run cited here, their cases were NOT_RUN, so the harness verdict is BLOCKED rather than ready (C-30).
-- **AX on Agent Substrate** is designed and blocked. The custom runner passed its contract tests under plain Docker, which says nothing about gVisor. AX does not read the agent command's exit status back, so in the design the collector, not the task phase, decides the outcome (C-31, C-37).
-- **Salesforce, CodeRabbit and a live model** are blocked on accounts and approvals the owner has not given (C-32 to C-34).
+- **The README media have not had an independent render review.** The console and media cases now run and pass (C-30, C-31, C-33 to C-35), and the media decode with valid provenance. But F6-A3 waits for a reviewer other than the media builder, so the harness verdict is `LOOP`, not ready (C-32). Every capture's manual visual review is pending, and GitHub rendering is NOT_RUN because nothing is published (C-55).
+- **AX on Agent Substrate** is designed and blocked. The custom runner passed its contract tests under plain Docker, which says nothing about gVisor. AX does not read the agent command's exit status back, so in the design the collector, not the task phase, decides the outcome (C-50, C-57).
+- **Salesforce, CodeRabbit and a live model** are blocked on accounts and approvals the owner has not given (C-51 to C-53).
 - **Egress counting** for the optional lanes relies on shims for provider command-line tools. Routing Node's own traffic through the counting proxy is unproven (L-023).
-- **Blind holdouts** have not been run. The public challenge cases are reproducible, not secret (C-35).
+- **Blind holdouts** have not been run. The public challenge cases are reproducible, not secret (C-54).
 
-<!-- media: profile-boundaries -->
+<!-- media: profile-boundaries (run d7b27d50; C-41) -->
 
 ## Reproduce it
 
@@ -119,6 +125,6 @@ npm run bench
 
 Your run produces new run IDs. Compare observations and statuses with the claim ledger, not the IDs. If yours differ, that is a finding, and the ledger is where it belongs.
 
-<!-- media: slack-service-request -->
+<!-- media: slack-service-request (run d7b27d50, W01-H; C-41) -->
 
 The standard I wanted is modest and checkable: someone else can inspect the request, follow the action, challenge the result and rerun the case.
