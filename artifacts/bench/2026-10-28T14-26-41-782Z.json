@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-28T14:26:41.782Z",
+  "environment": {
+    "os": "macOS 27.0.1",
+    "arch": "arm64",
+    "cpu_count": 18,
+    "ram_gib": 128,
+    "node": "v24.22.1",
+    "npm": "11.19.1",
+    "docker_server": "29.9.2",
+    "load_average_at_start": [
+      7.95,
+      18.76,
+      21.87
+    ],
+    "candidate": {
+      "revision": "4935584e6a8eb6f076c7b3b87331034779e4a605",
+      "tree_sha": "721110b062ecde0e2941943b6fb685114b07a9a6",
+      "dirty": false
+    }
+  },
+  "stages": [
+    "setup",
+    "workflows",
+    "collect",
+    "runall"
+  ],
+  "setup": {
+    "method": "npm ci in a temp copy of package.json + package-lock.json (+ postinstall patch script); cold = empty temp npm_config_cache, warm = default cache",
+    "cold_npm_ci": {
+      "raw": [
+        {
+          "seconds": 3.8,
+          "exit_code": 0
+        },
+        {
+          "seconds": 4.1,
+          "exit_code": 0
+        },
+        {
+          "seconds": 4,
+          "exit_code": 0
+        }
+      ],
+      "summary_seconds": {
+        "n": 3,
+        "min": 3.8,
+        "median": 4,
+        "max": 4.1
+      }
+    },
+    "warm_npm_ci": {
+      "raw": [
+        {
+          "seconds": 11.1,
+          "exit_code": 0
+        },
+        {
+          "seconds": 3.5,
+          "exit_code": 0
+        },
+        {
+          "seconds": 3.4,
+          "exit_code": 0
+        }
+      ],
+      "summary_seconds": {
+        "n": 3,
+        "min": 3.4,
+        "median": 3.5,
+        "max": 11.1
+      }
+    },
+    "image_pull": {
+      "status": "NOT_RUN",
+      "reason": "Removing the pinned Floci image could disrupt other lab runs sharing this Docker host; cold pull not measured."
+    }
+  },
+  "workflows": {
+    "method": "poll every 10 ms with the collector's clients; resolution is one poll plus one observation",
+    "W01": {
+      "run_id": "42bb1f6b-e41b-4de2-b46a-e62631e3eb50",
+      "raw": [
+        {
+          "rep": 1,
+          "callback_to_verified_ms": 71,
+          "post_to_verified_ms": 84,
+          "verified": true,
+          "observe_ms": 5
+        },
+        {
+          "rep": 2,
+          "callback_to_verified_ms": 19,
+          "post_to_verified_ms": 21,
+          "verified": true,
+          "observe_ms": 4
+        },
+        {
+          "rep": 3,
+          "callback_to_verified_ms": 17,
+          "post_to_verified_ms": 19,
+          "verified": true,
+          "observe_ms": 4
+        },
+        {
+          "rep": 4,
+          "callback_to_verified_ms": 17,
+          "post_to_verified_ms": 19,
+          "verified": true,
+          "observe_ms": 4
+        },
+        {
+          "rep": 5,
+          "callback_to_verified_ms": 18,
+          "post_to_verified_ms": 19,
+          "verified": true,
+          "observe_ms": 4
+        }
+      ],
+      "callback_to_verified_ms": {
+        "n": 5,
+        "min": 17,
+        "median": 18,
+        "max": 71
+      },
+      "observe_ms": {
+        "n": 5,
+        "min": 4,
+        "median": 4,
+        "max": 5
+      },
+      "unverified_reps": []
+    },
+    "W02": {
+      "run_id": "84a91a9a-dadf-4a07-973e-4fb4b88c74f5",
+      "raw": [
+        {
+          "rep": 1,
+          "callback_to_verified_ms": 27,
+          "post_to_verified_ms": 31,
+          "verified": true,
+          "observe_ms": 5
+        },
+        {
+          "rep": 2,
+          "callback_to_verified_ms": 23,
+          "post_to_verified_ms": 25,
+          "verified": true,
+          "observe_ms": 4
+        },
+        {
+          "rep": 3,
+          "callback_to_verified_ms": 22,
+          "post_to_verified_ms": 24,
+          "verified": true,
+          "observe_ms": 4
+        },
+        {
+          "rep": 4,
+          "callback_to_verified_ms": 23,
+          "post_to_verified_ms": 26,
+          "verified": true,
+          "observe_ms": 3
+        },
+        {
+          "rep": 5,
+          "callback_to_verified_ms": 20,
+          "post_to_verified_ms": 22,
+          "verified": true,
+          "observe_ms": 4
+        }
+      ],
+      "callback_to_verified_ms": {
+        "n": 5,
+        "min": 20,
+        "median": 23,
+        "max": 27
+      },
+      "observe_ms": {
+        "n": 5,
+        "min": 3,
+        "median": 4,
+        "max": 5
+      },
+      "unverified_reps": []
+    },
+    "W03": {
+      "run_id": "5b7acbfe-1b97-4b9a-8564-974a1c64d49f",
+      "raw": [
+        {
+          "rep": 1,
+          "callback_to_verified_ms": 41,
+          "post_to_verified_ms": 52,
+          "verified": true,
+          "observe_ms": 1
+        },
+        {
+          "rep": 2,
+          "callback_to_verified_ms": 15,
+          "post_to_verified_ms": 16,
+          "verified": true,
+          "observe_ms": 1
+        },
+        {
+          "rep": 3,
+          "callback_to_verified_ms": 14,
+          "post_to_verified_ms": 16,
+          "verified": true,
+          "observe_ms": 1
+        },
+        {
+          "rep": 4,
+          "callback_to_verified_ms": 14,
+          "post_to_verified_ms": 15,
+          "verified": true,
+          "observe_ms": 1
+        },
+        {
+          "rep": 5,
+          "callback_to_verified_ms": 13,
+          "post_to_verified_ms": 14,
+          "verified": true,
+          "observe_ms": 1
+        }
+      ],
+      "callback_to_verified_ms": {
+        "n": 5,
+        "min": 13,
+        "median": 14,
+        "max": 41
+      },
+      "observe_ms": {
+        "n": 5,
+        "min": 1,
+        "median": 1,
+        "max": 1
+      },
+      "unverified_reps": []
+    }
+  },
+  "collect_case": {
+    "method": "lab collect-case --case F3-A1, whole command",
+    "raw": [
+      {
+        "seconds": 3.3,
+        "exit_code": 0,
+        "run_id": "e16abef0-6171-4dbe-8bcd-04fde5275f32"
+      },
+      {
+        "seconds": 3.1,
+        "exit_code": 0,
+        "run_id": "95abc1a9-59ad-428c-bfb2-68a5d066c6e3"
+      },
+      {
+        "seconds": 3.3,
+        "exit_code": 0,
+        "run_id": "05330766-c388-4726-8f28-1f7bf944d6ec"
+      }
+    ],
+    "summary_seconds": {
+      "n": 3,
+      "min": 3.1,
+      "median": 3.3,
+      "max": 3.3
+    }
+  },
+  "run_all": {
+    "seconds": 260.6,
+    "exit_code": 2,
+    "verdict": "BLOCKED"
+  },
+  "load_average_at_end": [
+    11.86,
+    15.46,
+    19.59
+  ],
+  "note": "Single laptop, other workloads running, small n. Raw values are the result; min/median/max are descriptive only."
+}
