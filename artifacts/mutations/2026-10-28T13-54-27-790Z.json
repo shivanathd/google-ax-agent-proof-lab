@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-28T13:54:27.790Z",
+  "candidate": {
+    "revision": "bbd74fd13f6d59e3fd4d2bbab2568d9cb2b2d1c8",
+    "tree_sha": "21f8d7e7cf023984d4c129405a15dae9f4349b8f",
+    "dirty": false
+  },
+  "candidate_restored": true,
+  "summary": {
+    "caught": 3,
+    "uncaught": 0,
+    "invalid": 1
+  },
+  "results": [
+    {
+      "mutant": "01-disable-dedupe",
+      "patch": "tests/mutations/01-disable-dedupe.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/slack.test.ts -t \"F2-A2\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py F2-A2",
+          "status": "FAIL"
+        }
+      ],
+      "seconds": 12
+    },
+    {
+      "mutant": "02-bypass-approval",
+      "patch": "tests/mutations/02-bypass-approval.patch",
+      "verdict": "invalid",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "FAIL"
+        }
+      ],
+      "reason": "mutant does not typecheck",
+      "seconds": 1
+    },
+    {
+      "mutant": "03-reply-before-receipt",
+      "patch": "tests/mutations/03-reply-before-receipt.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/workflows.test.ts -t \"W01-S\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py S2",
+          "status": "FAIL"
+        }
+      ],
+      "seconds": 16
+    },
+    {
+      "mutant": "04-missing-evidence-success",
+      "patch": "tests/mutations/04-missing-evidence-success.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/evidence.test.ts -t \"G-UNKNOWN|PASS needs\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py F4-A1",
+          "status": "PASS"
+        }
+      ],
+      "seconds": 9
+    }
+  ],
+  "note": "Counts are of these probes only; they do not show the application is free of other defects."
+}
