@@ -85,7 +85,8 @@ export async function startWorkspace(
   };
 }
 
-// Test-coordinator-only simulator calls; they need the setup token, which the worker never holds.
+// Test-coordinator simulator calls. Emulate accepts ANY valid token here, the worker's bot token included
+// (LEARNINGS L-019); the worker is kept out by its Slack proxy (worker-proxy.ts), not by token scope.
 export async function simulate(ws: Workspace, route: "event-retry" | "block-actions", body: object) {
   const r = await fetch(`${ws.url}/_slack/simulate/${route}`, {
     method: "POST", headers: { authorization: `Bearer ${ws.tokens.setup}`, "content-type": "application/json" }, body: JSON.stringify(body),
