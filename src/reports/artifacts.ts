@@ -8,6 +8,7 @@ import { ROOT } from "../config/run-config.ts";
 import { assertContract } from "../contracts/validate.ts";
 import type { ProfileName } from "../contracts/profile.ts";
 import { buildReport, reportMarkdown, verifyChecksums, writeChecksums, type Bundle } from "./report.ts";
+import { scenario } from "./scenarios.ts";
 
 export const SPEC_CASES = join(ROOT, "docs/spec/active/2026-10-28-agent-proof-lab/evals/cases.json");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -20,8 +21,11 @@ export function artifactDir(runId: string) {
 
 export function expectationsFor(caseId: string): Record<string, boolean | number | string> {
   const cases = JSON.parse(readFileSync(SPEC_CASES, "utf8"));
-  if (!cases[caseId]) throw new Error(`unknown case ${caseId}`);
-  return cases[caseId].expected;
+  // Console scenarios (src/reports/scenarios.ts) reuse a supplied case's expectations or a CASEBOOK row.
+  const s = scenario(caseId);
+  const expected = cases[caseId]?.expected ?? (s?.expected_from ? cases[s.expected_from]?.expected : s?.expected);
+  if (!expected) throw new Error(`unknown case ${caseId}`);
+  return expected;
 }
 
 export const readBundle = (dir: string) => assertContract<Bundle>("observation-bundle", JSON.parse(readFileSync(join(dir, "observations.json"), "utf8")));

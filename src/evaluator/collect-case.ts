@@ -65,7 +65,16 @@ function writeUnexecuted(caseId: string, output: string, execution: "BLOCKED" | 
   writeFileSync(output, `${JSON.stringify(bundle, null, 2)}\n`);
 }
 
-export async function collectCase(caseId: string, output: string): Promise<number> {
+// Optional observers for the teaching console (src/console): they see the live handle and phase changes but
+// never alter the stimulus, the collector or the report.
+export interface CollectHooks {
+  onStarted?: (h: RunHandle) => Promise<void> | void;
+  onPhase?: (phase: "running" | "collecting" | "stopping" | "reported", runId: string) => void;
+  beforeStop?: (h: RunHandle) => Promise<void>;
+  onSnapshot?: (phase: string, h: RunHandle) => Promise<void>; // after the collector took the case's own snapshot
+}
+
+export async function collectCase(caseId: string, output: string, hooks: CollectHooks = {}): Promise<number> {
   const entry = CASES[caseId];
   if (!entry) throw new Error(`unknown case ${caseId}`);
   if (!isAbsolute(output)) throw new Error("--output must be an absolute path");
@@ -84,6 +93,7 @@ export async function collectCase(caseId: string, output: string): Promise<numbe
   const runId = h.manifest.config.run_id;
   const scratch = mkdtempSync(join(tmpdir(), "apl-case-"));
   const faults: string[] = [];
+  const deferred: (() => Promise<void> | void)[] = [];
   const refs: Record<string, unknown> = { faults };
   const collector = spawnCollector(collectorConfig(h, caseId, output, def));
   let stopped: Awaited<ReturnType<RunHandle["stop"]>> | undefined;
@@ -91,22 +101,33 @@ export async function collectCase(caseId: string, output: string): Promise<numbe
     const info = (await collector.next()) as CollectorInfo & { ready?: boolean };
     if (!info.ready) throw new Error("collector did not start");
     if (h.workspaces.length && def.worker !== false) await h.startWorker(def.worker?.(h, info) ?? {});
+    await hooks.onStarted?.(h);
+    hooks.onPhase?.("running", runId);
     const x: Exec = {
       h, info, scratch,
       ref: (k, v) => void (refs[k] = v),
       fault: (d) => void faults.push(d),
-      snapshot: async (phase) => void (await collector.ask({ op: "snapshot", name: phase, refs })),
+      snapshot: async (phase) => {
+        await collector.ask({ op: "snapshot", name: phase, refs });
+        await hooks.onSnapshot?.(phase, h);
+      },
+      defer: (fn) => void deferred.push(fn),
     };
     await def.execute(x);
+    hooks.onPhase?.("collecting", runId);
     const done = await collector.ask({ op: "finish", refs });
     if (!done.done) throw new Error("collector did not finish");
+    await hooks.beforeStop?.(h);
+    hooks.onPhase?.("stopping", runId);
   } finally {
+    for (const fn of deferred.reverse()) await Promise.resolve(fn()).catch(() => undefined);
     if (collector.child.exitCode === null) collector.child.kill("SIGKILL");
     stopped = await h.stop();
     rmSync(scratch, { recursive: true, force: true });
   }
   writeRunArtifacts(h, caseId, started_at, stopped);
   await generateReport(runId, { cleanup_status: stopped.cleanup_status, cleanup_remaining: stopped.remaining, started_at, ended_at: new Date().toISOString() });
+  hooks.onPhase?.("reported", runId);
   return 0;
 }
 

@@ -12,6 +12,7 @@ export interface Exec {
   ref: (key: string, value: unknown) => void; // stimulus identity passed to the collector (never expectations)
   fault: (description: string) => void;     // labels a simulated fault in the bundle and report
   snapshot: (phase: string) => Promise<void>;
+  defer: (fn: () => Promise<void> | void) => void; // coordinator cleanup run after the collector finishes
 }
 
 export interface CaseDef {

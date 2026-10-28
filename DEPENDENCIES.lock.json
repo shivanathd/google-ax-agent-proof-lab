@@ -72,7 +72,18 @@
       "version": "7.0.2",
       "integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
       "license": "Apache-2.0"
+    },
+    "marked": {
+      "version": "18.1.1",
+      "integrity": "sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg==",
+      "license": "MIT",
+      "published": "2026-10-12",
+      "purpose": "local Markdown-to-HTML render for `lab readme verify --local` (Task 6.1); not GitHub's renderer"
     }
+  },
+  "media_tools": {
+    "ffmpeg": { "version": "6.0", "source": "host binary on PATH (checked by `lab media doctor`)", "encoders": ["gif (palettegen/paletteuse)", "libx264", "png"] },
+    "playwright_chromium": { "source": "`npx playwright install chromium` for @playwright/test 1.64.1", "purpose": "console capture and README render checks" }
   },
   "images": {
     "floci": {
