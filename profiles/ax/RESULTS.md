@@ -168,3 +168,20 @@ Running: Substrate v0.6.0 in `ate-system`; AX in `ax-system`; the lab namespace 
 - `teardown.sh <run-dir>`: deletes the AX tasks and workspaces, the run's atespace, the lab namespace and `ax-system` with the AX ClusterRole, ClusterRoleBinding and PV, the run's snapshot prefixes and the Artifact Registry repo. It leaves Substrate v0.6.0 and the transfer service account and grants in place and prints them, because the v0.6.0 api-server will not start without them. Its diff treats the reinstall's own changes (`reinstall-delta.json`) as expected.
 - `--remove-substrate-iam`: also removes exactly the three recorded grants, then the account. It warns that Substrate v0.6.0 breaks.
 - `--restore-substrate-v05` (since the final review it also needs `--yes-clear-node-image-cache`, and the cache is cleared by Pods labelled `apl-run=<run_id>` that the script creates and deletes by that label): also deletes v0.6.0, clears the nodes' image cache, deploys the recorded `603e006` build with its install record, restores the pre-reinstall `pg_dump`, recreates the demo WorkerPools at their recorded replicas, switches `kubectl-ate` back to v0.5.0, then removes the account and grants. Never executed. Whether the restored suspended actors resume is UNKNOWN, because the actor-identity keys are regenerated on install.
+
+## Teardown (2026-10-29, owner-approved default mode)
+
+`profiles/ax/teardown.sh <run-dir>` (default mode) ran with the run's dedicated kubeconfig and exited 0, after the run dir was brought into line with `run-dir.schema.json` (`kube_context` added, an empty `atespace` field removed; the original manifest is kept beside it in the gitignored run dir). The script's post-snapshot diff against `pre-snapshot.json` reported no unexpected changes; every difference traced to the owner-accepted Substrate reinstall (`reinstall-delta.json`).
+
+Checked independently afterwards, with read-only queries rather than the script's own report:
+
+| Resource | After teardown |
+|---|---|
+| Lab namespace `apl-ax-<short>` and `ax-system` | NotFound |
+| ClusterRole and ClusterRoleBinding `ax-server`, the 10 GiB PersistentVolume and its Compute disk | NotFound / absent |
+| Private Artifact Registry repo `<registry>` (all four images) | absent |
+| Run-owned snapshot prefixes in `<snapshot-bucket>` | 0 objects |
+| Substrate v0.6.0 in `ate-system` | left in place on purpose; 11 of 11 pods Running |
+| Transfer service account and its three grants | left in place on purpose (the v0.6.0 API server needs them) |
+
+`ax delete task` returned NotFound for tasks already removed during the runs; the script continued, as designed. The demo and benchmark WorkerPools were deleted by the Substrate reinstall, so there was nothing to restore. Remaining owner options: `--remove-substrate-iam` (breaks Substrate v0.6.0) or `--restore-substrate-v05 --yes-clear-node-image-cache` (previous build plus the pre-reinstall database dump; whether the old demo actors resume is unknown).
