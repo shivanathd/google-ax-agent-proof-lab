@@ -11,6 +11,7 @@ const TASKS: Record<string, TaskSpec> = {
   "1.1": { tests: ["tests/unit/config.test.ts", "tests/integration/lifecycle.test.ts"], docker: true, cases: ["F1-A1", "F1-A2"] },
   "2.1": { tests: ["tests/unit/slack.test.ts", "tests/integration/slack.test.ts"], docker: true, cases: ["F2-A1", "F2-A2"] },
   "3.1": { tests: ["tests/unit/policy.test.ts", "tests/integration/workflows.test.ts"], docker: true, cases: ["F3-A1", "F3-A2", "F3-A3"] },
+  "5.1": { tests: ["tests/integration/profiles.test.ts", "tests/integration/ax-profile.test.ts"], docker: false, cases: ["F5-A1", "F5-A2"] },
 };
 
 const id = process.argv[2] ?? "";
