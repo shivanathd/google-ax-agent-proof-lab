@@ -14,7 +14,7 @@ import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { assertContract } from "../../src/contracts/validate.ts";
 import { collectCase, collectorConfig, collectorEnv, COLLECTOR_AWS } from "../../src/evaluator/collect-case.ts";
 import { CASES } from "../../src/collector/cases/index.ts";
-import { aggregate, assess, buildReport, lanesFrom, verifyChecksums, writeChecksums, type Bundle } from "../../src/reports/report.ts";
+import { aggregate, assess, buildReport, lanesFrom, reportMarkdown, verifyChecksums, writeChecksums, type Bundle } from "../../src/reports/report.ts";
 import { generateReport } from "../../src/reports/artifacts.ts";
 import { exportRun } from "../../src/reports/export.ts";
 import { verifyRun } from "../../src/cli/commands/verify.ts";
@@ -79,6 +79,13 @@ describe("C4/C5 schema validation", () => {
     ]) expect(() => assertContract("observation-bundle", JSON.parse(JSON.stringify(bad)))).toThrow();
     expect(() => assertContract("run-report", { ...report, schema_version: 2 })).toThrow();
     expect(() => assertContract("run-report", { ...report, status: "GREEN" })).toThrow();
+  });
+
+  it("F2-R6: every report discloses the unsupported Slack transport features, so report.md and the console show it", () => {
+    const report = buildReport({ bundle: bundle(), expected: { ticket_count: 1 } });
+    const line = report.limitations.find((l) => l.startsWith("Slack transport limits"));
+    for (const feature of ["Socket Mode", "slash commands", "shortcuts", "exact rate limiting", "button actions and modal submissions"]) expect(line, feature).toContain(feature);
+    expect(reportMarkdown(report)).toContain(`- ${line}`);
   });
 });
 

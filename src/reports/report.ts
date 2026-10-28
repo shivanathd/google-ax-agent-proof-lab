@@ -93,6 +93,7 @@ export function buildReport(o: {
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them.",
+    "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces.",
     ...(o.limitations ?? []),
   ];
   const report = {
