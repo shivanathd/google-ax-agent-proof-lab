@@ -3,81 +3,81 @@
   "clip": "clip-emulator-vs-real-org",
   "title": "Emulator versus real org",
   "run_ids": [
-    "585182e9-b6b4-41aa-b812-13475d79f0d4"
+    "581e434c-a178-47fe-ae7a-3ff59b4a38b9"
   ],
   "scenario_ids": [
     "W03-V"
   ],
-  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
-  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
-  "application_tree_sha256": "263e2c182a74e4796af18dbce4077ff94ea36e11270f26e9fa051f594fe361ff",
+  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
+  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "application_tree_sha256": "ca30f76f48fa4dc0c342018ac67831e3909782e1518cd6a871bf5bdce3e4ae73",
   "profile": "local",
   "mode": "scripted",
-  "recorded_at": "2026-10-28T14:56:47.362Z",
+  "recorded_at": "2026-10-28T15:13:18.758Z",
   "marks": [
     {
       "t_ms": 0,
       "label": "console loaded"
     },
     {
-      "t_ms": 35,
+      "t_ms": 59,
       "label": "select W03-V"
     },
     {
-      "t_ms": 2038,
+      "t_ms": 2065,
       "label": "dwell 2000ms"
     },
     {
-      "t_ms": 2038,
+      "t_ms": 2065,
       "label": "run clicked W03-V"
     },
     {
-      "t_ms": 7108,
+      "t_ms": 7159,
       "label": "reported W03-V"
     },
     {
-      "t_ms": 11112,
+      "t_ms": 11164,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 11138,
+      "t_ms": 11204,
       "label": "tab report"
     },
     {
-      "t_ms": 15142,
+      "t_ms": 15209,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 15173,
+      "t_ms": 15241,
       "label": "tab profiles"
     },
     {
-      "t_ms": 19176,
+      "t_ms": 19244,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 23273,
+      "t_ms": 23362,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 23273,
+      "t_ms": 23362,
       "label": "end"
     }
   ],
   "original_capture": "boundary-frames.json",
-  "original_capture_sha256": "6bd5769bee3048ad7dae06f38a2688d293dc01a717aa33cfc2fdfe241234f41b",
+  "original_capture_sha256": "75a8794ea03a549971f22bc5f360ae426308800d3aab3aa83fbfc9d67d704945",
   "webm_cross_check": "boundary.webm",
-  "webm_sha256": "225ae5b2959041482353bfa98b7dffe52188b1cd0bff12959eeb9dfbb534e485",
-  "mp4_sha256": "0d153622128d83545836069033e8184eea3e223bc265e6b9722079d36d010583",
+  "webm_sha256": "9cf2ca88ce635af701c748645235f4a0a547baca5acd7a8969b1539ccba82280",
+  "mp4_sha256": "0d7ee0b4be1dd0476ca8fce1413f9c03a77fa9d4736a65526754990d239a802e",
   "edits": [
-    "trimmed to 0.34-23.62 s of the source capture",
+    "trimmed to 2.84-26.20 s of the source capture",
     "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
     "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
     "captions: emulator-vs-real-org.vtt (WebVTT, generated from capture marks and the run report)"
   ],
   "evidence_refs": [
-    "docs/evidence/585182e9-b6b4-41aa-b812-13475d79f0d4/report.json",
-    "docs/evidence/585182e9-b6b4-41aa-b812-13475d79f0d4/observations.json"
+    "docs/evidence/581e434c-a178-47fe-ae7a-3ff59b4a38b9/report.json",
+    "docs/evidence/581e434c-a178-47fe-ae7a-3ff59b4a38b9/observations.json"
   ],
   "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
 }

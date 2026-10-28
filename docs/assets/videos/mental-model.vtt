@@ -1,43 +1,43 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:00.039
+00:00:00.000 --> 00:00:00.034
 Five questions: where the work runs, what it connects to, what it is allowed to do, what happened, and what we can claim.
 
 2
-00:00:00.039 --> 00:00:04.042
+00:00:00.034 --> 00:00:04.039
 Scenario W01-H: Service request. Dana asks LabBot to log an offline printer; expect one ticket, one S3 receipt and one reply in the same thread.
 
 3
-00:00:04.042 --> 00:00:08.608
+00:00:04.039 --> 00:00:10.140
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 4
-00:00:08.608 --> 00:00:12.691
-Collector report for run d14db4a9: PASS PASS: all 4 required assertions passed with evidence (local integration run (scripted driver))
+00:00:10.140 --> 00:00:14.217
+Collector report for run fed9685f: PASS PASS: all 4 required assertions passed with evidence (local integration run (scripted driver))
 
 5
-00:00:12.691 --> 00:00:17.719
+00:00:14.217 --> 00:00:19.232
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
 
 6
-00:00:17.719 --> 00:00:17.756
+00:00:19.232 --> 00:00:19.263
 Back to the emulated Slack thread and the before/after state.
 
 7
-00:00:17.756 --> 00:00:21.759
+00:00:19.263 --> 00:00:23.267
 Scenario W01-F: Missing receipt (injected fault). Same as W01-H, but the test coordinator deletes the S3 receipt after the worker reports success; the W01 completion check must FAIL.
 
 8
-00:00:21.759 --> 00:00:26.326
+00:00:23.267 --> 00:00:27.281
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 9
-00:00:26.326 --> 00:00:30.357
-Collector report for run 1990fdf4: FAIL NOT A SUCCESS: local core FAIL
+00:00:27.281 --> 00:00:31.298
+Collector report for run ca8e55fb: FAIL NOT A SUCCESS: local core FAIL
 Required assertions not passing: receipt_count (FAIL), receipt_matches_request (FAIL).
 Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)
 
 10
-00:00:30.357 --> 00:00:36.361
+00:00:31.298 --> 00:00:37.301
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.

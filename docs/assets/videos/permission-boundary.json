@@ -3,77 +3,77 @@
   "clip": "clip-permission-boundary",
   "title": "Permission boundary",
   "run_ids": [
-    "ab826d01-5a95-481d-bdee-c204fe2381fa"
+    "493034f5-af80-47da-9994-eb6b5142b363"
   ],
   "scenario_ids": [
     "W02-U"
   ],
-  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
-  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
-  "application_tree_sha256": "263e2c182a74e4796af18dbce4077ff94ea36e11270f26e9fa051f594fe361ff",
+  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
+  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "application_tree_sha256": "ca30f76f48fa4dc0c342018ac67831e3909782e1518cd6a871bf5bdce3e4ae73",
   "profile": "local",
   "mode": "scripted",
-  "recorded_at": "2026-10-28T14:56:47.362Z",
+  "recorded_at": "2026-10-28T15:13:18.758Z",
   "marks": [
     {
       "t_ms": 0,
       "label": "console loaded"
     },
     {
-      "t_ms": 37,
+      "t_ms": 45,
       "label": "select W02-U"
     },
     {
-      "t_ms": 1041,
+      "t_ms": 1049,
       "label": "dwell 1000ms"
     },
     {
-      "t_ms": 1041,
+      "t_ms": 1049,
       "label": "run clicked W02-U"
     },
     {
-      "t_ms": 5719,
+      "t_ms": 6339,
       "label": "reported W02-U"
     },
     {
-      "t_ms": 8727,
+      "t_ms": 9345,
       "label": "dwell 3000ms"
     },
     {
-      "t_ms": 9023,
+      "t_ms": 9510,
       "label": "tab report"
     },
     {
-      "t_ms": 13028,
+      "t_ms": 13513,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 13053,
+      "t_ms": 13527,
       "label": "tab workflow"
     },
     {
-      "t_ms": 15057,
+      "t_ms": 15531,
       "label": "dwell 2000ms"
     },
     {
-      "t_ms": 15057,
+      "t_ms": 15531,
       "label": "end"
     }
   ],
   "original_capture": "w02u-frames.json",
-  "original_capture_sha256": "c24c3b2d81494dfa095c7ef6ac1a4ae6a000129559739acbc2232d6846dc04c8",
+  "original_capture_sha256": "879ca2365c04837809ae05ca8d2101fd3c03c814e1ec9c8b7b710b40a6aba66d",
   "webm_cross_check": "w02u.webm",
-  "webm_sha256": "6ccd4945342c79755563417940bfd87a8f92ef3a3ac0cf6b4a44767d578fab43",
-  "mp4_sha256": "a9a894d35162b30a975391722c944300af511c234cda5b62ff92862d8a3876cb",
+  "webm_sha256": "1180982a1b78cc2a90a8721ec6aa5e9a6e4896606c5519d55c5d9a872940b3e7",
+  "mp4_sha256": "40572d3a277501373023efa6ed19eb09838ff2f8059cc86e9f3afd3185715e35",
   "edits": [
-    "trimmed to 0.41-15.47 s of the source capture",
+    "trimmed to 0.39-15.92 s of the source capture",
     "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
     "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
     "captions: permission-boundary.vtt (WebVTT, generated from capture marks and the run report)"
   ],
   "evidence_refs": [
-    "docs/evidence/ab826d01-5a95-481d-bdee-c204fe2381fa/report.json",
-    "docs/evidence/ab826d01-5a95-481d-bdee-c204fe2381fa/observations.json"
+    "docs/evidence/493034f5-af80-47da-9994-eb6b5142b363/report.json",
+    "docs/evidence/493034f5-af80-47da-9994-eb6b5142b363/observations.json"
   ],
   "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
 }

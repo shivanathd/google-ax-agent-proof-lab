@@ -1,25 +1,25 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:00.037
+00:00:00.000 --> 00:00:00.045
 The requester cannot approve their own request. The action should fail without changing the record.
 
 2
-00:00:00.037 --> 00:00:01.041
+00:00:00.045 --> 00:00:01.049
 Scenario W02-U: Self-approval denied. Dana clicks Approve on her own request, then Gus (no grant) tries; expect both refused and the request unchanged.
 
 3
-00:00:01.041 --> 00:00:05.719
+00:00:01.049 --> 00:00:06.339
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 4
-00:00:05.719 --> 00:00:09.023
-Collector report for run ab826d01: PASS PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))
+00:00:06.339 --> 00:00:09.510
+Collector report for run 493034f5: PASS PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))
 
 5
-00:00:09.023 --> 00:00:13.053
+00:00:09.510 --> 00:00:13.527
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
 
 6
-00:00:13.053 --> 00:00:15.057
+00:00:13.527 --> 00:00:15.531
 Back to the emulated Slack thread and the before/after state.
