@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { ROOT } from "../../config/run-config.ts";
-import { childEnv } from "../../config/env.ts";
+import { childEnv, browsersPath } from "../../config/env.ts";
 import { lab, waitFor } from "../drive.ts";
 import type { Probe } from "../probe.ts";
 import type { Exec } from "../types.ts";
@@ -97,8 +97,11 @@ export async function screenshotEvidence(p: Probe, page: Page, name: string) {
   p.evidence.push({ path: rel, sha256: createHash("sha256").update(readFileSync(file)).digest("hex"), source: "browser screenshot (collector's own Chromium)", observations: [] });
 }
 
+// `lab media|readme verify` children drive a browser under the scoped HOME, so they need the browser cache path too
+// (LEARNINGS L-057); it is a path, not a config.
 export async function labJson(args: string[], extra: Record<string, string> = {}) {
-  const r = await lab(args, { ...childEnv(process.env, extra), ...extra });
+  const env = { PLAYWRIGHT_BROWSERS_PATH: browsersPath(process.env), ...extra };
+  const r = await lab(args, { ...childEnv(process.env, env), ...env });
   let json: any = null;
   try {
     json = JSON.parse(r.stdout);
