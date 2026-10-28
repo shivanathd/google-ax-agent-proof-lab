@@ -49,7 +49,7 @@ describe("worker environment (BUILD_PLAN §8.5)", () => {
     }
     for (const forbidden of ["xoxa-ambient", "ambient-profile", "sk-ambient", "simulate"]) expect(flat).not.toContain(forbidden);
     expect(Object.keys(env).sort()).toEqual(
-      ["APL_WORKER", "AWS_ACCESS_KEY_ID", "AWS_CONFIG_FILE", "AWS_EC2_METADATA_DISABLED", "AWS_REGION", "AWS_SECRET_ACCESS_KEY", "AWS_SHARED_CREDENTIALS_FILE", "NODE_ENV", "PATH"],
+      ["APL_WORKER", "AWS_ACCESS_KEY_ID", "AWS_CONFIG_FILE", "AWS_EC2_METADATA_DISABLED", "AWS_REGION", "AWS_SECRET_ACCESS_KEY", "AWS_SHARED_CREDENTIALS_FILE", "HOME", "NODE_ENV", "PATH"],
     );
   });
 

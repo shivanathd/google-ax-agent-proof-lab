@@ -33,9 +33,12 @@ export function collectorConfig(h: RunHandle, caseId: string, output: string, de
   };
 }
 
-export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg) });
+// HOME is a run-owned dir next to the run manifest, never the developer's.
+const collectorHome = (cfg: CollectorConfig) => join(dirname(cfg.manifest_path), "collector-home");
+export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg), HOME: collectorHome(cfg) });
 
 function spawnCollector(cfg: CollectorConfig) {
+  mkdirSync(collectorHome(cfg), { recursive: true });
   const child: ChildProcess = spawn(process.execPath, ["--import", "tsx", "src/collector/main.ts"], { cwd: ROOT, env: collectorEnv(cfg), stdio: ["pipe", "pipe", "inherit"] });
   const lines = createInterface({ input: child.stdout! })[Symbol.asyncIterator]();
   const next = async () => {

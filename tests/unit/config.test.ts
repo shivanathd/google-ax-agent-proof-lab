@@ -5,6 +5,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createRunConfig, validateRunConfig } from "../../src/config/run-config.ts";
 import { assertAllowedEndpoint, EndpointRejected, guardAwsClient, guardedFetch, type Rejection } from "../../src/config/endpoints.ts";
 import { childEnv, sanitizeProcessEnv } from "../../src/config/env.ts";
+import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { composeProject, runDir } from "../../src/config/manifest.ts";
 import { laneStatuses, profileDoctor, profileRun } from "../../src/config/profiles.ts";
 import { flociClients } from "../../src/adapters/floci/clients.ts";
@@ -122,6 +123,17 @@ describe("credential hygiene (F1-R3)", () => {
     }
     expect(Object.values(env)).not.toContain("AKIAREAL");
     expect(childEnv(ambient, {}, { docker: true })).toHaveProperty("DOCKER_HOST");
+  });
+
+  it("child envs never carry the developer's HOME, so gcloud/kube/other CLI configs there are not discoverable", () => {
+    const env = childEnv(ambient, { APL_RUN_ID: "r" });
+    expect(env.HOME).toBeDefined();
+    expect(env.HOME).not.toBe("/home/lab");
+    expect(childEnv(ambient, { HOME: "/run-owned/home" }).HOME).toBe("/run-owned/home");
+    const w = workerConfig({ run_id: "0f8fad5b-d9cb-469f-a165-70867728950e", db_path: "/runs/r1/ledger.db", http_port: 9, allowlist: [] }, []);
+    expect(workerEnv(w, ambient).HOME).toBe("/runs/r1/worker-home");
+    // Docker's CLI context and credential store live under HOME; only the docker CLI child keeps it.
+    expect(childEnv(ambient, {}, { docker: true }).HOME).toBe("/home/lab");
   });
 
   it("strips ambient provider credentials from the coordinator process env", () => {

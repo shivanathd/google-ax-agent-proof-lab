@@ -1,6 +1,6 @@
 // Run lifecycle owned by the coordinator: per-run Floci compose project, ports and DB file; scoped teardown.
 import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { createWriteStream, existsSync, readFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { childEnv } from "./env.ts";
@@ -12,7 +12,7 @@ import { startWorkerSlackProxy } from "../adapters/slack/worker-proxy.ts";
 import { assertAllowedEndpoint } from "./endpoints.ts";
 import type { FaultProxy } from "../adapters/faults/proxy.ts";
 import { seedLedger } from "../ledger/seed.ts";
-import { workerConfig, workerEnv, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
+import { workerConfig, workerEnv, workerHome, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
 
 const run = promisify(execFile);
 export const RUN_LABEL = "dev.agent-proof-lab.run-id";
@@ -134,6 +134,7 @@ async function startWorker(h: RunHandle, w: WorkerOptions) {
     },
     h.workspaces, overrides,
   );
+  mkdirSync(workerHome(cfg), { recursive: true });
   const child = spawn(process.execPath, ["--import", "tsx", "src/worker/main.ts", "--run-id", m.config.run_id], {
     cwd: ROOT, env: workerEnv(cfg), stdio: ["ignore", "pipe", "pipe"],
   });
