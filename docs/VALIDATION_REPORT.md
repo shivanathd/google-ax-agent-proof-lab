@@ -1,5 +1,7 @@
 # Specification Package Validation
 
+> **Historical record.** This is the pre-implementation validation of the specification package, kept unchanged below. It is superseded for every claim about the implemented lab by the [claim ledger](CLAIM_LEDGER.md) and [learnings](LEARNINGS.md).
+
 Version 1.1.0, validated 28 October 2026. These results concern this specification and its verification helpers, not an implemented agent-testing application.
 
 ## Completed checks
