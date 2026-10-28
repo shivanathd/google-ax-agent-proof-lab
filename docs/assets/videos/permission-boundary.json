@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "clip": "clip-permission-boundary",
+  "title": "Permission boundary",
+  "run_ids": [
+    "ab826d01-5a95-481d-bdee-c204fe2381fa"
+  ],
+  "scenario_ids": [
+    "W02-U"
+  ],
+  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
+  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
+  "application_tree_sha256": "263e2c182a74e4796af18dbce4077ff94ea36e11270f26e9fa051f594fe361ff",
+  "profile": "local",
+  "mode": "scripted",
+  "recorded_at": "2026-10-28T14:56:47.362Z",
+  "marks": [
+    {
+      "t_ms": 0,
+      "label": "console loaded"
+    },
+    {
+      "t_ms": 37,
+      "label": "select W02-U"
+    },
+    {
+      "t_ms": 1041,
+      "label": "dwell 1000ms"
+    },
+    {
+      "t_ms": 1041,
+      "label": "run clicked W02-U"
+    },
+    {
+      "t_ms": 5719,
+      "label": "reported W02-U"
+    },
+    {
+      "t_ms": 8727,
+      "label": "dwell 3000ms"
+    },
+    {
+      "t_ms": 9023,
+      "label": "tab report"
+    },
+    {
+      "t_ms": 13028,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 13053,
+      "label": "tab workflow"
+    },
+    {
+      "t_ms": 15057,
+      "label": "dwell 2000ms"
+    },
+    {
+      "t_ms": 15057,
+      "label": "end"
+    }
+  ],
+  "original_capture": "w02u-frames.json",
+  "original_capture_sha256": "c24c3b2d81494dfa095c7ef6ac1a4ae6a000129559739acbc2232d6846dc04c8",
+  "webm_cross_check": "w02u.webm",
+  "webm_sha256": "6ccd4945342c79755563417940bfd87a8f92ef3a3ac0cf6b4a44767d578fab43",
+  "mp4_sha256": "a9a894d35162b30a975391722c944300af511c234cda5b62ff92862d8a3876cb",
+  "edits": [
+    "trimmed to 0.41-15.47 s of the source capture",
+    "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
+    "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
+    "captions: permission-boundary.vtt (WebVTT, generated from capture marks and the run report)"
+  ],
+  "evidence_refs": [
+    "docs/evidence/ab826d01-5a95-481d-bdee-c204fe2381fa/report.json",
+    "docs/evidence/ab826d01-5a95-481d-bdee-c204fe2381fa/observations.json"
+  ],
+  "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
+}

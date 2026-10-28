@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.030
+Deliver the same signed event again. A second delivery must not become a second business action.
+
+2
+00:00:00.030 --> 00:00:01.034
+Scenario W01-D: Duplicate delivery. After a completed request, the emulator re-delivers the same signed event; expect no new business record or reply.
+
+3
+00:00:01.034 --> 00:00:07.633
+Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
+
+4
+00:00:07.633 --> 00:00:10.765
+Collector report for run ae70bdf5: PASS PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))
+
+5
+00:00:10.765 --> 00:00:14.779
+Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
+
+6
+00:00:14.779 --> 00:00:16.784
+Back to the emulated Slack thread and the before/after state.
