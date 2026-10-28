@@ -52,12 +52,12 @@ The longer explanation is in [the mental model](docs/MENTAL_MODEL.md).
 
 ## Try it
 
-Tested on macOS 27 (arm64) with Node.js 24.22, npm 11.19 and Docker Desktop 29.9; other platforms are untested ([environment](docs/ENVIRONMENT.md)). Media capture additionally needs FFmpeg 6 and Playwright's Chromium.
+Tested on macOS 27 (arm64) with Node.js 24.22, npm 11.19 and Docker Desktop 29.9; other platforms are untested ([environment](docs/ENVIRONMENT.md)). You need Node.js 24 and Docker. FFmpeg 6 and Playwright's Chromium (`npx playwright install chromium`) are needed only for the console and media cases and for media capture. Export, media capture and F6-A2 also need a private-terms list you create yourself; without it they refuse to run (F6-A2 reports NOT_RUN). [Reproducing](docs/REPRODUCING.md#prerequisites) explains the list, the render review record and the optional pre-commit hook.
 
 ```bash
 npm ci                                   # also applies the pinned Emulate patch
 docker pull floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9
-npm run lab -- doctor                    # local prerequisites; optional lanes show BLOCKED
+npm run lab -- doctor                    # local prerequisites; optional lanes show SKIPPED (BLOCKED only if selected)
 npm run lab -- up --profile local        # prints run_id and console_url (loopback only)
 ```
 
@@ -75,7 +75,9 @@ npm run lab -- collect-case --case F3-A1 --output "$PWD/private-runs/manual/F3-A
 bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh
 ```
 
-Salesforce, CodeRabbit and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)). The AX lane was authorized and run on a GKE cluster under gVisor: W01-H, a failing-command case and sandbox isolation passed with independent collector evidence, and two termination assertions failed ([AX results](profiles/ax/RESULTS.md)).
+The supplied harness's current verdict is `LOOP`, not `LOCAL_CORE_READY`. In the harness run recorded in the [claim ledger](docs/CLAIM_LEDGER.md) (run H, with per-gate results) every task, feature and challenge gate passed except F6-A3, which stays FAIL until an independent render review record (`docs/assets/render-review.json`) exists. Run `run-all.sh` as above to reproduce it.
+
+Salesforce, CodeRabbit and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)). The AX lane was authorized and run on a GKE cluster under gVisor ([AX results](profiles/ax/RESULTS.md) §3.3, claims C-60 to C-69). Passed: W01-H as an AX task with independent collector evidence, a failing command's exit code 3 recorded while AX still showed `Running`, SIGTERM on worker eviction (from logs), resume after `ax suspend` keeping the workspace, sandbox isolation and router identity. Three assertions failed: `ax suspend` delivers no SIGTERM (C-62), `ax delete task` delivers none (C-63), and after a worker eviction followed by suspend and resume the result is lost (C-66).
 
 ## Watch the boundaries hold
 
@@ -155,7 +157,7 @@ Inline playback on GitHub needs a post-publication upload of these clips; until 
 - [Reproducing the media and evidence](docs/REPRODUCING.md) and [recordings](recordings/README.md)
 - [Recording runbook](docs/RECORDING_RUNBOOK.md), [README media contract](docs/README_MEDIA_SPEC.md), [storyboard](docs/README_STORYBOARD.md)
 - [Learnings: expected vs observed](docs/LEARNINGS.md) and [research register](docs/RESEARCH.md)
-- [Article draft (pre-results)](writing/ARTICLE_DRAFT.md)
+- [Article draft (unreviewed)](writing/ARTICLE_DRAFT.md)
 - [Build specification](docs/spec/active/2026-10-28-agent-proof-lab/REQUIREMENTS.md), [implementation plan](docs/spec/active/2026-10-28-agent-proof-lab/IMPLEMENTATION_PLAN.md), [decisions](docs/spec/active/2026-10-28-agent-proof-lab/DECISIONS.md) and the [supplied evaluator](docs/spec/active/2026-10-28-agent-proof-lab/evals/README.md)
 - [Publication checklist](docs/PUBLICATION_CHECKLIST.md)
 
