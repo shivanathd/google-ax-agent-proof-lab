@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "case_id": "W01-H",
-  "run_id": "81c6744f-3164-46e2-abdb-97f16e21260a",
+  "case_id": "W02-H",
+  "run_id": "28bd1213-321d-422a-a81d-74e2b7ef9d84",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
-  "tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
+  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
+  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
@@ -15,16 +15,15 @@
   "mutation": "none",
   "collector_methods": [
     "S3 GetObject (collector client, own credentials)",
-    "Slack conversations.replies (reader token)",
-    "read-only SQLite query (tickets, inbox, actions)"
+    "read-only SQLite query (approval_requests, run_audit)"
   ],
-  "observed_at": "2026-10-28T19:30:56.022Z",
+  "observed_at": "2026-10-28T19:47:32.083Z",
   "simulated_faults": [],
   "observations": {
-    "ticket_count": 1,
-    "receipt_count": 1,
-    "receipt_matches_request": true,
-    "completion_reply_count": 1
+    "approval_status": "approved",
+    "approved_transition_count": 1,
+    "approval_receipt_count": 1,
+    "approval_receipt_matches": true
   },
   "unobserved": {}
 }

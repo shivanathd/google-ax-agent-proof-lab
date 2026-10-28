@@ -11,7 +11,7 @@ An agent demo usually ends with a green check and a friendly message: "Your requ
 
 These are four different claims. A demo that answers the first one is often presented as if it answered all four.
 
-<!-- media: lab-overview (run a440ab5c, W02-H; C-40) -->
+<!-- media: lab-overview (run 28bd1213, W02-H; C-40) -->
 
 ## The setup
 
@@ -32,9 +32,9 @@ A separate collector process reads the outcome. It has its own Slack token, whic
 
 The case that matters is the one where they disagree. In one test the receipt is deleted after the worker has committed it, and the worker still claims success. The required assertion fails, and the report shows no success banner (C-08). The console shows the same failure without a success badge (C-30).
 
-<!-- media: service-request-success (run 61359d45, W01-H; C-41) -->
-<!-- media: evidence-report (run 61359d45; C-41) -->
-<!-- media: clip-mental-model (runs 81c6744f W01-H PASS and 7085c56e W01-F FAIL; C-44) -->
+<!-- media: service-request-success (run 7e63be51, W01-H; C-41) -->
+<!-- media: evidence-report (run 7e63be51; C-41) -->
+<!-- media: clip-mental-model (runs 56dbbe65 W01-H PASS and 25b02c98 W01-F FAIL; C-44) -->
 
 A rule from the specification turned out to be harder to keep than to state: **missing evidence is not zero.** If the collector cannot read the ledger, it does not know which receipt to look for. An early version recorded `receipt_count: 0` anyway, which reads as "no receipt". The test for the unreadable-ledger case caught it. The fact is now absent with a reason, and the report says UNKNOWN (L-021).
 
@@ -52,7 +52,7 @@ The last finding changed the design. The worker no longer gets an emulator URL a
 
 The same discipline applies to the CRM. W03 runs against a local contract double that is good for version conflicts and input validation (C-07). It is not Salesforce. The Salesforce lane is designed and blocked, and parity is reported as UNKNOWN rather than implied (C-09, C-51).
 
-<!-- media: clip-emulator-vs-real-org (run 13c84cec, W03-V; C-45) -->
+<!-- media: clip-emulator-vs-real-org (run 2a6647f6, W03-V; C-45) -->
 
 ## Authorized is not the same as delivered through Slack
 
@@ -65,14 +65,14 @@ The lab's results for the denied paths, all with zero writes:
 - a button copied into the other workspace (C-14);
 - an approver whose permission was revoked before the click (C-14).
 
-<!-- media: approval-denied (run 4bdbf285, W02-U; C-43) -->
-<!-- media: approval-denied-gif (run 4bdbf285; C-43) -->
-<!-- media: clip-permission-boundary (run 4bdbf285; C-43) -->
+<!-- media: approval-denied (run 304234f2, W02-U; C-43) -->
+<!-- media: approval-denied-gif (run 304234f2; C-43) -->
+<!-- media: clip-permission-boundary (run 304234f2; C-43) -->
 
 Duplicate delivery is part of the same question. A signed retry of the same event creates no second ticket and no second reply (C-04). If a reply is sent and the response never comes back, the outcome is recorded as UNKNOWN and never re-posted. With least-privilege scopes the worker cannot read history to check, so the lab trades reconcilability for privilege and says so (L-017).
 
-<!-- media: duplicate-event-safe (run 7d241b93, W01-D; C-42) -->
-<!-- media: clip-duplicate-delivery (run 7d241b93; C-42) -->
+<!-- media: duplicate-event-safe (run c56e3668, W01-D; C-42) -->
+<!-- media: clip-duplicate-delivery (run c56e3668; C-42) -->
 
 ## Tests that cannot fail
 
@@ -130,7 +130,7 @@ These are descriptive numbers from a small sample on a busy machine. They are no
 - **Egress counting** for the optional lanes relies on shims for provider command-line tools. Routing Node's own traffic through the counting proxy is unproven (L-023).
 - **The blind finding BH-03b** (team ID not checked at ingress) is disclosed, not fixed (L-028). The public challenge cases are reproducible, not secret.
 
-<!-- media: profile-boundaries (run 61359d45; C-41) -->
+<!-- media: profile-boundaries (run 7e63be51; C-41) -->
 
 ## Reproduce it
 
@@ -147,6 +147,6 @@ npm run bench
 
 Your run produces new run IDs. Compare observations and statuses with the claim ledger, not the IDs. If yours differ, that is a finding, and the ledger is where it belongs.
 
-<!-- media: slack-service-request (run 61359d45, W01-H; C-41) -->
+<!-- media: slack-service-request (run 7e63be51, W01-H; C-41) -->
 
 The standard I wanted is modest and checkable: someone else can inspect the request, follow the action, challenge the result and rerun the case.

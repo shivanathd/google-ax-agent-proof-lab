@@ -1,27 +1,25 @@
 {
   "schema_version": 1,
-  "case_id": "W01-F",
-  "run_id": "7085c56e-5cd2-41e3-9dc8-d5a4e75d863f",
+  "case_id": "W02-H",
+  "run_id": "28bd1213-321d-422a-a81d-74e2b7ef9d84",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
-  "tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
+  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
+  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
   "seed": 0,
   "floci_image": "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
-  "collector": "apl-collector pid=83474 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T19:31:11.923Z",
+  "collector": "apl-collector pid=87728 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T19:47:32.083Z",
   "execution": "EXECUTED",
   "mutation": "none",
-  "simulated_faults": [
-    "receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)"
-  ],
-  "status": "FAIL",
+  "simulated_faults": [],
+  "status": "PASS",
   "lanes": {
     "local": {
-      "status": "FAIL",
+      "status": "PASS",
       "selected": true,
       "reason": "local core: required assertions only"
     },
@@ -46,54 +44,53 @@
       "reason": "not selected"
     }
   },
-  "all_lanes_status": "FAIL",
+  "all_lanes_status": "PASS",
   "banner": {
-    "green": false,
-    "text": "NOT A SUCCESS: local core FAIL"
+    "green": true,
+    "text": "PASS: all 4 required assertions passed with evidence (local integration run (scripted driver))"
   },
   "assertions": [
     {
-      "id": "ticket_count",
+      "id": "approval_status",
       "required": true,
-      "expected": 1,
-      "observed": 1,
+      "expected": "approved",
+      "observed": "approved",
       "evidence_refs": [
-        "evidence/w01-ledger.json"
+        "evidence/approval-ledger.json"
       ],
       "status": "PASS",
       "reason": null
     },
     {
-      "id": "receipt_count",
-      "required": true,
-      "expected": 1,
-      "observed": 0,
-      "evidence_refs": [
-        "evidence/w01-s3.json"
-      ],
-      "status": "FAIL",
-      "reason": "observed value differs"
-    },
-    {
-      "id": "receipt_matches_request",
-      "required": true,
-      "expected": true,
-      "observed": false,
-      "evidence_refs": [
-        "evidence/w01-ledger.json",
-        "evidence/w01-s3.json",
-        "evidence/w01-thread.json"
-      ],
-      "status": "FAIL",
-      "reason": "observed value differs"
-    },
-    {
-      "id": "completion_reply_count",
+      "id": "approved_transition_count",
       "required": true,
       "expected": 1,
       "observed": 1,
       "evidence_refs": [
-        "evidence/w01-thread.json"
+        "evidence/approval-ledger.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "approval_receipt_count",
+      "required": true,
+      "expected": 1,
+      "observed": 1,
+      "evidence_refs": [
+        "evidence/approval-s3.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "approval_receipt_matches",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/approval-ledger.json",
+        "evidence/approval-s3.json"
       ],
       "status": "PASS",
       "reason": null
@@ -101,8 +98,8 @@
   ],
   "counts": {
     "required": 4,
-    "passed": 2,
-    "failed": 2,
+    "passed": 4,
+    "failed": 0,
     "blocked": 0,
     "skipped": 0,
     "not_run": 0,
@@ -110,7 +107,6 @@
   },
   "limitations": [
     "Mode: local integration run (scripted driver).",
-    "Simulated faults injected by the test coordinator: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault).",
     "Public challenge cases are visible to builders; they are not secret holdouts.",
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
@@ -118,11 +114,11 @@
     "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T19:31:10.175Z",
-  "ended_at": "2026-10-28T19:31:12.871Z",
+  "started_at": "2026-10-28T19:47:30.023Z",
+  "ended_at": "2026-10-28T19:47:32.657Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 2.696,
+      "value": 2.634,
       "reason": null
     }
   }

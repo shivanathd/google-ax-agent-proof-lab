@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "case_id": "W03-V",
-  "run_id": "13c84cec-4fbf-4e9b-b412-3f2cf3b0e973",
+  "run_id": "2a6647f6-13df-44a5-9fbf-dc7960a5be71",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
-  "tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
+  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
+  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
@@ -18,7 +18,7 @@
     "read-only SQLite query (crm_accounts, actions)",
     "read-only SQLite query (inbox)"
   ],
-  "observed_at": "2026-10-28T19:31:29.583Z",
+  "observed_at": "2026-10-28T19:48:12.799Z",
   "simulated_faults": [],
   "observations": {
     "result": "CONFLICT",
