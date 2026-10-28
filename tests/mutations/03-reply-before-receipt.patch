@@ -1,0 +1,11 @@
+--- a/src/workflows/w01.ts
++++ b/src/workflows/w01.ts
+@@ -68,6 +68,8 @@
+       kind: "ticket", tenant_id: t.tenant_id, subject_action_id: t.action_id, subject_id: String(t.id),
+       input: { summary: t.summary, requester_id: t.requester_id, action_key: t.action_key, created_at: t.created_at },
+     });
++    ctx.db.transaction(() => reply(ctx, t, `reply:ticket:${t.id}`, { channel: t.channel_id, thread_ts: t.thread_ts, text: `Ticket #${t.id} created: ${t.summary}. Receipt ${r.sha.slice(0, 12)}.` }))();
++    ctx.kick();
+     const env = await putWithRetries(ctx, t.tenant_id, t.action_id, r.key, r.body);
+     ctx.db.transaction(() => {
+       if (!env) {

@@ -1,0 +1,27 @@
+--- a/src/ledger/db.ts
++++ b/src/ledger/db.ts
+@@ -95,11 +95,11 @@
+        VALUES (@run_id,@tenant_id,@installation_id,@team_id,@event_id,@event_type,@actor_id,@channel_id,@message_ts,
+          @thread_ts,@text,@raw_body_sha256,1,@received_at,@retry_num,@status,@reason)
+        ON CONFLICT (installation_id, team_id, event_id)
+-         DO UPDATE SET delivery_count = delivery_count + 1, last_retry_num = excluded.last_retry_num
++         DO UPDATE SET delivery_count = delivery_count + 1, last_retry_num = excluded.last_retry_num, status = 'received'
+        RETURNING id, delivery_count`,
+     )
+     .get({ ...e, thread_ts: e.thread_ts ?? null, retry_num: e.retry_num ?? null, status, reason: reason ?? null }) as { id: number; delivery_count: number };
+-  return { inbox_id: row.id, duplicate: row.delivery_count > 1 };
++  return { inbox_id: row.id, duplicate: false };
+ }
+ 
+ // Compare-and-set claim: only one processor can move a row out of 'received'.
+--- a/src/workflows/w01.ts
++++ b/src/workflows/w01.ts
+@@ -16,7 +16,7 @@
+ export function onRequest(ctx: Ctx, row: InboxRow, summary: string) {
+   const { env, decision } = envelope(ctx.db, {
+     run_id: row.run_id, tenant_id: row.tenant_id, actor_id: row.actor_id, connection_ref: "local:floci", operation: "ticket.create",
+-    idempotency_key: `ticket.create:${row.installation_id}:${row.event_id}`, input: { summary, source_event_id: row.event_id },
++    idempotency_key: `ticket.create:${row.installation_id}:${row.event_id}:${(row as any).delivery_count}`, input: { summary, source_event_id: row.event_id },
+   });
+   if (decision.decision === "deny") return denyRequest(ctx, row, "ticket.create", decision.reason);
+   const job: Job = { envelope: env, installation_id: row.installation_id, inbox_id: row.id, channel: row.channel_id, thread_ts: row.thread_ts ?? row.message_ts };

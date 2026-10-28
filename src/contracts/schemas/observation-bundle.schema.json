@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-proof-lab.invalid/schemas/observation-bundle.json",
+  "title": "C4 ObservationBundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "case_id", "run_id", "profile", "mode", "candidate_revision", "fixture_sha256",
+    "collector", "observed_at", "execution", "observations"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "case_id": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]{0,15}$" },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "profile": { "enum": ["local", "salesforce", "coderabbit", "ax", "live-model"] },
+    "mode": { "enum": ["scripted", "fixture-replay", "live-model"] },
+    "execution": { "enum": ["EXECUTED", "BLOCKED", "NOT_RUN"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "candidate_revision": { "type": "string", "minLength": 1 },
+    "tree_sha": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+    "dirty": { "type": "boolean" },
+    "patch_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "fixture_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "dependencies_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "seed": { "type": "integer", "minimum": 0 },
+    "mutation": { "type": "string", "minLength": 1 },
+    "collector": { "type": "string", "minLength": 1 },
+    "collector_methods": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "observed_at": { "type": "string", "minLength": 1 },
+    "selected_profiles": { "type": "array", "items": { "enum": ["salesforce", "coderabbit", "ax", "live-model"] } },
+    "simulated_faults": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "observations": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": { "type": ["boolean", "integer", "number", "string"] }
+    },
+    "unobserved": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "source"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "source": { "type": "string", "minLength": 1 },
+          "observations": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "if": { "properties": { "execution": { "enum": ["BLOCKED", "NOT_RUN"] } } },
+  "then": { "required": ["reason"] }
+}

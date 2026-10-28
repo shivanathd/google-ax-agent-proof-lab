@@ -5,6 +5,7 @@ dist/
 !.env.example
 private-runs/
 artifacts/runs/
+artifacts/exports/
 **/evals/results/
 __pycache__/
 *.pyc

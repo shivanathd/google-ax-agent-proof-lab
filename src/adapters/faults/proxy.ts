@@ -1,13 +1,14 @@
 // Fault-injecting loopback proxy. It forwards every request to one upstream (an emulator) unless a rule
 // matches: `http500` answers 500 without forwarding; `hold-response` forwards, lets the upstream complete
-// the write, then never answers, so the client sees a timeout after the effect happened; `http403` refuses
-// without forwarding. Fault rules are TEST-ONLY and labelled as simulated faults in evidence; `http403` also
-// backs the worker's Slack method filter (../slack/worker-proxy.ts).
+// the write, then never answers, so the client sees a timeout after the effect happened; `stall` neither
+// forwards nor answers, so the effect never happens and the caller waits (used to kill mid-step);
+// `http403` refuses without forwarding. Fault rules are TEST-ONLY and labelled as simulated faults in
+// evidence; `http403` also backs the worker's Slack method filter (../slack/worker-proxy.ts).
 import { createServer, request, type IncomingMessage, type ServerResponse } from "node:http";
 
 export interface FaultRule {
   name: string;
-  action: "http500" | "hold-response" | "http403";
+  action: "http500" | "hold-response" | "stall" | "http403";
   match: (req: { method: string; url: string; headers: IncomingMessage["headers"]; body: string }) => boolean;
   times?: number; // apply to the first N matches only
 }
@@ -33,6 +34,7 @@ export async function startFaultProxy(port: number, upstream: string) {
         return;
       }
       if (rule?.action === "http403") return void res.writeHead(403, { "content-type": "application/json" }).end(`{"ok":false,"error":"forbidden_by_proxy"}`);
+      if (rule?.action === "stall") return void held.push(res); // never forwarded, never answered
       const up = request(
         { host: target.hostname, port: target.port, method: info.method, path: info.url, headers: { ...req.headers, host: target.host } },
         (upRes) => {
