@@ -1,6 +1,6 @@
 # Optional profiles
 
-The local profile is the lab. Four optional lanes can add evidence later: Salesforce, CodeRabbit, AX and live-model. Each one is off until the owner meets its prerequisites and authorizes a run. Right now every optional lane is BLOCKED. That is deliberate: the owner has not approved any account, org, app install, API key or provider call.
+The local profile is the lab. Four optional lanes can add evidence later: Salesforce, CodeRabbit, AX and live-model. Each one is off until the owner meets its prerequisites and authorizes a run. Right now every optional lane is BLOCKED. For Salesforce, CodeRabbit and live-model that is deliberate: the owner has not approved any account, org, app install, API key or provider call. AX was approved and attempted on a cluster, and is BLOCKED by a version mismatch (see below).
 
 A blocked optional lane blocks only itself (F5-R6). It never changes the local-core result, and the report shows it as a separate line.
 
@@ -72,7 +72,19 @@ No adapter reads ambient credentials. `SF_TARGET_ORG`, a default Salesforce org,
 
 ## AX (`profiles/ax/`)
 
-Another builder owns this adapter. Until `profiles/ax/index.ts` exists, the profile tests report AX as BLOCKED with the reason "adapter not installed". When it is present, the tests import it and hold it to the same gates: BLOCKED doctor, zero external calls, and no run without authorization. It needs no cluster in the default bootstrap. Its own prerequisites and limits belong in that adapter's documentation.
+**Status: BLOCKED** (cluster run attempted 2026-10-28 with owner approval). AX at the pinned commit could not provision any task on the cluster's Substrate: the AX client and the installed server speak incompatible versions of the same protobuf API (LEARNINGS L-030). No AX task ran, so no AX assertion has cluster evidence and none is PASS. Details, the observed compatibility checklist and the two ways to unblock are in `profiles/ax/RESULTS.md`.
+
+| Assertion | Status | Evidence |
+|---|---|---|
+| Compatibility checklist recorded | done | `profiles/ax/RESULTS.md` §1 |
+| F3-A1 (W01-H) through an AX Task, same assertions | BLOCKED | `ax apply` failed in `CreateActorTemplate` (L-030) |
+| Failing command: AX phase vs `result.json` | BLOCKED | no task started |
+| SIGTERM reaches the command; resume keeps the prepare-once marker | BLOCKED | no task started |
+| Egress isolation from inside the sandbox | BLOCKED | no sandbox started |
+| Collector's credentials absent from the task | observed | string search of the stored Task (`RESULTS.md` §5) |
+| submit → Running → result timing (n=5) | BLOCKED | no task reached Running |
+
+Not cluster evidence, recorded separately: a local rehearsal under runc (no AX, no gVisor) of the same image, case, collector and `evaluate_ax.py` passed F3-A1. The doctor and run gates are unchanged: BLOCKED doctor, zero external calls, and no run without authorization.
 
 ## Live-model (`profiles/live-model/`)
 

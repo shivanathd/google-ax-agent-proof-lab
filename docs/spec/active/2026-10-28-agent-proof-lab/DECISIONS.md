@@ -77,3 +77,11 @@ All decisions below use single-author trade-off analysis: [No Council: single-au
 **Context:** The owner asked for videos alongside GIFs.
 **Decision:** Add sanitized MP4 clips under `docs/assets/videos/` that follow RECORDING_RUNBOOK. Include them in the manifest, in `media verify` and in the 25 MiB budget (≤ 8 MiB of MP4 in total). The README links them through poster images.
 **Consequences:** Full-length raw recordings stay gitignored. Inline playback on GitHub needs a post-publication upload, which is recorded as NOT_RUN.
+
+## ADR-12: AX lane expectations in `profiles/ax/cases.ax.json`
+
+**Context:** F5-R4 asks the AX lane to repeat an existing case's outcome assertions. AX reports a task phase but does not read the command's exit status (L-006), and the collector cannot open the ledger inside the sandbox.
+**Decision:** `profiles/ax/cases.ax.json` holds the AX expectations. F3-A1 keeps the local keys and values (`ticket_count`, `receipt_count`, `receipt_matches_request`, `completion_reply_count`) and adds `command_exit_code` from the runner's `result.json`. `ax_task_phase` goes into every bundle under `recorded_not_asserted` and may never be an expectation. `profiles/ax/evaluate_ax.py` runs the supplied evaluator's own `inspect_bundle` against this table. The ledger-derived facts come from a ledger export the in-sandbox coordinator writes to Floci, cross-checked against the receipt and the Slack thread.
+**Consequences:** The ledger facts in the AX lane are weaker than local ones: a compromised sandbox could forge the export, though not the receipt hash it must match. The supplied `cases.json` and evaluator are unchanged.
+**Alternatives:** Treat phase `Running`/`Succeeded` as success. Rejected (L-006). Give the collector debug access to the sandbox. Rejected: `ax ssh` needs `spec.debug`, which also lets anyone with AX API access run code in the task.
+

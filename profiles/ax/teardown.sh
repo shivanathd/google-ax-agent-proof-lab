@@ -24,6 +24,7 @@ snapshot() { # <out.json>
   kubectl get crd,clusterrole,clusterrolebinding,validatingwebhookconfiguration,mutatingwebhookconfiguration,validatingadmissionpolicy,validatingadmissionpolicybinding,pv -o json >"$tmp/cluster.json"
   gcloud artifacts repositories list --project "$(j project)" --format=json >"$tmp/ar.json" 2>/dev/null || echo '[]' >"$tmp/ar.json"
   gcloud compute disks list --project "$(j project)" --format=json >"$tmp/disks.json" 2>/dev/null || echo '[]' >"$tmp/disks.json"
+  kubectl ate get atespaces -o json >"$tmp/atespaces.json" 2>/dev/null || echo '{"atespaces":[]}' >"$tmp/atespaces.json"
   python3 - "$tmp" "$out" <<'PY'
 import json, os, sys, glob, datetime
 tmp, out = sys.argv[1], sys.argv[2]
@@ -38,6 +39,7 @@ for i in load(f"{tmp}/cluster.json")["items"]:
 for v in snap["cluster_scoped"].values(): v.sort()
 snap["artifact_registry_repos"] = sorted(r["name"] for r in load(f"{tmp}/ar.json"))
 snap["compute_disks"] = sorted(r["name"] for r in load(f"{tmp}/disks.json"))
+snap["substrate_atespaces"] = sorted(a["metadata"]["name"] for a in load(f"{tmp}/atespaces.json").get("atespaces", []))
 json.dump(snap, open(out, "w"), indent=2, sort_keys=True)
 print(f"snapshot written: {out}")
 PY
@@ -60,19 +62,24 @@ PROJECT=$(j project); ZONE=$(j zone); CLUSTER=$(j cluster)
 BIN=$(j local.bin); export PATH="$BIN:$PATH" AX_HOME="$RUN_DIR/axhome"
 export KUBECONFIG="$RUN_DIR/teardown-kubeconfig"
 gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "$PROJECT" >/dev/null
-CTX=$(kubectl config current-context)
 echo "teardown: run $(j run_id) on context in $KUBECONFIG"
 
-# 1. AX objects (Task before Workspace), through the AX API while ax-server still runs.
+# 1. AX objects (Task before Workspace), through the AX API while ax-server still runs. The ax CLI's own tunnel
+#    gives up after a 400 ms health check (L-033), so this script holds its own port-forward.
+PORT=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1])")
+kubectl -n ax-system port-forward svc/ax-server "$PORT:8080" >"$RUN_DIR/teardown-pf.log" 2>&1 &
+PF=$!; trap 'kill $PF 2>/dev/null' EXIT; sleep 5
 python3 -c "import json,sys; [print(r['kind'], r['atespace'], r['name']) for r in json.load(open(sys.argv[1]))['ax']]" "$OWNED" |
   sort -r | while read -r kind atespace name; do
-    ax --context "$CTX" delete "$kind" "$name" -a "$atespace" || echo "teardown: ax delete $kind $name failed (continuing)"
+    ax --server "http://127.0.0.1:$PORT" delete "$kind" "$name" -a "$atespace" || echo "teardown: ax delete $kind $name failed (continuing)"
   done
 
-# 2. Substrate objects the run created directly (egress policies are deleted with their actor; listed for the diff).
-python3 -c "import json,sys; [print(r['kind'], r['atespace'], r['name']) for r in json.load(open(sys.argv[1]))['substrate'] if r['kind'] != 'egress-policy']" "$OWNED" |
+# 2. Substrate objects (egress policies go with their actor; listed for the diff). Atespaces last: they must be empty.
+#    local.bin holds a kubectl-ate built at the deployed Substrate's API version (L-030).
+python3 -c "import json,sys; [print(r['kind'], r['atespace'] or '-', r['name']) for r in sorted(json.load(open(sys.argv[1]))['substrate'], key=lambda r: r['kind'] == 'atespace') if r['kind'] != 'egress-policy']" "$OWNED" |
   while read -r kind atespace name; do
-    kubectl ate delete "$kind" "$name" -a "$atespace" || echo "teardown: kubectl ate delete $kind $name failed (continuing)"
+    if [ "$kind" = atespace ]; then kubectl ate delete atespace "$name"; else kubectl ate delete "$kind" "$name" -a "$atespace"; fi ||
+      echo "teardown: kubectl ate delete $kind $name failed (continuing)"
   done
 
 # 3. Namespaced Kubernetes objects by exact name, then the namespaces the run created.
@@ -103,8 +110,8 @@ python3 - "$PRE" "$RUN_DIR/post-snapshot.json" "$DELETE_BENCH" <<'PY'
 import json, sys
 pre, post, deleted = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3] == "1"
 diff = []
-for key in ("namespaces", "artifact_registry_repos", "compute_disks"):
-    a, b = set(pre[key]), set(post[key])
+for key in ("namespaces", "artifact_registry_repos", "compute_disks", "substrate_atespaces"):
+    a, b = set(pre.get(key, [])), set(post.get(key, []))
     diff += [f"{key}: added {x}" for x in sorted(b - a)] + [f"{key}: removed {x}" for x in sorted(a - b)]
 for kind in sorted(set(pre["cluster_scoped"]) | set(post["cluster_scoped"])):
     a, b = set(pre["cluster_scoped"].get(kind, [])), set(post["cluster_scoped"].get(kind, []))

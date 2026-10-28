@@ -10,10 +10,12 @@ This lane runs one existing lab case inside an AX task on Agent Substrate, then 
 | Custom runner image (linux/amd64) honouring the runner contract | EXECUTED (locally, `docker run` under amd64 emulation) | same test file, `ax runner contract (docker)` |
 | `result.json` written for passing, failing and terminated commands | EXECUTED (locally) | same |
 | Manifest rendering and `apl-run` labelling | EXECUTED (locally, text checks only) | same |
-| `ax apply` of Task + Workspace, in-cluster Emulate + Floci, collector | DESIGNED, never run | this README |
-| Behaviour under gVisor / microVM, Substrate networking, suspend/resume | DESIGNED, never run | this README |
+| In-cluster Emulate + Floci, NetworkPolicy, run-owned WorkerPool, collector Pod | EXECUTED (cluster, 2026-10-28) | `RESULTS.md` |
+| `ax apply` of Task + Workspace | ATTEMPTED, BLOCKED: AX ↔ Substrate protobuf skew (LEARNINGS L-030) | `RESULTS.md` §2 |
+| W01-H case, collector bundle, `evaluate_ax.py` | EXECUTED (locally, runc rehearsal only) | `RESULTS.md` §2 |
+| Behaviour under gVisor / microVM, Substrate egress, suspend/resume | DESIGNED, never run | `RESULTS.md` §3–6 |
 
-Nothing in this directory has contacted a cluster, a registry push endpoint or a cloud API. The local tests run plain Docker containers, not a Substrate sandbox. Substrate does not support plain Linux containers, so a local pass says nothing about gVisor syscall coverage.
+One authorized cluster run happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox, and a local pass says nothing about gVisor syscall coverage.
 
 ## Pinned upstream revisions (read 2026-10-28)
 
@@ -70,7 +72,18 @@ Deviations from the default runner:
 - **Extra endpoint.** `GET :80/apl/result` returns `result.json` (404 before it exists). An in-cluster collector can read the outcome through the Substrate router without debug access.
 - **No zombie reaping.** Orphans that leave the command's process group are not reaped (marked `shortcut:` in the code).
 
-## In-cluster placement (DESIGNED)
+## Files added for the cluster run
+
+- `case.ts` (`apl-case`): in-sandbox coordinator + worker for W01-H, and the isolation probes.
+- `allowlist.ts`: the AX endpoint allowlist (lab-namespace Service hosts pinned to their ClusterIPs), loaded with `node --import`. The local loopback rule stays the default.
+- `collector.ts`: the independent collector (plain Pod): `result` polls `/apl/result` through the router, `observe` writes a C4 bundle.
+- `cases.ax.json` + `evaluate_ax.py`: expectations (ADR-12) and the supplied evaluator run against them.
+- `orchestrate.ts`: operator-side generator for per-run secrets, the Emulate seed, the collector env and AX manifests, written to the gitignored run dir.
+- `emulate/`: the in-cluster Emulate image (pinned base, lockfile, repository patch, loopback callback mailbox).
+- `runner/Dockerfile.lab`: the runner plus the lab code, used by both the task and the collector Pod.
+- `teardown.sh`: deletes exactly what `owned-resources.json` lists, restores scaled worker pools, then diffs a post-snapshot against the pre-snapshot.
+
+## In-cluster placement (as deployed; superseded design notes below)
 
 ```
 kube context $APL_AX_CONTEXT
