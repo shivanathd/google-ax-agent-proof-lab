@@ -8,7 +8,7 @@ An agent can run successfully and still do the wrong thing. This lab separates t
 What business outcome do we want?
   |
   +-- Where does the work run?
-  |     Local worker process (built); AX on Agent Substrate (DESIGNED, BLOCKED)
+  |     Local worker process (built); AX on Agent Substrate (run on a cluster, see PROFILES.md)
   |
   +-- What systems does it interact with?
   |     Emulate Slack x2, Floci S3/SQS, SQLite ledger with a narrow CRM double (built)
