@@ -6,12 +6,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { GetObjectCommand, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
-import { startRun, stopRun, RUN_LABEL, type RunHandle } from "../../src/config/lifecycle.ts";
+import { processResourceId, startRun, stopRun, RUN_LABEL, type RunHandle } from "../../src/config/lifecycle.ts";
 import { ensureRunResources, flociClients } from "../../src/adapters/floci/clients.ts";
 import { getObjectText } from "../../src/adapters/floci/ops.ts";
-import { loadManifest, runDir } from "../../src/config/manifest.ts";
+import { createManifest, loadManifest, recordResource, runDir } from "../../src/config/manifest.ts";
 import { openReadOnly, rows } from "../../src/ledger/read.ts";
-import { ROOT } from "../../src/config/run-config.ts";
+import { candidateIdentity, createRunConfig, ROOT } from "../../src/config/run-config.ts";
 import { botReplies, history, mention, waitFor } from "./helpers.ts";
 
 const docker = (...args: string[]) => execFileSync("docker", args, { encoding: "utf8" }).trim();
@@ -164,5 +164,49 @@ describe("run isolation and scoped cleanup", () => {
     expect(idsFor(survivor.manifest.config.run_id).length).toBe(1);
     // Evidence is preserved until an explicit purge.
     expect(existsSync(join(runDir(started.run_id), "manifest.json"))).toBe(true);
+  });
+});
+
+describe("orphaned runs", () => {
+  it("stop() still tears the run down when the worker was killed by a signal (no hang, manifest not left NOT_RUN)", async () => {
+    const h = await startRun({ floci: false, slack: true });
+    cleanup.push(() => stopRun(h.manifest.config.run_id));
+    const worker = h.worker!;
+    const gone = new Promise((r) => worker.once("exit", r));
+    worker.kill("SIGKILL");
+    await gone;
+    expect([worker.exitCode, worker.signalCode]).toEqual([null, "SIGKILL"]);
+    const stopped = await Promise.race([h.stop(), new Promise<"hung">((r) => setTimeout(() => r("hung"), 15000))]);
+    expect(stopped).not.toBe("hung");
+    expect(loadManifest(h.manifest.config.run_id).cleanup_status).toBe("CLEAN");
+  });
+
+  it("doctor lists, and `down --orphans` removes only, a lab-labelled container whose run is not active", async () => {
+    const image = JSON.parse(readFileSync(join(ROOT, "DEPENDENCIES.lock.json"), "utf8")).images.floci;
+    // A fake orphan this test creates: labelled with a run id that has no manifest anywhere.
+    const orphanRun = randomUUID();
+    const orphan = docker("run", "-d", "--label", `${RUN_LABEL}=${orphanRun}`, "--name", `apl-fake-orphan-${orphanRun.slice(0, 8)}`, `${image.ref}@${image.digest}`);
+    cleanup.push(async () => docker("rm", "-f", orphan));
+    // An active run: manifest NOT_RUN whose recorded coordinator (this test process) is alive.
+    const active = createManifest(createRunConfig({}), candidateIdentity().tree_sha);
+    recordResource(active, { kind: "process", id: processResourceId(process.pid), role: "coordinator" });
+    const activeRun = active.config.run_id;
+    const live = docker("run", "-d", "--label", `${RUN_LABEL}=${activeRun}`, "--name", `apl-fake-active-${activeRun.slice(0, 8)}`, `${image.ref}@${image.digest}`);
+    cleanup.push(() => stopRun(activeRun));
+
+    const doctor = await readJson(lab(["doctor"]));
+    expect(doctor.orphan_warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ container: orphan.slice(0, 12), run_id: orphanRun, manifest: "missing", active: false }),
+      expect.objectContaining({ container: live.slice(0, 12), run_id: activeRun, manifest: "NOT_RUN", active: true }),
+    ]));
+
+    // Scoped to this test's own two runs (--run-id), so no other container on the machine is touched.
+    const kept = lab(["down", "--orphans", "--run-id", activeRun]);
+    expect(await readJson(kept)).toMatchObject({ removed: [], active: [activeRun] });
+    expect(idsFor(activeRun)).toEqual([live.slice(0, 12)]);
+    const down = lab(["down", "--orphans", "--run-id", orphanRun]);
+    expect(await readJson(down)).toMatchObject({ removed: [{ container: orphan.slice(0, 12), run_id: orphanRun }], active: [] });
+    expect(await exited(down)).toBe(0);
+    expect(docker("ps", "-aq", "--filter", `label=${RUN_LABEL}=${orphanRun}`)).toBe("");
   });
 });

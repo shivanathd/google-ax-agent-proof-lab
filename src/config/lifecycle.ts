@@ -1,11 +1,11 @@
 // Run lifecycle owned by the coordinator: per-run Floci compose project, ports and DB file; scoped teardown.
 import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { createWriteStream } from "node:fs";
+import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { childEnv } from "./env.ts";
 import { candidateIdentity, createRunConfig, ROOT, type Endpoint } from "./run-config.ts";
-import { createManifest, freePort, loadManifest, recordResource, runDir, saveManifest, type Manifest } from "./manifest.ts";
+import { composeProject, createManifest, freePort, loadManifest, recordResource, runDir, runsDir, saveManifest, type Manifest } from "./manifest.ts";
 import { ensureRunResources, flociClients } from "../adapters/floci/clients.ts";
 import { loadSlackFixture, startWorkspace, type Workspace } from "../adapters/slack/emulator.ts";
 import { startWorkerSlackProxy } from "../adapters/slack/worker-proxy.ts";
@@ -66,13 +66,16 @@ export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?
   const config = createRunConfig({ endpoint_allowlist: Object.values(ports).flatMap(loopback) });
   const manifest = createManifest(config, candidateIdentity().tree_sha);
   manifest.ports = ports;
+  // The live coordinator marks the run active; `down --orphans` and doctor treat a run without one as orphaned.
+  recordResource(manifest, { kind: "process", id: processResourceId(process.pid), role: "coordinator" });
   const allowlist = config.endpoint_allowlist;
   const h: RunHandle = {
     manifest, flociEndpoint: withFloci ? `http://127.0.0.1:${ports.floci}` : "", workspaces: [], slackProxies: [],
     startWorker: (w = {}) => startWorker(h, w),
     stopWorker: () => stopWorker(h),
+    // Teardown always reaches stopRun: a failure stopping the worker must not leak the run's containers.
     stop: async () => {
-      await stopWorker(h);
+      await stopWorker(h).catch(() => undefined);
       for (const ws of h.workspaces) await ws.close().catch(() => undefined);
       return stopRun(manifest.config.run_id);
     },
@@ -150,7 +153,9 @@ async function startWorker(h: RunHandle, w: WorkerOptions) {
 
 async function stopWorker(h: RunHandle) {
   const child = h.worker;
-  if (child && child.exitCode === null) {
+  // A child killed by a signal has exitCode null but signalCode set and has already emitted "exit";
+  // waiting for that event again hung teardown forever, leaving the manifest NOT_RUN and Floci running.
+  if (child && child.exitCode === null && child.signalCode === null) {
     const exited = new Promise((r) => child.once("exit", r));
     child.kill("SIGTERM");
     const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
@@ -212,4 +217,35 @@ export async function stopRun(runId: string): Promise<Manifest> {
   m.cleanup_status = m.remaining.length ? "INCOMPLETE" : "CLEAN";
   saveManifest(m);
   return m;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export interface LabContainer { container: string; run_id: string; project: string | null; manifest: Manifest["cleanup_status"] | "missing"; active: boolean }
+
+// Every container carrying the run label, with its run's manifest state. A run is active only while its
+// manifest is NOT_RUN and a recorded process (coordinator or worker) is still alive.
+export async function labContainers(): Promise<LabContainer[]> {
+  const fmt = `{{.ID}}\t{{.Label "${RUN_LABEL}"}}\t{{.Label "com.docker.compose.project"}}\t{{.Label "com.docker.compose.project.working_dir"}}`;
+  const out = (await run("docker", ["ps", "-a", "--filter", `label=${RUN_LABEL}`, "--format", fmt])).stdout;
+  return out.split("\n").filter(Boolean).map((line) => {
+    const [container, run_id = "", project = "", workdir = ""] = line.split("\t");
+    // Compose records the checkout that started the run; its private-runs/ holds the manifest.
+    const file = UUID.test(run_id) ? [runsDir(), ...(workdir ? [join(workdir, "private-runs")] : [])].map((d) => join(d, run_id, "manifest.json")).find(existsSync) : undefined;
+    const m: Manifest | undefined = file ? JSON.parse(readFileSync(file, "utf8")) : undefined;
+    const active = m?.cleanup_status === "NOT_RUN" && m.config.owned_resources.some((r) => r.kind === "process" && ownedPid(r.id) !== undefined);
+    return { container: container!, run_id, project: project || null, manifest: m?.cleanup_status ?? "missing", active };
+  });
+}
+
+// `lab down --orphans`: removes only labelled containers whose run is not active, plus that run's own compose
+// project (named from the run id). `only` narrows it to the given run ids.
+export async function removeOrphans(only?: string[]) {
+  const all = (await labContainers()).filter((c) => !only || only.includes(c.run_id));
+  const orphans = all.filter((c) => !c.active);
+  if (orphans.length) await run("docker", ["rm", "-f", "-v", ...orphans.map((c) => c.container)]);
+  for (const c of orphans) {
+    if (!UUID.test(c.run_id) || c.project !== composeProject(c.run_id)) continue;
+    await run("docker", ["compose", "-f", join(ROOT, "compose.yaml"), "-p", c.project, "down", "-v", "--remove-orphans", "--timeout", "5"], { env: childEnv(process.env, {}, { docker: true }) }).catch(() => undefined);
+  }
+  return { removed: orphans.map((c) => ({ container: c.container, run_id: c.run_id })), active: [...new Set(all.filter((c) => c.active).map((c) => c.run_id))] };
 }

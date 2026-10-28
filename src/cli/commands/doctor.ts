@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { emit } from "../registry.ts";
-import { dockerAvailable } from "../../config/lifecycle.ts";
+import { dockerAvailable, labContainers } from "../../config/lifecycle.ts";
 import { laneStatuses } from "../../config/profiles.ts";
 import { ROOT } from "../../config/run-config.ts";
 import type { Prerequisite, ProfileName } from "../../contracts/profile.ts";
@@ -42,6 +42,8 @@ export function register(program: Command) {
       const prerequisites = localPrerequisites();
       const ok = prerequisites.every((p) => p.satisfied);
       const lanes = await laneStatuses(opts.profile, process.env);
-      emit({ profile: "local", status: ok ? "NOT_RUN" : "BLOCKED", prerequisites, lanes, external_calls: 0 }, ok ? 0 : 2);
+      // Warning only: lab containers whose run manifest is missing or not CLEAN (`lab down --orphans` removes the inactive ones).
+      const orphan_warnings = dockerAvailable() ? (await labContainers()).filter((c) => c.manifest !== "CLEAN") : [];
+      emit({ profile: "local", status: ok ? "NOT_RUN" : "BLOCKED", prerequisites, lanes, orphan_warnings, external_calls: 0 }, ok ? 0 : 2);
     });
 }

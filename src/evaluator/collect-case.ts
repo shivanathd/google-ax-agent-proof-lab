@@ -95,9 +95,10 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
   const faults: string[] = [];
   const deferred: (() => Promise<void> | void)[] = [];
   const refs: Record<string, unknown> = { faults };
-  const collector = spawnCollector(collectorConfig(h, caseId, output, def));
+  let collector: ReturnType<typeof spawnCollector> | undefined;
   let stopped: Awaited<ReturnType<RunHandle["stop"]>> | undefined;
   try {
+    collector = spawnCollector(collectorConfig(h, caseId, output, def));
     const info = (await collector.next()) as CollectorInfo & { ready?: boolean };
     if (!info.ready) throw new Error("collector did not start");
     if (h.workspaces.length && def.worker !== false) await h.startWorker(def.worker?.(h, info) ?? {});
@@ -108,7 +109,7 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
       ref: (k, v) => void (refs[k] = v),
       fault: (d) => void faults.push(d),
       snapshot: async (phase) => {
-        await collector.ask({ op: "snapshot", name: phase, refs });
+        await collector!.ask({ op: "snapshot", name: phase, refs });
         await hooks.onSnapshot?.(phase, h);
       },
       defer: (fn) => void deferred.push(fn),
@@ -121,7 +122,7 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
     hooks.onPhase?.("stopping", runId);
   } finally {
     for (const fn of deferred.reverse()) await Promise.resolve(fn()).catch(() => undefined);
-    if (collector.child.exitCode === null) collector.child.kill("SIGKILL");
+    collector?.child.kill("SIGKILL"); // no-op once it has exited
     stopped = await h.stop();
     rmSync(scratch, { recursive: true, force: true });
   }

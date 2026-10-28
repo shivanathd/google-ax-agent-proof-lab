@@ -3,10 +3,12 @@
 // run there. A mutant is caught when any check FAILs, uncaught when all pass, invalid when it cannot be applied
 // or does not typecheck. The candidate checkout is never modified. Writes artifacts/mutations/<timestamp>.json.
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { candidateIdentity, ROOT } from "../../src/config/run-config.ts";
+import { stopRun } from "../../src/config/lifecycle.ts";
+import { loadManifest } from "../../src/config/manifest.ts";
 
 const EVALUATOR = "docs/spec/active/2026-10-28-agent-proof-lab/evals/evaluate.py";
 // The checks each mutant must be caught by: integration tests (optionally filtered) and evaluator cases.
@@ -51,6 +53,16 @@ for (const file of readdirSync(join(ROOT, "tests/mutations")).filter((f) => f.en
     verdict = "invalid";
     reason = (e as Error).message;
   } finally {
+    // A check killed by its timeout skips its own teardown. Stop every run the mutant started before its
+    // worktree (and with it the only manifests naming those containers) is deleted.
+    const runs = join(dir, "private-runs");
+    if (existsSync(runs)) {
+      process.env.APL_RUNS_DIR = runs;
+      for (const id of readdirSync(runs).filter((n) => existsSync(join(runs, n, "manifest.json")))) {
+        if (loadManifest(id).cleanup_status !== "CLEAN") await stopRun(id).catch(() => undefined);
+      }
+      delete process.env.APL_RUNS_DIR;
+    }
     spawnSync("git", ["worktree", "remove", "--force", dir], { cwd: ROOT, stdio: "ignore" });
     rmSync(join(dir, ".."), { recursive: true, force: true });
   }
