@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Proof Lab · teaching console</title>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to results</a>
+    <header class="top">
+      <div class="brand">
+        <h1>Agent Proof Lab</h1>
+        <p>Teaching console · local-first lab · personal project</p>
+      </div>
+      <dl class="run-details" id="run-details" aria-label="Run details"></dl>
+    </header>
+    <p class="notice" id="synthetic-notice" role="note"></p>
+    <div class="layout">
+      <nav class="side" aria-label="Scenarios and layers">
+        <section aria-labelledby="scenarios-h">
+          <h2 id="scenarios-h">Scenarios</h2>
+          <ul class="scenarios" id="scenarios"></ul>
+          <button type="button" class="run" id="run-button">Run selected scenario</button>
+          <p class="hint">Each run starts its own isolated stack. An independent collector judges it, not the worker.</p>
+        </section>
+        <section aria-labelledby="layers-h">
+          <h2 id="layers-h">Layer map</h2>
+          <dl class="layers" id="layers"></dl>
+        </section>
+      </nav>
+      <main id="main" tabindex="-1">
+        <div id="banner" class="banner" role="status" aria-live="polite"></div>
+        <div class="tabs" role="tablist" aria-label="Views">
+          <button type="button" role="tab" id="tab-workflow" aria-controls="panel-workflow" aria-selected="true">Workflow</button>
+          <button type="button" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false" tabindex="-1">Evidence report</button>
+          <button type="button" role="tab" id="tab-profiles" aria-controls="panel-profiles" aria-selected="false" tabindex="-1">Profile boundaries</button>
+        </div>
+        <section id="panel-workflow" role="tabpanel" aria-labelledby="tab-workflow" class="panel workflow">
+          <section class="slack" aria-labelledby="slack-h">
+            <h2 id="slack-h">Emulated Slack (local Emulate instance) — not the Slack client</h2>
+            <p class="sub" id="slack-sub"></p>
+            <ol class="transcript" id="transcript" aria-live="polite"></ol>
+          </section>
+          <div class="right">
+            <section aria-labelledby="phases-h">
+              <h2 id="phases-h">Run progress</h2>
+              <ol class="phases" id="phases"></ol>
+            </section>
+            <section aria-labelledby="state-h">
+              <h2 id="state-h">Before / after state</h2>
+              <p class="sub">Read-only ledger handle and S3 listing; not the worker's own report.</p>
+              <div id="state"></div>
+            </section>
+          </div>
+        </section>
+        <section id="panel-report" role="tabpanel" aria-labelledby="tab-report" class="panel" hidden>
+          <h2>Assertions (C5 run report)</h2>
+          <p class="sub" id="report-sub"></p>
+          <div class="table-wrap"><table id="assertions"></table></div>
+          <div class="cols">
+            <section aria-labelledby="lim-h"><h3 id="lim-h">Limitations</h3><ul id="limitations"></ul></section>
+            <section aria-labelledby="ev-h"><h3 id="ev-h">Evidence files</h3><ul id="evidence" class="mono"></ul></section>
+          </div>
+        </section>
+        <section id="panel-profiles" role="tabpanel" aria-labelledby="tab-profiles" class="panel" hidden>
+          <h2>Profile boundaries</h2>
+          <p class="sub">Actual doctor results for each optional lane (local configuration only, zero external calls). A blocked lane is not a failed local demo, and it is not evidence of parity either.</p>
+          <div class="table-wrap"><table id="profiles"></table></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

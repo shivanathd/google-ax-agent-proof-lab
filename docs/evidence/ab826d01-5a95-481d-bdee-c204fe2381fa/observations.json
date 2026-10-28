@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "case_id": "W02-U",
+  "run_id": "ab826d01-5a95-481d-bdee-c204fe2381fa",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
+  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
+  "mutation": "none",
+  "collector_methods": [
+    "S3 GetObject (collector client, own credentials)",
+    "read-only SQLite query (approval_requests, actions, run_audit)"
+  ],
+  "observed_at": "2026-10-28T14:57:28.477Z",
+  "simulated_faults": [],
+  "observations": {
+    "approval_status": "awaiting_approval",
+    "unauthorized_write_count": 0,
+    "approval_receipt_count": 0
+  },
+  "unobserved": {}
+}

@@ -10,6 +10,7 @@ import { S1 } from "./s1.ts";
 import { S2 } from "./s2.ts";
 import { S3 } from "./s3.ts";
 import { F6 } from "./f6.ts";
+import { SCENARIO_CASES } from "./scenarios.ts";
 
 export const CASES: Record<string, CaseDef | PendingCase> = {
   "F1-A1": F1_A1, "F1-A2": F1_A2,
@@ -19,4 +20,6 @@ export const CASES: Record<string, CaseDef | PendingCase> = {
   "F5-A1": F5_A1, "F5-A2": F5_A2,
   S1, S2, S3,
   ...F6,
+  // Teaching-console scenarios (Task 6.1): not supplied evaluator cases.
+  ...SCENARIO_CASES,
 };

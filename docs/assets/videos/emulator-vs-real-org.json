@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "clip": "clip-emulator-vs-real-org",
+  "title": "Emulator versus real org",
+  "run_ids": [
+    "585182e9-b6b4-41aa-b812-13475d79f0d4"
+  ],
+  "scenario_ids": [
+    "W03-V"
+  ],
+  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
+  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
+  "application_tree_sha256": "263e2c182a74e4796af18dbce4077ff94ea36e11270f26e9fa051f594fe361ff",
+  "profile": "local",
+  "mode": "scripted",
+  "recorded_at": "2026-10-28T14:56:47.362Z",
+  "marks": [
+    {
+      "t_ms": 0,
+      "label": "console loaded"
+    },
+    {
+      "t_ms": 35,
+      "label": "select W03-V"
+    },
+    {
+      "t_ms": 2038,
+      "label": "dwell 2000ms"
+    },
+    {
+      "t_ms": 2038,
+      "label": "run clicked W03-V"
+    },
+    {
+      "t_ms": 7108,
+      "label": "reported W03-V"
+    },
+    {
+      "t_ms": 11112,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 11138,
+      "label": "tab report"
+    },
+    {
+      "t_ms": 15142,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 15173,
+      "label": "tab profiles"
+    },
+    {
+      "t_ms": 19176,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 23273,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 23273,
+      "label": "end"
+    }
+  ],
+  "original_capture": "boundary-frames.json",
+  "original_capture_sha256": "6bd5769bee3048ad7dae06f38a2688d293dc01a717aa33cfc2fdfe241234f41b",
+  "webm_cross_check": "boundary.webm",
+  "webm_sha256": "225ae5b2959041482353bfa98b7dffe52188b1cd0bff12959eeb9dfbb534e485",
+  "mp4_sha256": "0d153622128d83545836069033e8184eea3e223bc265e6b9722079d36d010583",
+  "edits": [
+    "trimmed to 0.34-23.62 s of the source capture",
+    "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
+    "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
+    "captions: emulator-vs-real-org.vtt (WebVTT, generated from capture marks and the run report)"
+  ],
+  "evidence_refs": [
+    "docs/evidence/585182e9-b6b4-41aa-b812-13475d79f0d4/report.json",
+    "docs/evidence/585182e9-b6b4-41aa-b812-13475d79f0d4/observations.json"
+  ],
+  "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
+}

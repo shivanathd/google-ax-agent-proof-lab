@@ -5,7 +5,9 @@
   "description": "Local-first lab that separates agent execution, emulated dependencies, authorization and independently verified evidence.",
   "license": "UNLICENSED",
   "type": "module",
-  "engines": { "node": ">=24 <25" },
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "postinstall": "node scripts/patch-emulate.mjs",
     "lab": "tsx src/cli/main.ts",
@@ -14,6 +16,7 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "verify:task": "tsx scripts/verify/task.ts",
+    "media:readme": "npm run lab -- media doctor && npm run lab -- media capture --suite readme && npm run lab -- media optimize --suite readme && npm run lab -- readme build && npm run lab -- readme verify --local --record && npm run lab -- media verify --suite readme",
     "mutate": "tsx scripts/mutations/run.ts",
     "bench": "tsx scripts/bench/run.ts",
     "spike": "tsx spikes/w0-spike.ts"
@@ -31,6 +34,7 @@
     "@playwright/test": "1.64.1",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "26.6.5",
+    "marked": "18.1.1",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.4",

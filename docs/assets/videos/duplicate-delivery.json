@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "clip": "clip-duplicate-delivery",
+  "title": "Duplicate delivery",
+  "run_ids": [
+    "ae70bdf5-0ce7-4c8b-be35-c0569282f994"
+  ],
+  "scenario_ids": [
+    "W01-D"
+  ],
+  "candidate_revision": "44b76be0bcf17b724aed21c5fd691f21e2eb82ae",
+  "tree_sha": "e61581651f7e15791d88d9d228ddba66af8092e9",
+  "application_tree_sha256": "263e2c182a74e4796af18dbce4077ff94ea36e11270f26e9fa051f594fe361ff",
+  "profile": "local",
+  "mode": "scripted",
+  "recorded_at": "2026-10-28T14:56:47.362Z",
+  "marks": [
+    {
+      "t_ms": 0,
+      "label": "console loaded"
+    },
+    {
+      "t_ms": 30,
+      "label": "select W01-D"
+    },
+    {
+      "t_ms": 1034,
+      "label": "dwell 1000ms"
+    },
+    {
+      "t_ms": 1034,
+      "label": "run clicked W01-D"
+    },
+    {
+      "t_ms": 7633,
+      "label": "reported W01-D"
+    },
+    {
+      "t_ms": 10640,
+      "label": "dwell 3000ms"
+    },
+    {
+      "t_ms": 10765,
+      "label": "tab report"
+    },
+    {
+      "t_ms": 14767,
+      "label": "dwell 4000ms"
+    },
+    {
+      "t_ms": 14779,
+      "label": "tab workflow"
+    },
+    {
+      "t_ms": 16784,
+      "label": "dwell 2000ms"
+    },
+    {
+      "t_ms": 16784,
+      "label": "end"
+    }
+  ],
+  "original_capture": "w01d-frames.json",
+  "original_capture_sha256": "0179bf5e3f468f67cffd2c1d0bfd1fbc8371c80fa806c0c452fa57e7827324cd",
+  "webm_cross_check": "w01d.webm",
+  "webm_sha256": "bb707494dcbc388a15ba07c78397af3480b57afb45d2c436d1f57488f4bf361d",
+  "mp4_sha256": "c3ab9ddd47e13fc2ecbfffc98ef83a6ef0afaac6864c687b96ec7b3b58c43fa4",
+  "edits": [
+    "trimmed to 0.39-17.18 s of the source capture",
+    "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
+    "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
+    "captions: duplicate-delivery.vtt (WebVTT, generated from capture marks and the run report)"
+  ],
+  "evidence_refs": [
+    "docs/evidence/ae70bdf5-0ce7-4c8b-be35-c0569282f994/report.json",
+    "docs/evidence/ae70bdf5-0ce7-4c8b-be35-c0569282f994/observations.json"
+  ],
+  "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
+}
