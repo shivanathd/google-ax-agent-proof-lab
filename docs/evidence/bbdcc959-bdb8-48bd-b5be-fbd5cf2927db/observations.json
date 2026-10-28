@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A2",
+  "run_id": "bbdcc959-bdb8-48bd-b5be-fbd5cf2927db",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "1ba3c290a37990e4354900706e99a975f9493a35",
+  "tree_sha": "b907eba5df58a8be277f70fd766421f2881038c2",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "publication scan: secret rules + private-terms list (counts only; matches never stored)",
+    "recording export files (sidecar, captions, sanitized run export) + ffprobe decode",
+    "report.json read from the run's artifact directory"
+  ],
+  "observed_at": "2026-10-28T20:23:03.145Z",
+  "simulated_faults": [],
+  "observations": {
+    "revision_visible": true,
+    "run_id_visible": true,
+    "synthetic_notice_visible": true,
+    "secret_count": 0,
+    "forbidden_identity_count": 0,
+    "evidence_refs_valid": true
+  },
+  "unobserved": {}
+}

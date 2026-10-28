@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-28T20:26:48.358Z",
+  "candidate": {
+    "revision": "1ba3c290a37990e4354900706e99a975f9493a35",
+    "tree_sha": "b907eba5df58a8be277f70fd766421f2881038c2",
+    "dirty": false
+  },
+  "candidate_restored": true,
+  "summary": {
+    "caught": 4,
+    "uncaught": 0,
+    "invalid": 0
+  },
+  "results": [
+    {
+      "mutant": "01-disable-dedupe",
+      "patch": "tests/mutations/01-disable-dedupe.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/slack.test.ts -t \"F2-A2\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py F2-A2",
+          "status": "FAIL"
+        }
+      ],
+      "seconds": 10
+    },
+    {
+      "mutant": "02-bypass-approval",
+      "patch": "tests/mutations/02-bypass-approval.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/unit/policy.test.ts",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py F3-A2 S3",
+          "status": "FAIL"
+        }
+      ],
+      "seconds": 31
+    },
+    {
+      "mutant": "03-reply-before-receipt",
+      "patch": "tests/mutations/03-reply-before-receipt.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/workflows.test.ts -t \"W01-S\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py S2",
+          "status": "FAIL"
+        }
+      ],
+      "seconds": 14
+    },
+    {
+      "mutant": "04-missing-evidence-success",
+      "patch": "tests/mutations/04-missing-evidence-success.patch",
+      "verdict": "caught",
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "check": "vitest tests/integration/evidence.test.ts -t \"G-UNKNOWN|PASS needs\"",
+          "status": "FAIL"
+        },
+        {
+          "check": "evaluate.py F4-A1",
+          "status": "PASS"
+        }
+      ],
+      "seconds": 8
+    }
+  ],
+  "note": "Counts are of these probes only; they do not show the application is free of other defects."
+}

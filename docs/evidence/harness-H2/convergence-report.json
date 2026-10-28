@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "verdict": "LOCAL_CORE_READY",
+  "results": [
+    {
+      "layer": "task_verifications",
+      "id": "1.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "task_verifications",
+      "id": "2.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "task_verifications",
+      "id": "3.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "task_verifications",
+      "id": "4.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "task_verifications",
+      "id": "5.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "task_verifications",
+      "id": "6.1",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F1",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F2",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F3",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F4",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F5",
+      "status": "PASS"
+    },
+    {
+      "layer": "acceptance_tests",
+      "id": "F6",
+      "status": "PASS"
+    },
+    {
+      "layer": "holdout_evals",
+      "id": "S1",
+      "status": "PASS"
+    },
+    {
+      "layer": "holdout_evals",
+      "id": "S2",
+      "status": "PASS"
+    },
+    {
+      "layer": "holdout_evals",
+      "id": "S3",
+      "status": "PASS"
+    },
+    {
+      "layer": "holdout_evals",
+      "id": "S4",
+      "status": "PASS"
+    }
+  ],
+  "scope": "local required gates; not authorization to publish",
+  "holdout_visibility": "public-challenge"
+}

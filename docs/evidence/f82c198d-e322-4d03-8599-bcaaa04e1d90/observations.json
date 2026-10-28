@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A5",
+  "run_id": "f82c198d-e322-4d03-8599-bcaaa04e1d90",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "1ba3c290a37990e4354900706e99a975f9493a35",
+  "tree_sha": "b907eba5df58a8be277f70fd766421f2881038c2",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "`lab media verify` + `lab readme verify --local` (child processes, logged git/gh)",
+    "`lab readme verify --github` (child process, logged git/gh)",
+    "collector-owned git/gh invocation log + git remotes before/after"
+  ],
+  "observed_at": "2026-10-28T20:25:08.473Z",
+  "simulated_faults": [],
+  "observations": {
+    "local_media_status": "PASS",
+    "github_render_status": "NOT_RUN",
+    "unauthorized_repository_create_count": 0,
+    "unauthorized_push_count": 0
+  },
+  "unobserved": {}
+}

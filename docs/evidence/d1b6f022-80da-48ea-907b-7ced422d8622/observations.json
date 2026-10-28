@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A4",
+  "run_id": "d1b6f022-80da-48ea-907b-7ced422d8622",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "1ba3c290a37990e4354900706e99a975f9493a35",
+  "tree_sha": "b907eba5df58a8be277f70fd766421f2881038c2",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "`lab media verify` / `lab readme verify --local` (child processes) on deliberately broken copies"
+  ],
+  "observed_at": "2026-10-28T20:25:01.705Z",
+  "simulated_faults": [],
+  "observations": {
+    "missing_screenshot_detected": true,
+    "single_frame_gif_detected": true,
+    "stale_capture_detected": true,
+    "broken_embed_detected": true,
+    "false_media_success_count": 0
+  },
+  "unobserved": {}
+}
