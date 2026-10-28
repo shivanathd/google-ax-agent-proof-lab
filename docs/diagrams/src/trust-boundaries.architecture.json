@@ -36,7 +36,7 @@
   ],
   "cards": [
     { "dot": "rose", "title": "Who holds what", "items": ["Worker: one bot token (chat:write, app_mentions:read) and signing secret per installation.", "Collector: reader token (channels:history/read), its own Floci key, a readonly SQLite handle.", "Coordinator: setup and per-user tokens; only it calls simulate/*."] },
-    { "dot": "amber", "title": "Enforced by process, not by the emulator", "items": ["L-019: Emulate accepts any valid token on simulate/*.", "The worker never learns an emulator URL; its allowlist drops emulator ports.", "Floci credential checks were not verified: treat key separation as labelling (UNKNOWN)."] },
+    { "dot": "amber", "title": "Enforced by process, not by the emulator", "items": ["L-019: Emulate accepts any valid token on simulate/*.", "The worker never learns an emulator URL; its allowlist drops emulator ports.", "L-037: Floci does not check credentials, so the key separation is labelling only."] },
     { "dot": "cyan", "title": "Sources", "items": ["src/worker/config.ts, src/adapters/slack/emulator.ts", "src/adapters/slack/worker-proxy.ts, src/config/lifecycle.ts", "src/evaluator/collect-case.ts, src/collector/probe.ts"] }
   ]
 }

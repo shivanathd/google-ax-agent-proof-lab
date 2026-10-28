@@ -11,7 +11,7 @@ An agent demo usually ends with a green check and a friendly message: "Your requ
 
 These are four different claims. A demo that answers the first one is often presented as if it answered all four.
 
-<!-- media: lab-overview (run d1141e88, W02-H; C-40) -->
+<!-- media: lab-overview (run 04658407, W02-H; C-40) -->
 
 ## The setup
 
@@ -28,13 +28,13 @@ There are three workflows. W01 is a service request: a Slack mention becomes a q
 
 The worker can say "done". In this lab that statement is one observation among several, never the verdict.
 
-A separate collector process reads the outcome. It has its own Slack token, which can only read conversations. It has its own S3 client and opens the ledger read-only. It never talks to the worker. For W01 it checks three stores: is there exactly one ticket, does the S3 receipt match the request, and is there exactly one completion reply in the original thread? Those facts go into an observation bundle, and an evaluator compares them with expectations fixed in the specification.
+A separate collector process reads the outcome. It has its own Slack token, which can only read conversations. It has its own S3 client and opens the ledger read-only. (Its separate S3 key turned out to be a label, not a lock: Floci does not check credentials, L-037. What actually keeps the two apart is that they are separate processes.) It never talks to the worker. For W01 it checks three stores: is there exactly one ticket, does the S3 receipt match the request, and is there exactly one completion reply in the original thread? Those facts go into an observation bundle, and an evaluator compares them with expectations fixed in the specification.
 
 The case that matters is the one where they disagree. In one test the receipt is deleted after the worker has committed it, and the worker still claims success. The required assertion fails, and the report shows no success banner (C-08). The console shows the same failure without a success badge (C-30).
 
-<!-- media: service-request-success (run d7b27d50, W01-H; C-41) -->
-<!-- media: evidence-report (run d7b27d50; C-41) -->
-<!-- media: clip-mental-model (runs fed9685f W01-H PASS and ca8e55fb W01-F FAIL; C-44) -->
+<!-- media: service-request-success (run d886ccf1, W01-H; C-41) -->
+<!-- media: evidence-report (run d886ccf1; C-41) -->
+<!-- media: clip-mental-model (runs 60722942 W01-H PASS and 1ff864a9 W01-F FAIL; C-44) -->
 
 A rule from the specification turned out to be harder to keep than to state: **missing evidence is not zero.** If the collector cannot read the ledger, it does not know which receipt to look for. An early version recorded `receipt_count: 0` anyway, which reads as "no receipt". The test for the unreadable-ledger case caught it. The fact is now absent with a reason, and the report says UNKNOWN (L-021).
 
@@ -52,7 +52,7 @@ The last finding changed the design. The worker no longer gets an emulator URL a
 
 The same discipline applies to the CRM. W03 runs against a local contract double that is good for version conflicts and input validation (C-07). It is not Salesforce. The Salesforce lane is designed and blocked, and parity is reported as UNKNOWN rather than implied (C-09, C-51).
 
-<!-- media: clip-emulator-vs-real-org (run 581e434c, W03-V; C-45) -->
+<!-- media: clip-emulator-vs-real-org (run 18967808, W03-V; C-45) -->
 
 ## Authorized is not the same as delivered through Slack
 
@@ -65,20 +65,20 @@ The lab's results for the denied paths, all with zero writes:
 - a button copied into the other workspace (C-14);
 - an approver whose permission was revoked before the click (C-14).
 
-<!-- media: approval-denied (run 493034f5, W02-U; C-43) -->
-<!-- media: approval-denied-gif (run 493034f5; C-43) -->
-<!-- media: clip-permission-boundary (run 493034f5; C-43) -->
+<!-- media: approval-denied (run 7a941810, W02-U; C-43) -->
+<!-- media: approval-denied-gif (run 7a941810; C-43) -->
+<!-- media: clip-permission-boundary (run 7a941810; C-43) -->
 
 Duplicate delivery is part of the same question. A signed retry of the same event creates no second ticket and no second reply (C-04). If a reply is sent and the response never comes back, the outcome is recorded as UNKNOWN and never re-posted. With least-privilege scopes the worker cannot read history to check, so the lab trades reconcilability for privilege and says so (L-017).
 
-<!-- media: duplicate-event-safe (run 8c577551, W01-D; C-42) -->
-<!-- media: clip-duplicate-delivery (run 8c577551; C-42) -->
+<!-- media: duplicate-event-safe (run dc60b1dc, W01-D; C-42) -->
+<!-- media: clip-duplicate-delivery (run dc60b1dc; C-42) -->
 
 ## Tests that cannot fail
 
 The most useful lessons came from tests that passed for the wrong reason.
 
-The optional lanes (Salesforce, CodeRabbit, AX, a live model) are supposed to report BLOCKED until their owner approves them. They did. But the profile loader looked for a named export while every adapter used a default export, so each lane reported "adapter not installed". BLOCKED was right and the reason was wrong. The check now refuses that placeholder as evidence (L-020).
+The optional lanes (Salesforce, CodeRabbit, AX, a live model) are supposed to report BLOCKED until their owner approves them and configures them. They did. But the profile loader looked for a named export while every adapter used a default export, so each lane reported "adapter not installed". BLOCKED was right and the reason was wrong. The check now refuses that placeholder as evidence (L-020).
 
 Regenerating a report also rewrote its checksum file, which would have quietly re-approved an edited evidence file. Report generation now verifies the old checksums first and refuses on a mismatch (L-022).
 
@@ -86,9 +86,31 @@ Four deliberate mutants target the defects the lab exists to catch: deduplicatio
 
 Two failures appeared only after merging. Each branch had passed its own gates. Together, the new Slack proxy sat in front of a forbidden endpoint and hid it from the worker's guard. Separately, a restarted worker collided with the ports of its crashed predecessor. Only the full harness on the merged tree caught them (L-025, L-026). Both were fixed before the runs this article cites.
 
+A blind suite found what the visible one missed. A separate agent that had never seen the builders' tests wrote 15 extra scenarios and timestamped their expectations before running them against a frozen tree. Thirteen passed and two failed (C-54). A zero-cent purchase request was accepted because the input schema allowed zero; that is fixed now, and re-running it is a regression check, not a blind result (L-027). A payload claiming the other workspace's team, signed with this workspace's secret, was accepted at the door and only denied later by policy, because both emulated workspaces report the same team ID (L-028). That one is disclosed rather than changed. These were blind to the builder agents, not to the orchestrator who set them.
+
+## Running somewhere else: AX on Agent Substrate
+
+The optional AX lane runs the same W01 case as an AX task in a gVisor sandbox on Agent Substrate. It took three attempts. The first stopped because the AX control plane and the installed Substrate disagreed on the wire format (L-030). The second stopped on missing IAM prerequisites for upgrading Substrate (L-043). The third reinstalled Substrate at v0.6.0 with the owner's approval and ran the tests. Everything below comes from that one cluster, one worker and gVisor, and is recorded per assertion in `profiles/ax/RESULTS.md`.
+
+What passed:
+
+- W01 ran as an AX task and passed the same four assertions as the local lane, judged by a collector Pod with its own token and certificate (C-60).
+- A command that exited 3 was still reported by AX as `Running`. That is what the AX docs say to expect, and it is why the lane never treats the task phase as an outcome (C-61, C-57).
+- From inside the sandbox, metadata, public hosts, the cluster and control-plane APIs and an unlisted emulator port were all unreachable (C-67). The router refused a client without a certificate (C-68).
+- Resuming after a suspend kept the workspace (C-65).
+
+What failed:
+
+- Neither `ax suspend` nor `ax delete task` delivered SIGTERM to the command, so the runner never recorded an exit (C-62, C-63). Only evicting the worker Pod did (C-64).
+- After an eviction, AX treated the actor as crashed and reverted it to its last snapshot, so the result was gone (C-66).
+
+One observation is neither: `ax get task` returns the task's tokens in clear to any AX API caller (C-69).
+
+Timing, n=5: a task reached `Running` about 17 seconds after submit and its result about 20 seconds after (C-70). Most of that is the operator tooling attaching the egress policy and resuming the task. AX's own logs put resume to running at about 2 seconds.
+
 ## What it costs to run
 
-Measured on one laptop (macOS arm64, 18 cores) with other workloads running, n=5 per workflow, raw values in [`docs/BENCHMARKS.md`](../docs/BENCHMARKS.md):
+Measured on one laptop (macOS arm64, 18 cores) with other workloads running, n=5 per workflow, on a tree from before the console merge and the later emulator and allowlist changes, raw values in [`docs/BENCHMARKS.md`](../docs/BENCHMARKS.md):
 
 | Workflow | Callback to verified, 5 repetitions | Median |
 |---|---|---|
@@ -103,12 +125,12 @@ These are descriptive numbers from a small sample on a busy machine. They are no
 ## What is not done
 
 - **The README media have not had an independent render review.** The console and media cases now run and pass (C-30, C-31, C-33 to C-35), and the media decode with valid provenance. But F6-A3 waits for a reviewer other than the media builder, so the harness verdict is `LOOP`, not ready (C-32). Every capture's manual visual review is pending, and GitHub rendering is NOT_RUN because nothing is published (C-55).
-- **AX on Agent Substrate** is designed and blocked. The custom runner passed its contract tests under plain Docker, which says nothing about gVisor. AX does not read the agent command's exit status back, so in the design the collector, not the task phase, decides the outcome (C-50, C-57).
+- **AX termination** fails two of its three signal paths and loses state after an eviction (C-62, C-63, C-66). A runner that survives eviction is not built. All AX results come from one cluster.
 - **Salesforce, CodeRabbit and a live model** are blocked on accounts and approvals the owner has not given (C-51 to C-53).
 - **Egress counting** for the optional lanes relies on shims for provider command-line tools. Routing Node's own traffic through the counting proxy is unproven (L-023).
-- **Blind holdouts** have not been run. The public challenge cases are reproducible, not secret (C-54).
+- **The blind finding BH-03b** (team ID not checked at ingress) is disclosed, not fixed (L-028). The public challenge cases are reproducible, not secret.
 
-<!-- media: profile-boundaries (run d7b27d50; C-41) -->
+<!-- media: profile-boundaries (run d886ccf1; C-41) -->
 
 ## Reproduce it
 
@@ -125,6 +147,6 @@ npm run bench
 
 Your run produces new run IDs. Compare observations and statuses with the claim ledger, not the IDs. If yours differ, that is a finding, and the ledger is where it belongs.
 
-<!-- media: slack-service-request (run d7b27d50, W01-H; C-41) -->
+<!-- media: slack-service-request (run d886ccf1, W01-H; C-41) -->
 
 The standard I wanted is modest and checkable: someone else can inspect the request, follow the action, challenge the result and rerun the case.
