@@ -1,0 +1,99 @@
+# Namespace-local emulators for one AX run, applied with `kubectl --context $APL_AX_CONTEXT apply -f <rendered file>`.
+# Every object carries apl-run=${APL_RUN_ID}; teardown deletes by that label and then deletes the namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: floci
+  namespace: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+    app: floci
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: floci, apl-run: "${APL_RUN_ID}" }
+  template:
+    metadata:
+      labels: { app: floci, apl-run: "${APL_RUN_ID}" }
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: floci
+          image: "${APL_FLOCI_IMAGE}"
+          env:
+            - { name: FLOCI_SERVICES_UI_ENABLED, value: "false" }
+          ports: [{ containerPort: 4566 }]
+          resources:
+            limits: { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: floci
+  namespace: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+spec:
+  selector: { app: floci, apl-run: "${APL_RUN_ID}" }
+  ports: [{ port: 4566, targetPort: 4566 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emulate
+  namespace: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+    app: emulate
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: emulate, apl-run: "${APL_RUN_ID}" }
+  template:
+    metadata:
+      labels: { app: emulate, apl-run: "${APL_RUN_ID}" }
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: emulate
+          # Lab-built image wrapping the pinned emulate package; must listen on 8080.
+          image: "${APL_EMULATE_IMAGE}"
+          ports: [{ containerPort: 8080 }]
+          resources:
+            limits: { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: emulate
+  namespace: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+spec:
+  selector: { app: emulate, apl-run: "${APL_RUN_ID}" }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+# Only this namespace (collector) and Substrate's egress gateway namespace may reach the emulators.
+# The gateway namespace is an assumption to verify against the pinned Substrate docs before W6.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: emulators-ingress
+  namespace: apl-${APL_RUN_ID}
+  labels:
+    apl-run: "${APL_RUN_ID}"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ate-system }

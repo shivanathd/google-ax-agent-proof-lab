@@ -1,0 +1,49 @@
+# AX resources for one lab run, applied with `ax apply -a ${APL_AX_ATESPACE} -f <rendered file>`.
+# AX ObjectMeta has only name and atespace (ax.proto at the pinned SHA), so the run id cannot be a label here.
+# It is carried by the atespace, both resource names, spec.config and the task env instead.
+apiVersion: ax.io/v1alpha1
+kind: Workspace
+metadata:
+  name: apl-ws-${APL_RUN_ID}
+  atespace: ${APL_AX_ATESPACE}
+spec:
+  files:
+    - path: ".apl/run.json"
+      content: |
+        {"apl-run": "${APL_RUN_ID}", "case_id": "${APL_CASE_ID}"}
+---
+apiVersion: ax.io/v1alpha1
+kind: Task
+metadata:
+  name: apl-task-${APL_RUN_ID}
+  atespace: ${APL_AX_ATESPACE}
+spec:
+  image: "${APL_AX_IMAGE}"
+  # The W6 image (rebuilt from the frozen candidate) provides /usr/local/bin/apl-case.
+  command: ["/usr/local/bin/apl-case", "${APL_CASE_ID}"]
+  env:
+    - name: APL_RUN_ID
+      value: "${APL_RUN_ID}"
+    - name: APL_PROFILE
+      value: "ax"
+    # Namespace-local emulators; no tunnel to the laptop. Fake credentials only.
+    - name: APL_SLACK_API_URL
+      value: "http://emulate.apl-${APL_RUN_ID}.svc.cluster.local:8080/api/"
+    - name: AWS_ENDPOINT_URL
+      value: "http://floci.apl-${APL_RUN_ID}.svc.cluster.local:4566"
+    - name: AWS_ACCESS_KEY_ID
+      value: "test"
+    - name: AWS_SECRET_ACCESS_KEY
+      value: "test"
+    - name: AWS_REGION
+      value: "us-east-1"
+  config:
+    apl-run: "${APL_RUN_ID}"
+    case_id: "${APL_CASE_ID}"
+  resources:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+  workspace:
+    name: apl-ws-${APL_RUN_ID}
+  debug: false
