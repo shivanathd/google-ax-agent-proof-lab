@@ -1,4 +1,6 @@
 import { mkdtempSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,7 +8,10 @@ import { openLedger } from "../../src/ledger/db.ts";
 import { assertAllowed, decide, envelope, setGrant, SYSTEM_ACTOR } from "../../src/policy/index.ts";
 import { CRM_DOUBLE, seedAccount, updateDescription } from "../../src/adapters/crm-local/index.ts";
 import { plan } from "../../src/workflows/scripted.ts";
-import { receiptBody, type Ctx } from "../../src/workflows/context.ts";
+import { receiptBody, reply, type Ctx } from "../../src/workflows/context.ts";
+import { enqueueOutbox } from "../../src/ledger/db.ts";
+import { createWorker } from "../../src/worker/worker.ts";
+import type { WorkerConfig } from "../../src/worker/config.ts";
 
 const RUN = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const fresh = () => {
@@ -57,12 +62,89 @@ describe("deterministic policy and C3 envelopes", () => {
     expect(() => envelope(db, { ...base, actor_id: "UAPP", operation: "approval.resolve", input: { approval_id: "a", request_digest: "0".repeat(64), resolution: "approved" } })).toThrow(/approval_ref/);
   });
 
+  it("operation-specific schemas reject an unknown input field for all six operations", () => {
+    const db = fresh();
+    const valid: Record<string, { actor_id: string; connection_ref: string; input: Record<string, unknown>; expected_version?: number; approval_ref?: string }> = {
+      "ticket.create": { actor_id: "UREQ", connection_ref: "local:floci", input: { summary: "printer", source_event_id: "Ev1" } },
+      "receipt.put": { actor_id: SYSTEM_ACTOR, connection_ref: "local:floci", input: { bucket: "b", key: "k", sha256: "0".repeat(64), subject_action_id: "a" } },
+      "approval.request": { actor_id: "UREQ", connection_ref: "local:slack:A", input: { item: "desk", amount_cents: 12500 } },
+      "approval.resolve": { actor_id: "UAPP", connection_ref: "local:slack:A", approval_ref: "apr-1", input: { approval_id: "apr-1", request_digest: "0".repeat(64), resolution: "approved" } },
+      "crm.description.update": { actor_id: "UCRM", connection_ref: "local:crm-double", expected_version: 1, input: { account_id: "a", description: "d" } },
+      "slack.reply": { actor_id: SYSTEM_ACTOR, connection_ref: "local:slack:A", input: { channel: "C1", thread_ts: "1.1", text: "done" } },
+    };
+    expect(Object.keys(valid).sort()).toEqual(["approval.request", "approval.resolve", "crm.description.update", "receipt.put", "slack.reply", "ticket.create"]);
+    for (const [operation, v] of Object.entries(valid)) {
+      const e = { ...base, ...v, operation: operation as never };
+      expect(() => envelope(db, e), operation).not.toThrow();
+      expect(() => envelope(db, { ...e, input: { ...v.input, injected: true } }), operation).toThrow(/additional properties/);
+    }
+  });
+
   it("adapters refuse denied envelopes", () => {
     const db = fresh();
     const { env } = envelope(db, { ...base, actor_id: "UNOBODY", operation: "crm.description.update", expected_version: 1, input: { account_id: "a", description: "d" } });
     expect(env.authorization_decision).toBe("deny");
     expect(() => assertAllowed(env, "crm.description.update")).toThrow(/not allowed/);
     expect(() => updateDescription(db, env)).toThrow(/not allowed/);
+  });
+});
+
+describe("slack replies go through a validated C3 slack.reply envelope", () => {
+  const ctx = (db: ReturnType<typeof fresh>) => ({ cfg: { run_id: RUN }, db } as Ctx);
+  const outbox = (db: ReturnType<typeof fresh>, key: string) => db.prepare("SELECT * FROM outbox WHERE action_key = ?").get(key) as Record<string, any>;
+
+  it("reply() writes an allowed system envelope bound to tenant, installation and action key", () => {
+    const db = fresh();
+    reply(ctx(db), { tenant_id: "T_LAB_A", installation_id: "A" }, "reply:t1", { channel: "C1", thread_ts: "1.1", text: "done", meta: { approval_id: "apr-1", version: 1 } });
+    const env = JSON.parse(outbox(db, "reply:t1").payload);
+    expect(() => assertAllowed(env, "slack.reply")).not.toThrow();
+    expect(env).toMatchObject({
+      run_id: RUN, tenant_id: "T_LAB_A", actor_id: SYSTEM_ACTOR, connection_ref: "local:slack:A", operation: "slack.reply", idempotency_key: "reply:t1",
+      authorization_decision: "allow", input: { channel: "C1", thread_ts: "1.1", text: "[scripted] done", meta: { approval_id: "apr-1", version: 1 } },
+    });
+  });
+
+  it("reply() refuses unknown message fields before anything is queued", () => {
+    const db = fresh();
+    expect(() => reply(ctx(db), { tenant_id: "T_LAB_A", installation_id: "A" }, "reply:t2", { channel: "C1", thread_ts: "1.1", text: "x", unfurl_links: true } as never)).toThrow(/additional properties/);
+    expect(outbox(db, "reply:t2")).toBeUndefined();
+  });
+
+  it("publish() re-validates: a forged or rebound outbox row is never sent to Slack", async () => {
+    const db = fresh();
+    const posted: string[] = [];
+    const srv = createServer((req, res) => {
+      let b = "";
+      req.on("data", (d) => (b += d)).on("end", () => {
+        posted.push(JSON.parse(b).text);
+        res.setHeader("content-type", "application/json").end(JSON.stringify({ ok: true, ts: "2.2", channel: "C1" }));
+      });
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const port = (srv.address() as AddressInfo).port;
+    const cfg: WorkerConfig = {
+      run_id: RUN, db_path: "unused", http_port: 0, allowlist: [{ scheme: "http", host: "127.0.0.1", port }], slack_timeout_ms: 2000, max_retries: 0,
+      installations: (["A", "B"] as const).map((id) => ({ installation_id: id, tenant_id: `T_LAB_${id}`, team_id: `T${id}`, api_app_id: "A_LABBOT", bot_user_id: "U_LABBOT", signing_secret: "s", api_url: `http://127.0.0.1:${port}`, bot_token: "xoxb-unit" })),
+    };
+    const worker = await createWorker(cfg, db);
+    reply(ctx(db), { tenant_id: "T_LAB_A", installation_id: "A" }, "reply:ok", { channel: "C1", thread_ts: "1.1", text: "valid" });
+    // Written straight to the outbox, bypassing reply(): no envelope at all.
+    enqueueOutbox(db, { run_id: RUN, tenant_id: "T_LAB_A", installation_id: "A", action_key: "reply:raw", kind: "slack.reply", payload: { channel: "C1", thread_ts: "1.1", text: "forged" } });
+    // A valid tenant-B envelope replayed under installation A.
+    reply(ctx(db), { tenant_id: "T_LAB_B", installation_id: "B" }, "reply:b", { channel: "C2", thread_ts: "1.1", text: "rebound" });
+    const envB = outbox(db, "reply:b").payload;
+    db.prepare("DELETE FROM outbox WHERE action_key = 'reply:b'").run();
+    enqueueOutbox(db, { run_id: RUN, tenant_id: "T_LAB_A", installation_id: "A", action_key: "reply:b", kind: "slack.reply", payload: JSON.parse(envB) });
+    // A denied envelope.
+    const denied = { ...JSON.parse(outbox(db, "reply:ok").payload), idempotency_key: "reply:denied", authorization_decision: "deny" };
+    enqueueOutbox(db, { run_id: RUN, tenant_id: "T_LAB_A", installation_id: "A", action_key: "reply:denied", kind: "slack.reply", payload: denied });
+    worker.kick();
+    const end = Date.now() + 5000;
+    while ((db.prepare("SELECT count(*) AS n FROM outbox WHERE status = 'pending'").get() as { n: number }).n && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
+    worker.stop();
+    srv.close();
+    expect(posted).toEqual(["[scripted] valid"]);
+    for (const key of ["reply:raw", "reply:b", "reply:denied"]) expect(outbox(db, key), key).toMatchObject({ status: "failed", result: expect.stringContaining("envelope_rejected") });
   });
 });
 

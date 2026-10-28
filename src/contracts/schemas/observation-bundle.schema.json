@@ -23,6 +23,7 @@
     "fixture_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "dependencies_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "seed": { "type": "integer", "minimum": 0 },
+    "floci_image": { "type": "string", "pattern": "^[a-z0-9./_-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}$" },
     "mutation": { "type": "string", "minLength": 1 },
     "collector": { "type": "string", "minLength": 1 },
     "collector_methods": { "type": "array", "items": { "type": "string", "minLength": 1 } },

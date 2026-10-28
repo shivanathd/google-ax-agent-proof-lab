@@ -1,3 +1,4 @@
+// W0 interface spike, kept as evidence of what was checked before implementation; not part of the lab runtime.
 // W0 spike: prove the pinned upstream interfaces the lab depends on, against real processes.
 // Run: npm run spike. Prints one line per check; exits nonzero on the first failure.
 import { createHmac, timingSafeEqual } from "node:crypto";

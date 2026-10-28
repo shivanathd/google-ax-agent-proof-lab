@@ -7,7 +7,7 @@ import { chromium } from "@playwright/test";
 import { ROOT } from "../../config/run-config.ts";
 import { SECRET_RULES } from "../../reports/export.ts";
 import { verifyChecksums } from "../../reports/report.ts";
-import { loadPrivateTerms } from "../../media/spec.ts";
+import { loadPrivateTerms, privateTermsMissing } from "../../media/spec.ts";
 import type { CaseDef } from "../types.ts";
 import { consoleRuns, readConsole, readReport, screenshotEvidence, withPage } from "./f6-shared.ts";
 
@@ -41,6 +41,7 @@ export const F6_A1: CaseDef = {
 export const F6_A2: CaseDef = {
   stack: { floci: false, slack: false },
   worker: false,
+  prerequisite: () => privateTermsMissing(),
   async execute(x) {
     const { startConsole } = await import("../../console/server.ts");
     const { exportRun } = await import("../../reports/export.ts");

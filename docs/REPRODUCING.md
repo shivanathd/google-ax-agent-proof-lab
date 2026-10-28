@@ -4,11 +4,39 @@ The screenshots, GIFs, posters and MP4 clips in the root README are captures of 
 
 ## Prerequisites
 
-The same as the local core (Node.js 24, Docker, the pinned Floci image, `npm ci`), plus FFmpeg 6.x on `PATH` with the `palettegen`/`paletteuse` filters and `libx264`, and Playwright's Chromium (`npx playwright install chromium`). The publication scan also needs the owner's private-terms list at `private-runs/private-terms.txt` in the main checkout; without it, capture and export refuse to run rather than report zero findings.
+| Needed for | What |
+|---|---|
+| Everything | Node.js 24.x (`engines` refuses other majors), `npm ci` (applies the pinned Emulate patch) |
+| Every case that starts Floci (most of them) | Docker with a running daemon, and the pinned image: `docker pull floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9` |
+| Console and media cases only (F6-A1 to F6-A5, S4) and media capture | FFmpeg 6.x on `PATH` with the `palettegen`/`paletteuse` filters and `libx264`, and Playwright's Chromium: `npx playwright install chromium` |
+| F6-A2, media capture, `lab export` | A private-terms list (below) |
+
+`npm run lab -- doctor` checks the local core; `npm run lab -- media doctor` checks the media prerequisites. Neither makes a network call.
+
+### The private-terms list
+
+`private-runs/private-terms.txt` (gitignored) is the maintainer's local list of forbidden identifiers: names of real employers, customers, projects, hosts or accounts that must never appear in a published capture or export. It is not in the repository, and its contents are never printed; scans report counts and file names only. It is resolved through the git common directory, so worktrees share the main checkout's copy.
+
+A reader creates their own, one term per line, matched case-insensitively as a substring; blank lines are ignored:
 
 ```bash
-npm run lab -- media doctor
+mkdir -p private-runs
+printf '%s\n' 'your-employer-name' 'your-real-hostname' > private-runs/private-terms.txt
 ```
+
+Use terms that are private to you; the lab's own fictional names (Dana, Northstar Demo, `T_LAB_A`) would make every scan fail. Without the list the lab fails closed instead of reporting zero findings: `lab export` is REJECTED, media capture refuses to start, and F6-A2 writes a bundle with `execution: NOT_RUN` and the reason "private-terms list missing" (exit 2). It is never PASS.
+
+### F6-A3 and the render review record
+
+F6-A3 checks the committed README media and also requires `docs/assets/render-review.json`: a record written by an independent reviewer (a person or agent that did not produce the media) after inspecting the rendered README: `reviewer` (not the media builder), `reviewed_at`, `desktop_ok` and `narrow_ok` (1440 and 400 px), and `readme_sha256` and `media_manifest_sha256` matching the current files, so any README or media change invalidates it. The media pipeline never writes it, so the case cannot pass itself. Until such a record exists for the current README, `local_render_review_passed` is false, F6-A3 FAILs and the supplied harness verdict is `LOOP` ([claim ledger](CLAIM_LEDGER.md), C-32). A reader reproducing the run gets the same result.
+
+### Optional pre-commit hook
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`.githooks/pre-commit` refuses a commit when the author email is not a `*.invalid` or GitHub noreply address, or when any staged line contains a term from `private-runs/private-terms.txt`. It fails closed: with no list it rejects every commit. It is a local guard for the maintainer, not a publication gate.
 
 ## One command sequence
 

@@ -33,9 +33,12 @@ export function collectorConfig(h: RunHandle, caseId: string, output: string, de
   };
 }
 
-export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg) });
+// HOME is a run-owned dir next to the run manifest, never the developer's.
+const collectorHome = (cfg: CollectorConfig) => join(dirname(cfg.manifest_path), "collector-home");
+export const collectorEnv = (cfg: CollectorConfig, ambient: NodeJS.ProcessEnv = process.env) => childEnv(ambient, { APL_COLLECTOR: JSON.stringify(cfg), HOME: collectorHome(cfg) });
 
 function spawnCollector(cfg: CollectorConfig) {
+  mkdirSync(collectorHome(cfg), { recursive: true });
   const child: ChildProcess = spawn(process.execPath, ["--import", "tsx", "src/collector/main.ts"], { cwd: ROOT, env: collectorEnv(cfg), stdio: ["pipe", "pipe", "inherit"] });
   const lines = createInterface({ input: child.stdout! })[Symbol.asyncIterator]();
   const next = async () => {
@@ -83,6 +86,11 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
     writeUnexecuted(caseId, output, "NOT_RUN", entry.pending);
     return 2;
   }
+  const unmet = entry.prerequisite?.();
+  if (unmet) {
+    writeUnexecuted(caseId, output, "NOT_RUN", unmet);
+    return 2;
+  }
   if (!dockerAvailable()) {
     writeUnexecuted(caseId, output, "BLOCKED", "Docker daemon not reachable (local prerequisite)");
     return 2;
@@ -95,9 +103,10 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
   const faults: string[] = [];
   const deferred: (() => Promise<void> | void)[] = [];
   const refs: Record<string, unknown> = { faults };
-  const collector = spawnCollector(collectorConfig(h, caseId, output, def));
+  let collector: ReturnType<typeof spawnCollector> | undefined;
   let stopped: Awaited<ReturnType<RunHandle["stop"]>> | undefined;
   try {
+    collector = spawnCollector(collectorConfig(h, caseId, output, def));
     const info = (await collector.next()) as CollectorInfo & { ready?: boolean };
     if (!info.ready) throw new Error("collector did not start");
     if (h.workspaces.length && def.worker !== false) await h.startWorker(def.worker?.(h, info) ?? {});
@@ -108,7 +117,7 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
       ref: (k, v) => void (refs[k] = v),
       fault: (d) => void faults.push(d),
       snapshot: async (phase) => {
-        await collector.ask({ op: "snapshot", name: phase, refs });
+        await collector!.ask({ op: "snapshot", name: phase, refs });
         await hooks.onSnapshot?.(phase, h);
       },
       defer: (fn) => void deferred.push(fn),
@@ -121,7 +130,7 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
     hooks.onPhase?.("stopping", runId);
   } finally {
     for (const fn of deferred.reverse()) await Promise.resolve(fn()).catch(() => undefined);
-    if (collector.child.exitCode === null) collector.child.kill("SIGKILL");
+    collector?.child.kill("SIGKILL"); // no-op once it has exited
     stopped = await h.stop();
     rmSync(scratch, { recursive: true, force: true });
   }

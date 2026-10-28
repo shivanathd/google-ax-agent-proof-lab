@@ -1,5 +1,6 @@
 // The worker's entire configuration, passed as one env var. It holds only the worker's own bot token and
 // signing secret per installation: never the setup/simulator, reader or per-user tokens.
+import { dirname, join } from "node:path";
 import { childEnv } from "../config/env.ts";
 import type { Endpoint } from "../config/run-config.ts";
 import type { Installation } from "../http/slack.ts";
@@ -36,5 +37,7 @@ export function workerConfig(
   };
 }
 
+// HOME is a run-owned dir next to the ledger (created by startWorker), never the developer's.
+export const workerHome = (cfg: Pick<WorkerConfig, "db_path">) => join(dirname(cfg.db_path), "worker-home");
 export const workerEnv = (cfg: WorkerConfig, ambient: NodeJS.ProcessEnv = process.env) =>
-  childEnv(ambient, { APL_WORKER: JSON.stringify(cfg), NODE_ENV: "production" });
+  childEnv(ambient, { APL_WORKER: JSON.stringify(cfg), NODE_ENV: "production", HOME: workerHome(cfg) });

@@ -4,8 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { emit } from "../registry.ts";
-import { processResourceId, startRun } from "../../config/lifecycle.ts";
-import { recordResource } from "../../config/manifest.ts";
+import { startRun } from "../../config/lifecycle.ts";
 import { isOptionalProfile, profileDoctor } from "../../config/profiles.ts";
 import { ROOT } from "../../config/run-config.ts";
 import { slackClient } from "../../adapters/slack/client.ts";
@@ -26,7 +25,6 @@ export function register(program: Command) {
       }
       const handle = await startRun({ slack: true, extraPorts: ["console"] });
       const { manifest } = handle;
-      recordResource(manifest, { kind: "process", id: processResourceId(process.pid), role: "coordinator" });
 
       const status = () => ({
         run_id: manifest.config.run_id, profile: "local", mode: manifest.config.mode,

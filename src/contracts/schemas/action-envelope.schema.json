@@ -54,7 +54,10 @@
     {
       "if": { "properties": { "operation": { "const": "slack.reply" } }, "required": ["operation"] },
       "then": { "properties": { "input": { "type": "object", "additionalProperties": false, "required": ["channel", "thread_ts", "text"],
-        "properties": { "channel": { "type": "string" }, "thread_ts": { "type": "string" }, "text": { "type": "string", "maxLength": 4000 } } } } }
+        "properties": { "channel": { "type": "string" }, "thread_ts": { "type": "string" }, "text": { "type": "string", "maxLength": 4000 },
+          "blocks": { "type": "array", "maxItems": 10, "items": { "type": "object" } },
+          "meta": { "type": "object", "additionalProperties": false, "required": ["approval_id", "version"],
+            "properties": { "approval_id": { "type": "string" }, "version": { "type": "integer", "minimum": 0 } } } } } } }
     }
   ]
 }

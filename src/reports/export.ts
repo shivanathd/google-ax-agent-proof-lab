@@ -2,11 +2,11 @@
 // → private-terms scan. Any finding quarantines the candidate export under private-runs/quarantine/ and
 // publishes nothing. Findings name the file and rule, never the matched value.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { ROOT } from "../config/run-config.ts";
 import { artifactDir } from "./artifacts.ts";
-import { verifyChecksums, writeChecksums } from "./report.ts";
+import { filesUnder, verifyChecksums, writeChecksums } from "./report.ts";
 
 export const SECRET_RULES: [string, RegExp][] = [
   ["slack-token", /xox[abposr]-[A-Za-z0-9-]{8,}/],
@@ -21,21 +21,19 @@ export const SECRET_RULES: [string, RegExp][] = [
 ];
 
 // The private-terms list lives only in the main checkout's gitignored private-runs/ (shared by worktrees).
+// APL_PRIVATE_TERMS points elsewhere (tests use it to simulate a missing list).
 export function privateTermsPath(cwd = ROOT) {
+  if (process.env.APL_PRIVATE_TERMS) return process.env.APL_PRIVATE_TERMS;
   const common = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, encoding: "utf8" }).trim();
   return join(dirname(common), "private-runs", "private-terms.txt");
 }
 
 const REPORT_FIELDS = ["schema_version", "case_id", "run_id", "profile", "mode", "candidate_revision", "tree_sha", "dirty", "patch_sha256", "fixture_sha256",
-  "collector", "observed_at", "execution", "reason", "mutation", "simulated_faults", "status", "lanes", "all_lanes_status", "banner", "assertions", "counts",
+  "dependencies_sha256", "seed", "floci_image", "collector", "observed_at", "execution", "reason", "mutation", "simulated_faults", "status", "lanes", "all_lanes_status", "banner", "assertions", "counts",
   "limitations", "cleanup_status", "started_at", "ended_at", "durations"] as const;
 const BUNDLE_FIELDS = ["schema_version", "case_id", "run_id", "profile", "mode", "execution", "reason", "candidate_revision", "tree_sha", "dirty", "patch_sha256",
-  "fixture_sha256", "dependencies_sha256", "mutation", "collector_methods", "observed_at", "simulated_faults", "observations", "unobserved"] as const;
+  "fixture_sha256", "dependencies_sha256", "seed", "floci_image", "mutation", "collector_methods", "observed_at", "simulated_faults", "observations", "unobserved"] as const;
 const pick = (o: Record<string, unknown>, keys: readonly string[]) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
-
-function files(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : [join(dir, n)]));
-}
 
 export interface ExportResult { status: "EXPORTED" | "QUARANTINED" | "REJECTED"; run_id: string; findings: { file: string; rule: string }[]; output: string | null }
 
@@ -51,7 +49,7 @@ export function exportRun(runId: string, o: { termsPath?: string; outRoot?: stri
 
   // Scan every captured file, not only the projection: a secret anywhere in the capture blocks the export.
   const findings: ExportResult["findings"] = [];
-  for (const f of files(src)) {
+  for (const f of filesUnder(src)) {
     const text = readFileSync(f, "utf8");
     const rel = relative(src, f);
     for (const [rule, re] of SECRET_RULES) if (re.test(text)) findings.push({ file: rel, rule });

@@ -20,6 +20,7 @@ export interface CaseDef {
   needs?: { sinkhole?: boolean; shims?: boolean };
   worker?: false | ((h: RunHandle, info: CollectorInfo) => WorkerOptions);
   selected_profiles?: string[];
+  prerequisite?: () => string | undefined;  // unmet → bundle execution NOT_RUN with this reason; nothing is started
   execute: (x: Exec) => Promise<void>;
   phases?: Record<string, (p: Probe) => Promise<void>>;
   observe: (p: Probe) => Promise<void>;

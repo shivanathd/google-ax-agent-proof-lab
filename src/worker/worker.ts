@@ -6,6 +6,7 @@ import { EndpointRejected } from "../config/endpoints.ts";
 import { flociClients } from "../adapters/floci/clients.ts";
 import { receiveJobs, sendJob } from "../adapters/floci/ops.ts";
 import { audit, claimInbox, isRevoked, settleOutbox, type DB } from "../ledger/db.ts";
+import { assertAllowed, type ActionEnvelope } from "../policy/index.ts";
 import { handleEvent, w01, w02 } from "../workflows/index.ts";
 import type { Ctx } from "../workflows/context.ts";
 import type { Installation } from "../http/slack.ts";
@@ -62,7 +63,17 @@ export async function createWorker(cfg: WorkerConfig, db: DB) {
       return;
     }
     if (isRevoked(db, row.installation_id)) return settle("failed", { error: "installation_revoked" });
-    const { meta, ...message } = payload;
+    // Re-validate the stored C3 envelope and its binding to this row before any send (no bypass of reply()).
+    const env = payload as ActionEnvelope;
+    try {
+      assertAllowed(env, "slack.reply");
+      const inst = cfg.installations.find((i) => i.installation_id === row.installation_id);
+      if (env.run_id !== cfg.run_id || env.tenant_id !== row.tenant_id || inst?.tenant_id !== env.tenant_id
+        || env.connection_ref !== `local:slack:${row.installation_id}` || env.idempotency_key !== row.action_key) throw new Error("binding");
+    } catch {
+      return settle("failed", { error: "envelope_rejected" });
+    }
+    const { meta, ...message } = env.input as Record<string, any>;
     try {
       const r = await slack.get(row.installation_id)!("chat.postMessage", message);
       // A provider refusal (e.g. missing_scope) is final: there is no broader credential to escalate to.

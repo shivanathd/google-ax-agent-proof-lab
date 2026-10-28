@@ -1,8 +1,8 @@
 // C5 RunReport generation (F4-R3, F4-R4). Pure functions over a C4 bundle plus fixed expectations; the
 // worker's own claims never enter here. Status precedence: FAIL > UNKNOWN > BLOCKED > NOT_RUN > PASS.
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { assertContract } from "../contracts/validate.ts";
 import type { DoctorResult, LaneStatus } from "../contracts/profile.ts";
 
@@ -13,7 +13,7 @@ export interface Evidence { path: string; sha256: string; source: string; observ
 export interface Bundle {
   schema_version: 1; case_id: string; run_id: string; profile: string; mode: string; execution: "EXECUTED" | "BLOCKED" | "NOT_RUN";
   reason?: string; candidate_revision: string; tree_sha?: string; dirty?: boolean; patch_sha256?: string; fixture_sha256: string;
-  dependencies_sha256?: string; seed?: number; mutation?: string; collector: string; collector_methods?: string[]; observed_at: string;
+  dependencies_sha256?: string; seed?: number; floci_image?: string; mutation?: string; collector: string; collector_methods?: string[]; observed_at: string;
   selected_profiles?: string[]; simulated_faults?: string[]; observations: Record<string, Fact>; unobserved?: Record<string, string>;
   evidence?: Evidence[];
 }
@@ -93,12 +93,15 @@ export function buildReport(o: {
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them.",
+    "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces.",
     ...(o.limitations ?? []),
   ];
   const report = {
     schema_version: 1 as const, case_id: b.case_id, run_id: b.run_id, profile: b.profile, mode: b.mode,
     candidate_revision: b.candidate_revision, tree_sha: b.tree_sha ?? "UNKNOWN", dirty: b.dirty ?? true, ...(b.patch_sha256 ? { patch_sha256: b.patch_sha256 } : {}),
-    fixture_sha256: b.fixture_sha256, collector: b.collector, observed_at: b.observed_at, execution: b.execution, ...(b.reason ? { reason: b.reason } : {}),
+    fixture_sha256: b.fixture_sha256, // F4-R2 identity: copied only when the bundle carries it (absent stays absent, never a default).
+    ...(b.dependencies_sha256 ? { dependencies_sha256: b.dependencies_sha256 } : {}), ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.floci_image ? { floci_image: b.floci_image } : {}),
+    collector: b.collector, observed_at: b.observed_at, execution: b.execution, ...(b.reason ? { reason: b.reason } : {}),
     mutation: b.mutation ?? "none", simulated_faults: b.simulated_faults ?? [],
     status, lanes, all_lanes_status, banner: { green, text }, assertions, counts: counts(assertions), limitations,
     artifacts: o.artifacts ?? [], cleanup_status: o.cleanup_status ?? "NOT_RUN", cleanup_remaining: o.cleanup_remaining ?? [],
@@ -123,6 +126,7 @@ export function reportMarkdown(r: ReturnType<typeof buildReport>) {
     `> ${r.banner.green ? "✅" : "⚠️"} ${r.banner.text}`, "",
     `- Run: \`${r.run_id}\` · profile \`${r.profile}\` · mode \`${r.mode}\` · execution ${r.execution}`,
     `- Tree \`${r.tree_sha}\` · commit \`${r.candidate_revision}\` · dirty ${r.dirty}${r.patch_sha256 ? ` · patch \`${r.patch_sha256}\`` : ""} · mutation \`${r.mutation}\``,
+    ...("floci_image" in r || "seed" in r ? [`- Seed \`${r.seed ?? "—"}\` · Floci image \`${r.floci_image ?? "not used"}\``] : []),
     `- Local core: **${r.status}** · all selected lanes: **${r.all_lanes_status}** · cleanup ${r.cleanup_status}`,
     `- Counts: required ${c.required}, passed ${c.passed}, failed ${c.failed}, blocked ${c.blocked}, skipped ${c.skipped}, not run ${c.not_run}, unknown ${c.unknown}`, "",
     "| Assertion | Required | Expected | Observed | Status | Evidence | Reason |", "|---|---|---|---|---|---|---|", ...rows, "",
@@ -133,20 +137,38 @@ export function reportMarkdown(r: ReturnType<typeof buildReport>) {
 
 export const sha256File = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
 
-function filesUnder(dir: string): string[] {
+// C4: `rel` must name something whose real path stays inside `dir` — no absolute path, no `..`, no symlink
+// (file or directory) leading out. Returns the joined path, or null when it escapes or does not resolve.
+export function containedPath(dir: string, rel: string): string | null {
+  if (isAbsolute(rel) || rel.split(/[\\/]/).includes("..")) return null;
+  const p = join(dir, rel);
+  try {
+    const root = realpathSync(dir);
+    const real = realpathSync(p);
+    return real === root || real.startsWith(root + sep) ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+// lstat walk: symlinks are listed as entries (never followed), so a link cannot pull outside files in.
+export function filesUnder(dir: string): string[] {
   const out: string[] = [];
   const walk = (d: string) => {
     for (const name of readdirSync(d).sort()) {
       const p = join(d, name);
-      statSync(p).isDirectory() ? walk(p) : out.push(p);
+      lstatSync(p).isDirectory() ? walk(p) : out.push(p);
     }
   };
   walk(dir);
   return out;
 }
+const escapes = (dir: string) => filesUnder(dir).map((p) => relative(dir, p)).filter((rel) => !containedPath(dir, rel)).map((rel) => `escapes artifact dir: ${rel}`);
 
 // checksums.sha256 in `sha256sum` format over every other file in the run directory.
 export function writeChecksums(dir: string) {
+  const bad = escapes(dir);
+  if (bad.length) throw new Error(`refusing to checksum: ${bad.join("; ")}`);
   const lines = filesUnder(dir).filter((p) => relative(dir, p) !== "checksums.sha256").map((p) => `${sha256File(p)}  ${relative(dir, p)}`);
   writeFileSync(join(dir, "checksums.sha256"), `${lines.join("\n")}\n`);
 }
@@ -156,11 +178,12 @@ export function verifyChecksums(dir: string) {
   const file = join(dir, "checksums.sha256");
   if (!existsSync(file)) return { ok: false, problems: ["checksums.sha256 missing"] };
   const listed = new Map(readFileSync(file, "utf8").split("\n").filter(Boolean).map((l) => [l.slice(66), l.slice(0, 64)] as const));
-  const problems: string[] = [];
+  const problems: string[] = escapes(dir);
   for (const [path, hash] of listed) {
-    const p = join(dir, path);
-    if (path.includes("..") || !existsSync(p)) problems.push(`missing: ${path}`);
-    else if (sha256File(p) !== hash) problems.push(`hash mismatch: ${path}`);
+    const p = containedPath(dir, path);
+    if (p) {
+      if (sha256File(p) !== hash) problems.push(`hash mismatch: ${path}`);
+    } else if (!problems.includes(`escapes artifact dir: ${path}`)) problems.push(existsSync(join(dir, path)) ? `escapes artifact dir: ${path}` : `missing: ${path}`);
   }
   for (const p of filesUnder(dir)) {
     const rel = relative(dir, p);

@@ -33,7 +33,12 @@ No other OS or architecture has been tested. Floci's image is published for `lin
 
 ## Prerequisites
 
-`npm run lab -- doctor` checks them without any network call: Node 24.x, a reachable Docker daemon, the pinned Floci image present locally, the emulate patch, and a loadable `better-sqlite3`. A missing prerequisite reports BLOCKED and exits 2. No provider account or LLM key is needed for the local profile.
+`npm run lab -- doctor` checks them without any network call: Node 24.x, a reachable Docker daemon, the pinned Floci image present locally, the emulate patch, and a loadable `better-sqlite3`. A missing prerequisite reports BLOCKED and exits 2. No provider account or LLM key is needed for the local profile. FFmpeg and Playwright's Chromium are needed only for the console and media cases (F6, S4) and media capture; see [REPRODUCING](REPRODUCING.md).
+
+## Boundary limits
+
+- Slack request bodies (C2 WorkflowEvent): at most 64 KiB (`BODY_LIMIT_BYTES` in `src/http/slack.ts`). Larger bodies are rejected with HTTP 413 before they are parsed or verified; `tests/integration/slack.test.ts` sends a body one byte over the bound. Real Slack event payloads are a few KiB.
+- Child-process environments (worker, collector, CLI children) are built from an allowlist. `HOME` is not passed through: the worker and collector get run-owned directories under `private-runs/<run_id>/`, other children an empty lab-owned directory, so gcloud, kube and other CLI configs under the developer's home are not discoverable. Only `docker` CLI children keep `HOME`, because Docker's context and credential store live there.
 
 ## Setup timings
 
@@ -51,3 +56,5 @@ Not measured: a cold image pull. Removing the pinned Floci image would have disr
 ## Run isolation
 
 Every run gets a UUID run ID, its own loopback ports, its own SQLite file under `private-runs/<run_id>/`, and its own Docker Compose project `apl-<12 hex>`. All of its containers carry the label `dev.agent-proof-lab.run-id=<run_id>`. `npm run lab -- down --run-id <id>` removes only the resources recorded in that run's manifest or carrying that exact label, and it keeps the evidence directory.
+
+A run is active while its manifest says `cleanup_status: NOT_RUN` and a process it recorded (the coordinator or the worker) is still alive. `npm run lab -- doctor` lists, as `orphan_warnings`, every container with the run label whose manifest is missing or not CLEAN, with an `active` flag. `npm run lab -- down --orphans` removes only labelled containers whose run is not active, and that run's own compose project `apl-<12 hex>`; add `--run-id <id>` to limit it to one run. Anything without the label is never touched.
