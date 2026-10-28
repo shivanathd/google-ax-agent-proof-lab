@@ -9,3 +9,6 @@ artifacts/runs/
 __pycache__/
 *.pyc
 *.log
+recordings/raw/
+test-results/
+playwright-report/

@@ -1,0 +1,37 @@
+{
+  "name": "agent-proof-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first lab that separates agent execution, emulated dependencies, authorization and independently verified evidence.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "postinstall": "node scripts/patch-emulate.mjs",
+    "lab": "tsx src/cli/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "verify:task": "tsx scripts/verify/task.ts",
+    "spike": "tsx spikes/w0-spike.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1151.0",
+    "@aws-sdk/client-sqs": "3.1151.0",
+    "ajv": "8.20.0",
+    "better-sqlite3": "13.0.3",
+    "commander": "15.0.0",
+    "emulate": "0.12.3",
+    "fastify": "5.12.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.5",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

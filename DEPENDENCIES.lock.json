@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-28",
+  "host": {
+    "os": "macOS 27.0.1",
+    "arch": "arm64",
+    "cpus": 18,
+    "ram_gib": 128,
+    "node": "24.22.1",
+    "npm": "11.19.1",
+    "docker": "29.9.2 (Docker Desktop)",
+    "ffmpeg": "6.0",
+    "python": "3.14.8"
+  },
+  "npm": {
+    "emulate": {
+      "version": "0.12.3",
+      "integrity": "sha512-kYESyCh3jTvcLAk7Do4g38AHZu7YyWvlRzDq8/V9o8DPGCHealCt5AmNHgntAI8yZSYm/JVJI+JZyr8zP7J6IQ==",
+      "license": "Apache-2.0"
+    },
+    "fastify": {
+      "version": "5.12.7",
+      "integrity": "sha512-v4pEPsTRPuqlDIYiQFB+BHjVN4SdHX9u0ABk0ZDUKbbdY1vsNryUd1j4Z+jQEZajvYIVk047Kimva9/AJ79GYw==",
+      "license": "MIT"
+    },
+    "better-sqlite3": {
+      "version": "13.0.3",
+      "integrity": "sha512-RbOBxmLBG8uvFUc15X9+9SFemKcQ0WBuISBVkpuiaUB2qblC8UWlHEjdWVoZ8AdhSwmoEgsiXKfopX0CQxaACQ==",
+      "license": "MIT"
+    },
+    "@aws-sdk/client-s3": {
+      "version": "3.1151.0",
+      "integrity": "sha512-Kg20OP7F+rrWMFjPv/aCsNUt/qDbvh1bLJFQM8k/8fnxowR/DA67qL5KHzWWN5gwJCYplS3KQde6P/knOB+lxg==",
+      "license": "Apache-2.0"
+    },
+    "@aws-sdk/client-sqs": {
+      "version": "3.1151.0",
+      "integrity": "sha512-mkKK4Up5FZS7L7lxI+YZSNOUPcpfjagJad3d1Rn22lksFTn+dUw8FFokV9jTxHilyVv5WfqPR9i42TnLT2xB3w==",
+      "license": "Apache-2.0"
+    },
+    "ajv": {
+      "version": "8.20.0",
+      "integrity": "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==",
+      "license": "MIT"
+    },
+    "commander": {
+      "version": "15.0.0",
+      "integrity": "sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==",
+      "license": "MIT"
+    },
+    "@playwright/test": {
+      "version": "1.64.1",
+      "integrity": "sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==",
+      "license": "Apache-2.0"
+    },
+    "vitest": {
+      "version": "5.0.4",
+      "integrity": "sha512-z0WxZRV2Sg48wF0FSgMq3TFG8JS38/Qr96vZVZdX6+Em9raQTvnXQvdTFJe2m3rfyJnEHeHQ/snceIdi8D1pVg==",
+      "license": "MIT"
+    },
+    "vite": {
+      "version": "8.3.4",
+      "integrity": "sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ==",
+      "license": "MIT"
+    },
+    "tsx": {
+      "version": "4.23.15",
+      "integrity": "sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw==",
+      "license": "MIT"
+    },
+    "typescript": {
+      "version": "7.0.2",
+      "integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
+      "license": "Apache-2.0"
+    }
+  },
+  "images": {
+    "floci": {
+      "ref": "floci/floci:2.3.0",
+      "digest": "sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
+      "license": "MIT",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    }
+  },
+  "local_patches": [
+    {
+      "package": "emulate@0.12.3",
+      "file": "dist/dist-B5YXZCS3.js",
+      "original_sha256": "c4c5244040bc9fd66afaf3dd41440e0f60cea4d1cea1e520819d5d181037d0a8",
+      "script": "scripts/patch-emulate.mjs",
+      "reason": "Slack seeder ignores webhook dispatcher; adds slack.event_subscriptions (LEARNINGS L-001)"
+    }
+  ],
+  "version_policy": "Newest release at least 14 days old, except emulate 0.12.3 (6 days old) because 0.12.2 lacks /_slack/simulate/* (ADR-10)."
+}

@@ -57,3 +57,23 @@ All decisions below use single-author trade-off analysis: [No Council: single-au
 **Decision:** TypeScript/Node, a small console, SQLite and local emulators; proposed MIT code license only after owner and dependency review.
 **Consequences:** Keep Kubernetes out of the default bootstrap. Do not bundle vendor source/images or represent third-party services as relicensed.
 **Alternatives:** Full multi-service platform, default cluster or premature license attribution. Rejected as unnecessary scope.
+
+## ADR-9: Evidence binds to the git tree SHA
+
+**Context:** The repository will move machines and its author metadata may be rewritten before publication. A rewrite changes commit SHAs.
+**Decision:** Every bundle, report and media item records `tree_sha` (`HEAD^{tree}`) as the primary identity. It also records `candidate_revision` (commit), `dirty` and `patch_sha256`.
+**Consequences:** Rewriting author identity leaves the evidence valid, because tree hashes depend only on content.
+**Alternatives:** Commit-only binding. Rejected: it would break on any history rewrite.
+
+## ADR-10: Pin emulate 0.12.3 despite release age
+
+**Context:** The default policy pins the newest release at least 14 days old. That would be emulate 0.12.2, which has no `/_slack/simulate/event-retry` or `/_slack/simulate/block-actions`. F2-A2 and F2-R5 need both.
+**Decision:** Pin 0.12.3 (published 2026-10-22). Add one hash-checked install-time patch that fixes the missing `slack.event_subscriptions` seed (LEARNINGS L-001).
+**Consequences:** The pinned version is newer than the policy allows, and the dependency is patched. Both facts are disclosed in `DEPENDENCIES.lock.json`. The patch refuses to apply to any other file hash.
+**Alternatives:** Poll `conversations.history` instead of Events API callbacks. Rejected: F2 requires signed callbacks.
+
+## ADR-11: Short MP4 clips in the README
+
+**Context:** The owner asked for videos alongside GIFs.
+**Decision:** Add sanitized MP4 clips under `docs/assets/videos/` that follow RECORDING_RUNBOOK. Include them in the manifest, in `media verify` and in the 25 MiB budget (≤ 8 MiB of MP4 in total). The README links them through poster images.
+**Consequences:** Full-length raw recordings stay gitignored. Inline playback on GitHub needs a post-publication upload, which is recorded as NOT_RUN.
