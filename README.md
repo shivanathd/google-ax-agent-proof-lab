@@ -75,7 +75,7 @@ npm run lab -- collect-case --case F3-A1 --output "$PWD/private-runs/manual/F3-A
 bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh
 ```
 
-The supplied harness's current verdict is `LOOP`, not `LOCAL_CORE_READY`. In the harness run recorded in the [claim ledger](docs/CLAIM_LEDGER.md) (run H, with per-gate results) every task, feature and challenge gate passed except F6-A3, which stays FAIL until an independent render review record (`docs/assets/render-review.json`) exists. Run `run-all.sh` as above to reproduce it.
+The supplied harness's verdict is recorded per tree in the [claim ledger](docs/CLAIM_LEDGER.md) (harness run sets, with per-gate results), not in this README. `LOCAL_CORE_READY` needs every task, feature and challenge gate to pass, including F6-A3, which requires an independent render review record (`docs/assets/render-review.json`) whose hashes match the current README and media manifest. Run `run-all.sh` as above to reproduce it.
 
 Salesforce, CodeRabbit and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)). The AX lane was authorized and run on a GKE cluster under gVisor ([AX results](profiles/ax/RESULTS.md) §3.3, claims C-60 to C-69). Passed: W01-H as an AX task with independent collector evidence, a failing command's exit code 3 recorded while AX still showed `Running`, SIGTERM on worker eviction (from logs), resume after `ax suspend` keeping the workspace, sandbox isolation and router identity. Three assertions failed: `ax suspend` delivers no SIGTERM (C-62), `ax delete task` delivers none (C-63), and after a worker eviction followed by suspend and resume the result is lost (C-66).
 
@@ -161,4 +161,4 @@ Inline playback on GitHub needs a post-publication upload of these clips; until 
 - [Build specification](docs/spec/active/2026-10-28-agent-proof-lab/REQUIREMENTS.md), [implementation plan](docs/spec/active/2026-10-28-agent-proof-lab/IMPLEMENTATION_PLAN.md), [decisions](docs/spec/active/2026-10-28-agent-proof-lab/DECISIONS.md) and the [supplied evaluator](docs/spec/active/2026-10-28-agent-proof-lab/evals/README.md)
 - [Publication checklist](docs/PUBLICATION_CHECKLIST.md)
 
-This is a personal educational project. The license and contribution terms are pending the owner's review; repository publication, provider-app installation and any upload need separate approval.
+This is a personal educational project, released under the [MIT License](LICENSE); third-party notices are in [NOTICE](NOTICE). Repository publication, provider-app installation and any upload need separate approval.
