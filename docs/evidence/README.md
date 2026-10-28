@@ -4,10 +4,10 @@ Each directory is the allowlisted `lab export` projection of one executed local 
 `observations.json` (C4 facts) and `checksums.sha256`. Exports pass the tamper check, the secret scan and the private-terms scan first.
 Raw evidence files (ledger rows, Slack payloads) stay in the gitignored `artifacts/runs/<run_id>/`.
 
-- [`d7b27d50-c6af-4abd-bd03-36b67dfcb967`](d7b27d50-c6af-4abd-bd03-36b67dfcb967/report.json): W01-H, local core PASS
-- [`8c577551-a2f9-4968-ac0d-67115ea07c90`](8c577551-a2f9-4968-ac0d-67115ea07c90/report.json): W01-D, local core PASS
-- [`493034f5-af80-47da-9994-eb6b5142b363`](493034f5-af80-47da-9994-eb6b5142b363/report.json): W02-U, local core PASS
-- [`d1141e88-6ad1-4ebf-9008-dd8a1a3186df`](d1141e88-6ad1-4ebf-9008-dd8a1a3186df/report.json): W02-H, local core PASS
-- [`fed9685f-093e-43d3-b630-df61329bc6ab`](fed9685f-093e-43d3-b630-df61329bc6ab/report.json): W01-H, local core PASS
-- [`ca8e55fb-ac80-4ea7-8df7-5a2843ea8974`](ca8e55fb-ac80-4ea7-8df7-5a2843ea8974/report.json): W01-F, local core FAIL
-- [`581e434c-a178-47fe-ae7a-3ff59b4a38b9`](581e434c-a178-47fe-ae7a-3ff59b4a38b9/report.json): W03-V, local core PASS
+- [`0fe7285f-531e-4eb3-8d92-54b7a55a84c8`](0fe7285f-531e-4eb3-8d92-54b7a55a84c8/report.json): W01-H, local core PASS
+- [`de624d93-0e32-4071-a85f-981b8a2e1073`](de624d93-0e32-4071-a85f-981b8a2e1073/report.json): W01-D, local core PASS
+- [`0bdf37f3-0667-462c-8143-4c6aa63e0fd4`](0bdf37f3-0667-462c-8143-4c6aa63e0fd4/report.json): W02-U, local core PASS
+- [`d717040a-4532-49a8-9a67-881cfa382dd4`](d717040a-4532-49a8-9a67-881cfa382dd4/report.json): W02-H, local core PASS
+- [`2cd3a116-982b-4562-8c37-36acae6ebe78`](2cd3a116-982b-4562-8c37-36acae6ebe78/report.json): W01-H, local core PASS
+- [`5f03f95b-6ea4-4d08-aef6-7c6ba8c6c49d`](5f03f95b-6ea4-4d08-aef6-7c6ba8c6c49d/report.json): W01-F, local core FAIL
+- [`bbfafa8f-3aa4-4d17-bd3b-68146e4fb232`](bbfafa8f-3aa4-4d17-bd3b-68146e4fb232/report.json): W03-V, local core PASS

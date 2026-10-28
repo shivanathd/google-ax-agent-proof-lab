@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "case_id": "W02-H",
-  "run_id": "d1141e88-6ad1-4ebf-9008-dd8a1a3186df",
+  "case_id": "W01-D",
+  "run_id": "de624d93-0e32-4071-a85f-981b8a2e1073",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
-  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
+  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
-  "collector": "apl-collector pid=13791 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T15:14:12.253Z",
+  "collector": "apl-collector pid=90773 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T16:14:31.274Z",
   "execution": "EXECUTED",
   "mutation": "none",
   "simulated_faults": [],
@@ -44,58 +44,51 @@
   "all_lanes_status": "PASS",
   "banner": {
     "green": true,
-    "text": "PASS: all 4 required assertions passed with evidence (local integration run (scripted driver))"
+    "text": "PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))"
   },
   "assertions": [
     {
-      "id": "approval_status",
+      "id": "additional_business_records",
       "required": true,
-      "expected": "approved",
-      "observed": "approved",
+      "expected": 0,
+      "observed": 0,
       "evidence_refs": [
-        "evidence/approval-ledger.json"
+        "evidence/before-ledger.json",
+        "evidence/before-s3.json",
+        "evidence/after-ledger.json",
+        "evidence/after-s3.json"
       ],
       "status": "PASS",
       "reason": null
     },
     {
-      "id": "approved_transition_count",
+      "id": "additional_completion_replies",
       "required": true,
-      "expected": 1,
-      "observed": 1,
+      "expected": 0,
+      "observed": 0,
       "evidence_refs": [
-        "evidence/approval-ledger.json"
+        "evidence/before-thread.json",
+        "evidence/after-thread.json"
       ],
       "status": "PASS",
       "reason": null
     },
     {
-      "id": "approval_receipt_count",
-      "required": true,
-      "expected": 1,
-      "observed": 1,
-      "evidence_refs": [
-        "evidence/approval-s3.json"
-      ],
-      "status": "PASS",
-      "reason": null
-    },
-    {
-      "id": "approval_receipt_matches",
+      "id": "same_request_identity",
       "required": true,
       "expected": true,
       "observed": true,
       "evidence_refs": [
-        "evidence/approval-ledger.json",
-        "evidence/approval-s3.json"
+        "evidence/before-ledger.json",
+        "evidence/after-ledger.json"
       ],
       "status": "PASS",
       "reason": null
     }
   ],
   "counts": {
-    "required": 4,
-    "passed": 4,
+    "required": 3,
+    "passed": 3,
     "failed": 0,
     "blocked": 0,
     "skipped": 0,
@@ -110,11 +103,11 @@
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T15:14:09.858Z",
-  "ended_at": "2026-10-28T15:14:12.882Z",
+  "started_at": "2026-10-28T16:14:27.812Z",
+  "ended_at": "2026-10-28T16:14:32.500Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 3.024,
+      "value": 4.688,
       "reason": null
     }
   }

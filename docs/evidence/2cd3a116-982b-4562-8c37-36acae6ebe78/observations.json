@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "case_id": "W01-F",
-  "run_id": "ca8e55fb-ac80-4ea7-8df7-5a2843ea8974",
+  "case_id": "W01-H",
+  "run_id": "2cd3a116-982b-4562-8c37-36acae6ebe78",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
-  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
+  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
@@ -16,14 +16,12 @@
     "Slack conversations.replies (reader token)",
     "read-only SQLite query (tickets, inbox, actions)"
   ],
-  "observed_at": "2026-10-28T15:14:39.563Z",
-  "simulated_faults": [
-    "receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)"
-  ],
+  "observed_at": "2026-10-28T16:15:06.657Z",
+  "simulated_faults": [],
   "observations": {
     "ticket_count": 1,
-    "receipt_count": 0,
-    "receipt_matches_request": false,
+    "receipt_count": 1,
+    "receipt_matches_request": true,
     "completion_reply_count": 1
   },
   "unobserved": {}

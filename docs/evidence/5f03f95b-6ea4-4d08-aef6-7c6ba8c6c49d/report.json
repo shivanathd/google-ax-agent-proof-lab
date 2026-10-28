@@ -1,22 +1,24 @@
 {
   "schema_version": 1,
-  "case_id": "W01-H",
-  "run_id": "fed9685f-093e-43d3-b630-df61329bc6ab",
+  "case_id": "W01-F",
+  "run_id": "5f03f95b-6ea4-4d08-aef6-7c6ba8c6c49d",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
-  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
+  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
-  "collector": "apl-collector pid=14979 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T15:14:22.961Z",
+  "collector": "apl-collector pid=93160 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T16:15:22.508Z",
   "execution": "EXECUTED",
   "mutation": "none",
-  "simulated_faults": [],
-  "status": "PASS",
+  "simulated_faults": [
+    "receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)"
+  ],
+  "status": "FAIL",
   "lanes": {
     "local": {
-      "status": "PASS",
+      "status": "FAIL",
       "selected": true,
       "reason": "local core: required assertions only"
     },
@@ -41,10 +43,10 @@
       "reason": "not selected"
     }
   },
-  "all_lanes_status": "PASS",
+  "all_lanes_status": "FAIL",
   "banner": {
-    "green": true,
-    "text": "PASS: all 4 required assertions passed with evidence (local integration run (scripted driver))"
+    "green": false,
+    "text": "NOT A SUCCESS: local core FAIL"
   },
   "assertions": [
     {
@@ -62,25 +64,25 @@
       "id": "receipt_count",
       "required": true,
       "expected": 1,
-      "observed": 1,
+      "observed": 0,
       "evidence_refs": [
         "evidence/w01-s3.json"
       ],
-      "status": "PASS",
-      "reason": null
+      "status": "FAIL",
+      "reason": "observed value differs"
     },
     {
       "id": "receipt_matches_request",
       "required": true,
       "expected": true,
-      "observed": true,
+      "observed": false,
       "evidence_refs": [
         "evidence/w01-ledger.json",
         "evidence/w01-s3.json",
         "evidence/w01-thread.json"
       ],
-      "status": "PASS",
-      "reason": null
+      "status": "FAIL",
+      "reason": "observed value differs"
     },
     {
       "id": "completion_reply_count",
@@ -96,8 +98,8 @@
   ],
   "counts": {
     "required": 4,
-    "passed": 4,
-    "failed": 0,
+    "passed": 2,
+    "failed": 2,
     "blocked": 0,
     "skipped": 0,
     "not_run": 0,
@@ -105,17 +107,18 @@
   },
   "limitations": [
     "Mode: local integration run (scripted driver).",
+    "Simulated faults injected by the test coordinator: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault).",
     "Public challenge cases are visible to builders; they are not secret holdouts.",
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
     "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T15:14:18.251Z",
-  "ended_at": "2026-10-28T15:14:23.737Z",
+  "started_at": "2026-10-28T16:15:20.810Z",
+  "ended_at": "2026-10-28T16:15:23.444Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 5.486,
+      "value": 2.634,
       "reason": null
     }
   }

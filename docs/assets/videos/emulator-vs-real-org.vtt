@@ -1,22 +1,22 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:02.065
+00:00:00.000 --> 00:00:02.042
 A local CRM contract double cannot prove Salesforce behaviour. That lane needs a real, separately authorized test org.
 Scenario W03-V: Stale CRM version. Fran updates a synthetic account with an old expected version; expect CONFLICT and no overwrite.
 
 2
-00:00:02.065 --> 00:00:07.159
+00:00:02.042 --> 00:00:06.025
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 3
-00:00:07.159 --> 00:00:11.204
-Collector report for run 581e434c (W03-V): PASS: all 3 required assertions passed with evidence (local integration run (scripted driver)).
+00:00:06.025 --> 00:00:10.039
+Collector report for run bbfafa8f (W03-V): PASS: all 3 required assertions passed with evidence (local integration run (scripted driver)).
 
 4
-00:00:11.204 --> 00:00:15.241
+00:00:10.039 --> 00:00:14.058
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
 
 5
-00:00:15.241 --> 00:00:23.400
+00:00:14.058 --> 00:00:22.134
 Optional lanes as reported by their doctors (local configuration only, no external calls); a blocked lane is not a pass.

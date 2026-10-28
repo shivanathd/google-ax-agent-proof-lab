@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "case_id": "W01-D",
-  "run_id": "8c577551-a2f9-4968-ac0d-67115ea07c90",
+  "run_id": "de624d93-0e32-4071-a85f-981b8a2e1073",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "ea1decac8a2f0e99dbad32ea94b409c48482a877",
-  "tree_sha": "60f9f1bfc2ec8a1cca771f2de1e681783bd2c845",
+  "candidate_revision": "3dd4af6be9e6943af87c6996a7b424e7eca72101",
+  "tree_sha": "13ef5aa42a0ff8b5ec1d944c0fe4eb682c809eec",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
@@ -16,7 +16,7 @@
     "Slack conversations.replies (reader token)",
     "read-only SQLite query (inbox, tickets, actions, outbox, approval_requests)"
   ],
-  "observed_at": "2026-10-28T15:13:40.731Z",
+  "observed_at": "2026-10-28T16:14:31.274Z",
   "simulated_faults": [],
   "observations": {
     "additional_business_records": 0,
