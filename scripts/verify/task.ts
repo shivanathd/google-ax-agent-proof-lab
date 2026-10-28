@@ -15,7 +15,14 @@ const TASKS: Record<string, TaskSpec> = {
   "5.1": { tests: ["tests/integration/profiles.test.ts", "tests/integration/ax-profile.test.ts"], docker: false, cases: ["F5-A1", "F5-A2"] },
 };
 
+// Registered but not built: reported BLOCKED (exit 2) so the harness never shows it as PASS or as a FAIL of this build.
+const PENDING: Record<string, string> = { "6.1": "console, recordings and media (Task 6.1) not built yet" };
+
 const id = process.argv[2] ?? "";
+if (PENDING[id]) {
+  console.error(`verify:task ${id}: BLOCKED — ${PENDING[id]}`);
+  process.exit(2);
+}
 const task = TASKS[id];
 if (!task) {
   console.error(`verify:task: unknown task "${id}" (known: ${Object.keys(TASKS).join(", ")})`);
