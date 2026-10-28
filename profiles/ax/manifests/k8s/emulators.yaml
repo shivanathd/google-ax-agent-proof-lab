@@ -1,9 +1,10 @@
-# Namespace-local emulators for one AX run, applied with `kubectl --context $APL_AX_CONTEXT apply -f <rendered file>`.
-# Every object carries apl-run=${APL_RUN_ID}; teardown deletes by that label and then deletes the namespace.
+# Lab namespace for one AX run, applied with `kubectl apply -f <rendered file>` (placeholders filled by render()).
+# Every object carries apl-run=${APL_RUN_ID}; teardown deletes the names in owned-resources.json, then the namespace.
+# Secrets emulate-seed and collector-env are created separately from the gitignored run dir.
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: apl-${APL_RUN_ID}
+  name: apl-ax-${APL_SHORT_ID}
   labels:
     apl-run: "${APL_RUN_ID}"
 ---
@@ -11,61 +12,64 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: floci
-  namespace: apl-${APL_RUN_ID}
-  labels:
-    apl-run: "${APL_RUN_ID}"
-    app: floci
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", app: floci }
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: floci, apl-run: "${APL_RUN_ID}" }
+    matchLabels: { app: floci }
   template:
     metadata:
       labels: { app: floci, apl-run: "${APL_RUN_ID}" }
     spec:
       automountServiceAccountToken: false
+      # Kubernetes service-link env would set FLOCI_PORT=tcp://<ip>:4566, which Floci reads as its own port.
+      enableServiceLinks: false
       containers:
         - name: floci
           image: "${APL_FLOCI_IMAGE}"
           env:
             - { name: FLOCI_SERVICES_UI_ENABLED, value: "false" }
           ports: [{ containerPort: 4566 }]
+          readinessProbe: { tcpSocket: { port: 4566 }, periodSeconds: 2 }
           resources:
-            limits: { cpu: "500m", memory: "512Mi" }
+            limits: { cpu: "500m", memory: "768Mi" }
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: floci
-  namespace: apl-${APL_RUN_ID}
-  labels:
-    apl-run: "${APL_RUN_ID}"
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
 spec:
-  selector: { app: floci, apl-run: "${APL_RUN_ID}" }
-  ports: [{ port: 4566, targetPort: 4566 }]
+  selector: { app: floci }
+  ports: [{ name: http, port: 4566, targetPort: 4566 }]
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: emulate
-  namespace: apl-${APL_RUN_ID}
-  labels:
-    apl-run: "${APL_RUN_ID}"
-    app: emulate
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", app: emulate }
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: emulate, apl-run: "${APL_RUN_ID}" }
+    matchLabels: { app: emulate }
   template:
     metadata:
       labels: { app: emulate, apl-run: "${APL_RUN_ID}" }
     spec:
       automountServiceAccountToken: false
+      enableServiceLinks: false
       containers:
         - name: emulate
-          # Lab-built image wrapping the pinned emulate package; must listen on 8080.
           image: "${APL_EMULATE_IMAGE}"
-          ports: [{ containerPort: 8080 }]
+          env:
+            - { name: APL_EMULATE_BASE_URL, value: "http://emulate.apl-ax-${APL_SHORT_ID}.svc.cluster.local:8080" }
+            - name: APL_EMULATE_SEED
+              valueFrom: { secretKeyRef: { name: emulate-seed, key: seed } }
+          ports: [{ containerPort: 8080 }, { containerPort: 8081 }]
+          readinessProbe: { httpGet: { path: /_apl/health, port: 8081 }, periodSeconds: 2 }
           resources:
             limits: { cpu: "500m", memory: "512Mi" }
 ---
@@ -73,27 +77,63 @@ apiVersion: v1
 kind: Service
 metadata:
   name: emulate
-  namespace: apl-${APL_RUN_ID}
-  labels:
-    apl-run: "${APL_RUN_ID}"
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
 spec:
-  selector: { app: emulate, apl-run: "${APL_RUN_ID}" }
-  ports: [{ port: 8080, targetPort: 8080 }]
+  selector: { app: emulate }
+  ports:
+    - { name: slack, port: 8080, targetPort: 8080 }
+    - { name: mailbox, port: 8081, targetPort: 8081 }
 ---
-# Only this namespace (collector) and Substrate's egress gateway namespace may reach the emulators.
-# The gateway namespace is an assumption to verify against the pinned Substrate docs before W6.
+# Task egress reaches the emulators through Substrate's egress gateway (atenet-egress in ate-system), never
+# directly from the worker pods in this namespace. Only the gateway and this run's collector may connect.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: emulators-ingress
-  namespace: apl-${APL_RUN_ID}
-  labels:
-    apl-run: "${APL_RUN_ID}"
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
 spec:
-  podSelector: {}
+  podSelector:
+    matchExpressions: [{ key: app, operator: In, values: [floci, emulate] }]
   policyTypes: [Ingress]
   ingress:
     - from:
-        - podSelector: {}
-        - namespaceSelector:
-            matchLabels: { kubernetes.io/metadata.name: ate-system }
+        - podSelector: { matchLabels: { app: apl-collector } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ate-system } }
+          podSelector: { matchLabels: { app: atenet-egress } }
+---
+# Capacity for this run's AX tasks. The other pools are scaled to zero for the run, so tasks land here.
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: apl-ax-pool
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+spec:
+  replicas: 1
+  sandboxClasses: [{ name: gvisor }]
+  workerImage: "${APL_WORKER_IMAGE}"
+  template:
+    resources:
+      limits: { cpu: "3", memory: 4Gi }
+      requests: { cpu: "1", memory: 4Gi }
+---
+# Independent collector: a plain Pod outside the sandbox with its own reader token and S3 credentials.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apl-collector
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", app: apl-collector }
+spec:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  restartPolicy: Never
+  containers:
+    - name: collector
+      image: "${APL_LAB_IMAGE}"
+      command: ["sleep", "infinity"]
+      envFrom: [{ secretRef: { name: collector-env } }]
+      resources:
+        limits: { cpu: "500m", memory: "512Mi" }

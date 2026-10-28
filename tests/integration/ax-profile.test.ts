@@ -122,6 +122,9 @@ describe("ax manifests", () => {
     APL_AX_ATESPACE: `apl-${runId}`,
     APL_FLOCI_IMAGE: FLOCI_IMAGE,
     APL_EMULATE_IMAGE: `registry.example.invalid/lab/emulate@sha256:${"b".repeat(64)}`,
+    APL_SHORT_ID: runId.slice(0, 8),
+    APL_LAB_IMAGE: DIGEST_IMAGE,
+    APL_WORKER_IMAGE: `registry.example.invalid/lab/ateworker-gvisor@sha256:${"c".repeat(64)}`,
   };
 
   it("renders every placeholder and labels every Kubernetes object with apl-run", () => {

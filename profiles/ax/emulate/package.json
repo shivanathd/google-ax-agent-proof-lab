@@ -1,0 +1,7 @@
+{
+  "name": "apl-ax-emulate",
+  "private": true,
+  "type": "module",
+  "description": "In-cluster Emulate Slack for the AX lane (image only).",
+  "dependencies": { "emulate": "0.12.3" }
+}

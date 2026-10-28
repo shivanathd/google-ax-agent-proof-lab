@@ -114,6 +114,9 @@ export async function run(caseId: string, opts: { authorized: boolean; env: Node
     APL_AX_ATESPACE: `apl-${runId}`,
     APL_FLOCI_IMAGE: env.APL_FLOCI_IMAGE ?? FLOCI_IMAGE,
     APL_EMULATE_IMAGE: env.APL_EMULATE_IMAGE ?? "",
+    APL_SHORT_ID: runId.slice(0, 8),
+    APL_LAB_IMAGE: env.APL_AX_IMAGE!,
+    APL_WORKER_IMAGE: env.APL_AX_WORKER_IMAGE ?? "",
   };
   if (!DIGEST_PINNED.test(vars.APL_EMULATE_IMAGE!)) throw new Error("APL_EMULATE_IMAGE must be pinned by digest");
   const outDir = join("private-runs", "ax", runId);
@@ -131,11 +134,11 @@ export async function run(caseId: string, opts: { authorized: boolean; env: Node
   };
   remote(env.APL_AX_KUBECTL!, "get", "svc", "api", "-n", "ate-system");
   remote(env.APL_AX_KUBECTL!, "apply", "-f", k8s);
-  remote(env.APL_AX_KUBECTL!, "wait", "-n", `apl-${runId}`, "--for=condition=Available", "deployment", "-l", `apl-run=${runId}`, "--timeout=180s");
+  remote(env.APL_AX_KUBECTL!, "wait", "-n", `apl-ax-${vars.APL_SHORT_ID}`, "--for=condition=Available", "deployment", "-l", `apl-run=${runId}`, "--timeout=180s");
   remote(env.APL_AX_CLI!, "apply", "-a", vars.APL_AX_ATESPACE!, "-f", ax);
   writeFileSync(
     join(outDir, "owned-resources.json"),
-    JSON.stringify({ run_id: runId, namespace: `apl-${runId}`, label: `apl-run=${runId}`, atespace: vars.APL_AX_ATESPACE, ax: [`workspace/apl-ws-${runId}`, `task/apl-task-${runId}`] }, null, 2),
+    JSON.stringify({ run_id: runId, namespace: `apl-ax-${vars.APL_SHORT_ID}`, label: `apl-run=${runId}`, atespace: vars.APL_AX_ATESPACE, ax: [`workspace/apl-ws-${runId}`, `task/apl-task-${runId}`] }, null, 2),
   );
   return {
     ...d,

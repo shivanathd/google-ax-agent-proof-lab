@@ -10,13 +10,15 @@ import { seedAccount, type Account } from "../adapters/crm-local/index.ts";
 interface Seed { grants: Record<string, Record<string, string[]>>; crm_accounts: Account[] }
 export const loadSeed = (): Seed => JSON.parse(readFileSync(join(ROOT, "fixtures/cases/seed.json"), "utf8"));
 
-// usersByTenant: tenant_id -> (user name -> Slack user id)
-export function seedLedger(dbPath: string, usersByTenant: Record<string, Record<string, string>>) {
+// usersByTenant: tenant_id -> (user name -> Slack user id). `tenants` limits the grants seeded (the AX lane runs
+// one workspace); the default seeds every tenant and fails on any missing user id.
+export function seedLedger(dbPath: string, usersByTenant: Record<string, Record<string, string>>, tenants?: string[]) {
   const seed = loadSeed();
   const db = openLedger(dbPath);
   try {
     db.transaction(() => {
       for (const [tenant, users] of Object.entries(seed.grants)) {
+        if (tenants && !tenants.includes(tenant)) continue;
         for (const [name, perms] of Object.entries(users)) {
           const id = usersByTenant[tenant]?.[name];
           if (!id) throw new Error(`seed: no Slack id for ${name} in ${tenant}`);

@@ -1,0 +1,30 @@
+# Lab image for the AX lane: this directory's runner as PID 1 plus the lab's code for `apl-case` (in-sandbox
+# coordinator + worker) and the collector (run from the same image in a plain Pod, with other credentials).
+# Build from a committed tree at the repository root, so APL_CANDIDATE_REVISION names exactly what is inside:
+#   docker buildx build --platform linux/amd64 -f profiles/ax/runner/Dockerfile.lab \
+#     --build-arg APL_CANDIDATE_REVISION=$(git rev-parse HEAD) -t <repo>/apl-lab .
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS runner
+ARG TARGETOS TARGETARCH
+WORKDIR /src
+COPY profiles/ax/runner/go.mod profiles/ax/runner/go.sum ./
+RUN go mod download
+COPY profiles/ax/runner/main.go ./
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/ax-task-runner .
+
+FROM node:24-bookworm-slim@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
+WORKDIR /app
+COPY package.json package-lock.json tsconfig.json ./
+COPY scripts/patch-emulate.mjs scripts/patch-emulate.mjs
+# better-sqlite3 ships linux-x64 prebuilds; its node-gyp install script would need a toolchain, so scripts are
+# skipped and the root postinstall (the hash-checked Emulate patch) runs explicitly.
+RUN npm ci --ignore-scripts --no-audit --no-fund && node scripts/patch-emulate.mjs
+COPY src src
+COPY fixtures fixtures
+COPY profiles/ax profiles/ax
+COPY --from=runner /out/ax-task-runner /usr/local/bin/ax-task-runner
+RUN printf '#!/bin/sh\ncd /app && exec node --import tsx profiles/ax/case.ts "$@"\n' > /usr/local/bin/apl-case \
+ && chmod 0755 /usr/local/bin/apl-case && mkdir -p /workspace
+ARG APL_CANDIDATE_REVISION=unknown
+ENV APL_CANDIDATE_REVISION=$APL_CANDIDATE_REVISION
+EXPOSE 80
+ENTRYPOINT ["/usr/local/bin/ax-task-runner"]
