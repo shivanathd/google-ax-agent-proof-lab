@@ -9,6 +9,7 @@ import { createManifest, freePort, loadManifest, recordResource, runDir, saveMan
 import { ensureRunResources, flociClients } from "../adapters/floci/clients.ts";
 import { loadSlackFixture, startWorkspace, type Workspace } from "../adapters/slack/emulator.ts";
 import { startWorkerSlackProxy } from "../adapters/slack/worker-proxy.ts";
+import { assertAllowedEndpoint } from "./endpoints.ts";
 import type { FaultProxy } from "../adapters/faults/proxy.ts";
 import { seedLedger } from "../ledger/seed.ts";
 import { workerConfig, workerEnv, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
@@ -103,11 +104,20 @@ export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?
 
 async function startWorker(h: RunHandle, w: WorkerOptions) {
   const m = h.manifest;
+  // A crashed worker (S2) leaves its proxies listening; replace them rather than collide on their ports.
+  await Promise.all(h.slackProxies.splice(0).map((p) => p.close()));
   // The worker knows only its Slack proxy's URL (worker-proxy.ts); emulator ports are not on its allowlist.
   const overrides: Record<string, InstallationOverride> = {};
   for (const ws of h.workspaces) {
     const own = w.overrides?.[ws.installation_id];
-    const proxy = await startWorkerSlackProxy(m.ports[`slack_proxy_${ws.installation_id}`]!, own?.api_url ?? ws.url);
+    const upstream = own?.api_url ?? ws.url;
+    // The proxy relays without a guard, so it must never front an endpoint the run allowlist forbids
+    // (F1-R2). A forbidden override goes to the worker unproxied; the worker's guard rejects it pre-network.
+    if (!(await assertAllowedEndpoint(upstream, m.config.endpoint_allowlist).then(() => true, () => false))) {
+      overrides[ws.installation_id] = { ...own };
+      continue;
+    }
+    const proxy = await startWorkerSlackProxy(m.ports[`slack_proxy_${ws.installation_id}`]!, upstream);
     h.slackProxies.push(proxy);
     overrides[ws.installation_id] = { ...own, api_url: proxy.url };
   }
