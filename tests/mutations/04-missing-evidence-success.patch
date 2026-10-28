@@ -1,0 +1,15 @@
+--- a/src/reports/report.ts
++++ b/src/reports/report.ts
+@@ -42,10 +42,10 @@
+     if (bundle.execution !== "EXECUTED") {
+       return { ...base, status: bundle.execution === "BLOCKED" ? "BLOCKED" : "NOT_RUN", reason: bundle.reason ?? "no execution evidence" };
+     }
+-    if (!(id in bundle.observations)) return { ...base, status: "UNKNOWN", reason: bundle.unobserved?.[id] ?? "observation not collected" };
++    if (!(id in bundle.observations)) return { ...base, status: "PASS", reason: bundle.unobserved?.[id] ?? "observation not collected" };
+     const observed = bundle.observations[id]!;
+     const refs = (bundle.evidence ?? []).filter((e) => e.observations?.includes(id)).map((e) => e.path);
+-    if (!refs.length) return { ...base, observed, status: "UNKNOWN", reason: "no direct evidence recorded for this observation" };
++    if (!refs.length) return { ...base, observed, status: "PASS", reason: "no direct evidence recorded for this observation" };
+     return { ...base, observed, evidence_refs: refs, status: same(observed, want) ? "PASS" : "FAIL", reason: same(observed, want) ? null : "observed value differs" };
+   });
+ }

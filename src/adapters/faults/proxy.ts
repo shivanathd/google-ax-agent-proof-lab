@@ -1,12 +1,13 @@
 // TEST-ONLY fault-injecting loopback proxy. It forwards every request to one upstream (an emulator) unless
 // a rule matches: `http500` answers 500 without forwarding; `hold-response` forwards, lets the upstream
-// complete the write, then never answers, so the client sees a timeout after the effect happened.
+// complete the write, then never answers, so the client sees a timeout after the effect happened; `stall`
+// neither forwards nor answers, so the effect never happens and the caller waits (used to kill mid-step).
 // Simulated faults are labelled as such in evidence; they are not observations of Emulate or Floci.
 import { createServer, request, type IncomingMessage, type ServerResponse } from "node:http";
 
 export interface FaultRule {
   name: string;
-  action: "http500" | "hold-response";
+  action: "http500" | "hold-response" | "stall";
   match: (req: { method: string; url: string; headers: IncomingMessage["headers"]; body: string }) => boolean;
   times?: number; // apply to the first N matches only
 }
@@ -31,6 +32,7 @@ export async function startFaultProxy(port: number, upstream: string) {
         res.writeHead(500, { "content-type": "application/xml" }).end("<Error><Code>InternalError</Code><Message>injected fault</Message></Error>");
         return;
       }
+      if (rule?.action === "stall") return void held.push(res); // never forwarded, never answered
       const up = request(
         { host: target.hostname, port: target.port, method: info.method, path: info.url, headers: { ...req.headers, host: target.host } },
         (upRes) => {

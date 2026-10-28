@@ -16,7 +16,9 @@ export function isOptionalProfile(name: string): name is OptionalProfile {
 export async function loadAdapter(name: OptionalProfile, root = ROOT): Promise<ProfileAdapter | undefined> {
   const file = join(root, "profiles", name, "index.ts");
   if (!existsSync(file)) return undefined;
-  return (await import(pathToFileURL(file).href)).adapter as ProfileAdapter | undefined;
+  // Adapters export `adapter` or a default export (all four shipped adapters use the default).
+  const mod = await import(pathToFileURL(file).href);
+  return (mod.adapter ?? mod.default) as ProfileAdapter | undefined;
 }
 
 const notInstalled = (profile: OptionalProfile): DoctorResult => ({

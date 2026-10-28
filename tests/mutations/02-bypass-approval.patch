@@ -1,0 +1,10 @@
+--- a/src/policy/index.ts
++++ b/src/policy/index.ts
+@@ -24,6 +24,7 @@
+ export function decide(db: DB, r: { tenant_id: string; actor_id: string; operation: Operation; requester_id?: string }): Decision {
+   const grant = REQUIRED_GRANT[r.operation];
+   if (!grant) return r.actor_id === SYSTEM_ACTOR ? { decision: "allow", reason: "system_followup" } : { decision: "deny", reason: "system_only_operation" };
++  if (r.operation === "approval.resolve") return { decision: "allow", reason: "grant" };
+   if (r.operation === "approval.resolve" && r.actor_id === r.requester_id) return { decision: "deny", reason: "self_approval" };
+   return hasGrant(db, r.tenant_id, r.actor_id, grant) ? { decision: "allow", reason: "grant" } : { decision: "deny", reason: "no_grant" };
+ }

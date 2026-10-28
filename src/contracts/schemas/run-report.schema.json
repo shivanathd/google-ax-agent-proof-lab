@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-proof-lab.invalid/schemas/run-report.json",
+  "title": "C5 RunReport",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "status": { "enum": ["PASS", "FAIL", "BLOCKED", "SKIPPED", "NOT_RUN", "UNKNOWN"] },
+    "nullable_measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "reason"],
+      "properties": {
+        "value": { "type": ["number", "null"], "minimum": 0 },
+        "reason": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "required": [
+    "schema_version", "case_id", "run_id", "profile", "mode", "candidate_revision", "tree_sha", "dirty", "fixture_sha256",
+    "collector", "observed_at", "execution", "mutation", "status", "lanes", "all_lanes_status", "banner", "assertions",
+    "counts", "limitations", "artifacts", "cleanup_status", "started_at", "ended_at", "durations"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "case_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "profile": { "enum": ["local", "salesforce", "coderabbit", "ax", "live-model"] },
+    "mode": { "enum": ["scripted", "fixture-replay", "live-model"] },
+    "execution": { "enum": ["EXECUTED", "BLOCKED", "NOT_RUN"] },
+    "reason": { "type": "string" },
+    "candidate_revision": { "type": "string", "minLength": 1 },
+    "tree_sha": { "type": "string", "minLength": 1 },
+    "dirty": { "type": "boolean" },
+    "patch_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "fixture_sha256": { "type": "string", "minLength": 1 },
+    "collector": { "type": "string", "minLength": 1 },
+    "observed_at": { "type": "string", "minLength": 1 },
+    "mutation": { "type": "string", "minLength": 1 },
+    "simulated_faults": { "type": "array", "items": { "type": "string" } },
+    "status": { "$ref": "#/definitions/status" },
+    "all_lanes_status": { "$ref": "#/definitions/status" },
+    "lanes": {
+      "type": "object",
+      "required": ["local"],
+      "propertyNames": { "enum": ["local", "salesforce", "coderabbit", "ax", "live-model"] },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "selected", "reason"],
+        "properties": {
+          "status": { "$ref": "#/definitions/status" },
+          "selected": { "type": "boolean" },
+          "reason": { "type": "string" },
+          "parity": { "$ref": "#/definitions/status" },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["id", "description", "satisfied"],
+              "properties": { "id": { "type": "string" }, "description": { "type": "string" }, "satisfied": { "type": "boolean" } }
+            }
+          }
+        }
+      }
+    },
+    "banner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["green", "text"],
+      "properties": { "green": { "type": "boolean" }, "text": { "type": "string", "minLength": 1 } }
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "required", "expected", "observed", "status", "evidence_refs", "reason"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "required": { "type": "boolean" },
+          "expected": { "type": ["boolean", "integer", "number", "string"] },
+          "observed": { "type": ["boolean", "integer", "number", "string", "null"] },
+          "status": { "$ref": "#/definitions/status" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "passed", "failed", "blocked", "skipped", "not_run", "unknown"],
+      "properties": {
+        "required": { "type": "integer", "minimum": 0 }, "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }, "blocked": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }, "not_run": { "type": "integer", "minimum": 0 },
+        "unknown": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "cleanup_status": { "enum": ["CLEAN", "RETAINED_BY_REQUEST", "INCOMPLETE", "NOT_RUN"] },
+    "cleanup_remaining": { "type": "array", "items": { "type": "string" } },
+    "started_at": { "type": "string", "minLength": 1 },
+    "ended_at": { "type": "string", "minLength": 1 },
+    "durations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wall_clock_seconds"],
+      "properties": { "wall_clock_seconds": { "$ref": "#/definitions/nullable_measure" } }
+    }
+  }
+}
