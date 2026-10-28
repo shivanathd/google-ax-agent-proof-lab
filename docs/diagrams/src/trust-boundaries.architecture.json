@@ -18,7 +18,7 @@
     { "id": "evaluator", "type": "backend", "label": "Evaluator", "sublabel": "no provider credentials", "pos": [580, 760], "size": [190, 64] }
   ],
   "boundaries": [
-    { "kind": "security-group", "label": "coordinator process", "wraps": ["coord", "proxy"] },
+    { "kind": "security-group", "label": "coordinator process (Emulate runs in-process)", "wraps": ["coord", "proxy", "emulate"] },
     { "kind": "security-group", "label": "worker process", "wraps": ["worker"] },
     { "kind": "security-group", "label": "collector process", "wraps": ["collector"] }
   ],

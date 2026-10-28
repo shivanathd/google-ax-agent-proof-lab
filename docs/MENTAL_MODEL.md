@@ -27,7 +27,7 @@ What business outcome do we want?
         (docs/CLAIM_LEDGER.md)
 ```
 
-This map is architecture, not execution evidence. The local lane exists in `src/`; what it has shown is in [`CLAIM_LEDGER.md`](CLAIM_LEDGER.md). The diagrams in [`diagrams/`](diagrams/README.md) draw the same responsibilities against the code: a system map, trust boundaries and credential custody, the evidence flow, and the designed AX lane. `mental-model.architecture.json` is the Archify source for this layer view.
+This map is architecture, not execution evidence. The local lane exists in `src/`; what it has shown is in [`CLAIM_LEDGER.md`](CLAIM_LEDGER.md). The diagrams in [`diagrams/`](diagrams/README.md) draw the same responsibilities against the code (each is architecture, not execution evidence): [the four layers and the fifth question](diagrams/mental-model.html), [the system map](diagrams/system-map.html), [infrastructure layers, local and GKE](diagrams/infra-layers.html), [one W01 request end to end](diagrams/request-flow.html), [trust boundaries and credential custody](diagrams/trust-boundaries.html), [the evidence flow](diagrams/evidence-flow.html) and [the AX lane as executed in run 3](diagrams/ax-lane.html). GitHub renders their Mermaid versions in [`diagrams/README.md`](diagrams/README.md). The Archify source for this layer view is [`diagrams/src/mental-model.architecture.json`](diagrams/src/mental-model.architecture.json).
 
 ## Execution is one layer
 

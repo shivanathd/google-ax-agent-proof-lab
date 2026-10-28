@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Agent Proof Lab: four layers and the fifth question (architecture, not execution evidence)",
+    "output": "docs/diagrams/mental-model.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "status",
+      "type": "frontend",
+      "label": "Assertion status (C5)",
+      "sublabel": "PASS \u00b7 FAIL \u00b7 BLOCKED \u00b7 SKIPPED \u00b7 NOT_RUN \u00b7 UNKNOWN",
+      "pos": [
+        380,
+        40
+      ],
+      "size": [
+        276,
+        64
+      ]
+    },
+    {
+      "id": "labels",
+      "type": "frontend",
+      "label": "Claim labels",
+      "sublabel": "DOCUMENTED \u00b7 DESIGNED \u00b7 EXECUTED \u00b7 UNKNOWN",
+      "pos": [
+        696,
+        40
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "claims",
+      "type": "database",
+      "label": "Claim ledger",
+      "sublabel": "run ID + tree SHA + limits",
+      "pos": [
+        1000,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "docs/CLAIM_LEDGER.md"
+    },
+    {
+      "id": "collector",
+      "type": "security",
+      "label": "Independent collector",
+      "sublabel": "own process + credentials",
+      "pos": [
+        280,
+        210
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "src/collector/"
+    },
+    {
+      "id": "bundle",
+      "type": "database",
+      "label": "C4 bundle",
+      "sublabel": "typed facts; absent = reason",
+      "pos": [
+        520,
+        210
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "evaluator",
+      "type": "backend",
+      "label": "Supplied evaluator",
+      "sublabel": "fixed cases.json",
+      "pos": [
+        760,
+        210
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "evaluate.py"
+    },
+    {
+      "id": "report",
+      "type": "database",
+      "label": "C5 RunReport",
+      "sublabel": "assertions, hashes, limits",
+      "pos": [
+        1000,
+        210
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "src/reports/"
+    },
+    {
+      "id": "slack",
+      "type": "external",
+      "label": "Emulate Slack x2",
+      "sublabel": "signed callbacks, Web API",
+      "pos": [
+        40,
+        390
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "emulate 0.12.3"
+    },
+    {
+      "id": "floci",
+      "type": "cloud",
+      "label": "Floci S3 + SQS",
+      "sublabel": "receipts, job queue",
+      "pos": [
+        280,
+        390
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "2.3.0 by digest"
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "SQLite ledger",
+      "sublabel": "inbox, outbox, tickets",
+      "pos": [
+        520,
+        390
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "crm",
+      "type": "database",
+      "label": "CRM contract double",
+      "sublabel": "one narrow operation",
+      "pos": [
+        760,
+        390
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "not Salesforce"
+    },
+    {
+      "id": "salesforce",
+      "type": "cloud",
+      "label": "Salesforce scratch org",
+      "sublabel": "optional; BLOCKED",
+      "pos": [
+        1000,
+        390
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "BLOCKED"
+    },
+    {
+      "id": "identity",
+      "type": "security",
+      "label": "Verified identity",
+      "sublabel": "HMAC + installation binding",
+      "pos": [
+        40,
+        570
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "src/http/slack.ts"
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Deterministic policy",
+      "sublabel": "current grants, job-time",
+      "pos": [
+        280,
+        570
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "src/policy/"
+    },
+    {
+      "id": "envelope",
+      "type": "security",
+      "label": "C3 ActionEnvelope",
+      "sublabel": "unknown fields rejected",
+      "pos": [
+        520,
+        570
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "security",
+      "label": "Approval binding",
+      "sublabel": "request digest + expiry",
+      "pos": [
+        760,
+        570
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "W02"
+    },
+    {
+      "id": "axrunner",
+      "type": "cloud",
+      "label": "AX runner",
+      "sublabel": "optional; ran in run 3",
+      "pos": [
+        40,
+        750
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "optional; run 3"
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Scripted worker",
+      "sublabel": "W01-W03; no model",
+      "pos": [
+        280,
+        750
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "local core"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "5. What can honestly be claimed?",
+      "wraps": [
+        "status",
+        "labels",
+        "claims"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "4. Evidence: did it meet the requirement?",
+      "wraps": [
+        "collector",
+        "bundle",
+        "evaluator",
+        "report"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "2. Emulation: what does it touch?",
+      "wraps": [
+        "slack",
+        "floci",
+        "ledger",
+        "crm",
+        "salesforce"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "3. Authorization: is the action allowed?",
+      "wraps": [
+        "identity",
+        "policy",
+        "envelope",
+        "approval"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "1. Execution: where does it run?",
+      "wraps": [
+        "axrunner",
+        "worker"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "callback",
+      "from": "slack",
+      "to": "identity",
+      "label": "signed callback",
+      "variant": "security"
+    },
+    {
+      "id": "tenant",
+      "from": "identity",
+      "to": "policy",
+      "label": "tenant"
+    },
+    {
+      "id": "ask",
+      "from": "worker",
+      "to": "policy",
+      "label": "every action",
+      "variant": "emphasis"
+    },
+    {
+      "id": "decide",
+      "from": "policy",
+      "to": "envelope",
+      "label": "decides",
+      "variant": "security"
+    },
+    {
+      "id": "digest",
+      "from": "approval",
+      "to": "envelope",
+      "label": "digest",
+      "variant": "security"
+    },
+    {
+      "id": "runs",
+      "from": "axrunner",
+      "to": "worker",
+      "label": "runs task",
+      "variant": "dashed"
+    },
+    {
+      "id": "put",
+      "from": "envelope",
+      "to": "floci",
+      "label": "S3 PUT, SQS"
+    },
+    {
+      "id": "txn",
+      "from": "envelope",
+      "to": "ledger",
+      "label": "transaction"
+    },
+    {
+      "id": "cas",
+      "from": "envelope",
+      "to": "crm",
+      "label": "CAS write"
+    },
+    {
+      "id": "parity",
+      "from": "crm",
+      "to": "salesforce",
+      "label": "BLOCKED",
+      "variant": "dashed"
+    },
+    {
+      "id": "read-slack",
+      "from": "slack",
+      "to": "collector",
+      "label": "reader token",
+      "variant": "security"
+    },
+    {
+      "id": "read-floci",
+      "from": "floci",
+      "to": "collector",
+      "label": "own client",
+      "variant": "security"
+    },
+    {
+      "id": "read-ledger",
+      "from": "ledger",
+      "to": "collector",
+      "label": "read-only",
+      "variant": "security"
+    },
+    {
+      "id": "facts",
+      "from": "collector",
+      "to": "bundle",
+      "label": "facts",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c4",
+      "from": "bundle",
+      "to": "evaluator",
+      "label": "C4",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c5",
+      "from": "evaluator",
+      "to": "report",
+      "label": "C5",
+      "variant": "emphasis"
+    },
+    {
+      "id": "assigns",
+      "from": "evaluator",
+      "to": "status",
+      "label": "assigns"
+    },
+    {
+      "id": "cite",
+      "from": "report",
+      "to": "claims",
+      "label": "cited by run ID"
+    },
+    {
+      "id": "label",
+      "from": "labels",
+      "to": "claims",
+      "label": "labels"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Read this as",
+      "items": [
+        "Architecture, not execution evidence; results live in docs/CLAIM_LEDGER.md.",
+        "Each layer answers one question; a green check in one says nothing about another.",
+        "Local core is built; AX ran on a cluster in run 3 (6 PASS, 3 FAIL); Salesforce is BLOCKED."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Rules the layers keep",
+      "items": [
+        "Identity comes from the verified installation, never from message text.",
+        "Every effect, slack.reply included, is a C3 envelope that policy decided.",
+        "A worker's 'done' reply is one observation for the collector, not the verdict.",
+        "A fact the collector could not read is absent with a reason, so the status is UNKNOWN, not 0."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Sources",
+      "items": [
+        "docs/MENTAL_MODEL.md; README.md, Understand the layers",
+        "docs/spec/active/2026-10-28-agent-proof-lab/contracts/CONTRACTS.md (C2-C5)",
+        "src/http/slack.ts, src/policy/index.ts, src/workflows/context.ts",
+        "src/collector/probe.ts, src/reports/report.ts, profiles/ax/RESULTS.md"
+      ]
+    }
+  ]
+}

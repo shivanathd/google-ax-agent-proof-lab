@@ -1,0 +1,452 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Infrastructure layers: local host and the optional GKE lane as run (architecture, not execution evidence)",
+    "output": "docs/diagrams/infra-layers.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "coord",
+      "type": "backend",
+      "label": "lab CLI + coordinator",
+      "sublabel": "Node 24; Emulate in-process",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "per-run ports"
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Worker process",
+      "sublabel": "Node 24; run-owned HOME",
+      "pos": [
+        270,
+        40
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "collector",
+      "type": "security",
+      "label": "Collector process",
+      "sublabel": "Node 24; run-owned HOME",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "floci",
+      "type": "cloud",
+      "label": "Floci container",
+      "sublabel": "by digest; 127.0.0.1 only",
+      "pos": [
+        270,
+        200
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "compose -p per run"
+    },
+    {
+      "id": "artifacts",
+      "type": "database",
+      "label": "artifacts/runs/<id>/",
+      "sublabel": "C4, C5; gitignored",
+      "pos": [
+        40,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "gitignored"
+    },
+    {
+      "id": "privateruns",
+      "type": "database",
+      "label": "private-runs/<id>/",
+      "sublabel": "manifest, ledger; gitignored",
+      "pos": [
+        270,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "gitignored"
+    },
+    {
+      "id": "evidence",
+      "type": "database",
+      "label": "docs/evidence/<id>/",
+      "sublabel": "sanitized; committed",
+      "pos": [
+        40,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "committed"
+    },
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operator tools",
+      "sublabel": "kubectl, ax CLI, orchestrate",
+      "pos": [
+        270,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "AX lane only"
+    },
+    {
+      "id": "registry",
+      "type": "cloud",
+      "label": "Artifact Registry",
+      "sublabel": "<registry>; REMOVED",
+      "pos": [
+        520,
+        40
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMOVED"
+    },
+    {
+      "id": "bucket",
+      "type": "database",
+      "label": "GCS snapshot bucket",
+      "sublabel": "run prefixes REMOVED",
+      "pos": [
+        770,
+        40
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "run prefixes REMOVED"
+    },
+    {
+      "id": "sa",
+      "type": "security",
+      "label": "Transfer SA",
+      "sublabel": "<transfer-sa>; REMAINS",
+      "pos": [
+        1000,
+        40
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMAINS"
+    },
+    {
+      "id": "substrate",
+      "type": "backend",
+      "label": "Agent Substrate v0.6.0",
+      "sublabel": "ate-system; REMAINS",
+      "pos": [
+        770,
+        200
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMAINS"
+    },
+    {
+      "id": "sandbox",
+      "type": "backend",
+      "label": "Task sandbox (gVisor)",
+      "sublabel": "1 gVisor worker; REMOVED",
+      "pos": [
+        770,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMOVED"
+    },
+    {
+      "id": "atenet",
+      "type": "security",
+      "label": "atenet router + egress",
+      "sublabel": "mTLS SPIFFE; REMAINS",
+      "pos": [
+        1000,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMAINS"
+    },
+    {
+      "id": "ax",
+      "type": "backend",
+      "label": "AX control plane",
+      "sublabel": "server + Postgres; REMOVED",
+      "pos": [
+        520,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMOVED, PV + disk too"
+    },
+    {
+      "id": "podcollector",
+      "type": "security",
+      "label": "Collector Pod",
+      "sublabel": "own SA + cert; REMOVED",
+      "pos": [
+        770,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMOVED"
+    },
+    {
+      "id": "emulators",
+      "type": "external",
+      "label": "Emulate + Floci",
+      "sublabel": "lab namespace; REMOVED",
+      "pos": [
+        1000,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "REMOVED"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Local host: macOS arm64, Node 24, Docker Desktop",
+      "wraps": [
+        "coord",
+        "worker",
+        "collector",
+        "floci",
+        "artifacts",
+        "privateruns",
+        "evidence",
+        "operator"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Docker",
+      "wraps": [
+        "floci"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "GCP project <project> (optional AX lane, run 3)",
+      "wraps": [
+        "registry",
+        "bucket",
+        "sa",
+        "substrate",
+        "sandbox",
+        "atenet",
+        "ax",
+        "podcollector",
+        "emulators"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "GKE <cluster>: 2 x c3-standard-4, pre-existing",
+      "wraps": [
+        "substrate",
+        "sandbox",
+        "atenet",
+        "ax",
+        "podcollector",
+        "emulators"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "spawn-worker",
+      "from": "coord",
+      "to": "worker",
+      "label": "spawns"
+    },
+    {
+      "id": "spawn-collector",
+      "from": "coord",
+      "to": "collector",
+      "label": "spawns"
+    },
+    {
+      "id": "loopback",
+      "from": "worker",
+      "to": "floci",
+      "label": "S3, SQS"
+    },
+    {
+      "id": "bundle",
+      "from": "collector",
+      "to": "artifacts",
+      "label": "C4 bundle"
+    },
+    {
+      "id": "export",
+      "from": "artifacts",
+      "to": "evidence",
+      "label": "lab export",
+      "variant": "security"
+    },
+    {
+      "id": "rundir",
+      "from": "operator",
+      "to": "privateruns",
+      "label": "run dir"
+    },
+    {
+      "id": "apply",
+      "from": "operator",
+      "to": "ax",
+      "label": "ax apply",
+      "variant": "emphasis"
+    },
+    {
+      "id": "actors",
+      "from": "ax",
+      "to": "substrate",
+      "label": "actors",
+      "variant": "emphasis"
+    },
+    {
+      "id": "snapshots",
+      "from": "substrate",
+      "to": "bucket",
+      "label": "snapshots",
+      "variant": "dashed"
+    },
+    {
+      "id": "impersonate",
+      "from": "substrate",
+      "to": "sa",
+      "label": "impersonates",
+      "variant": "security"
+    },
+    {
+      "id": "roles",
+      "from": "sa",
+      "to": "bucket",
+      "label": "2 roles",
+      "variant": "security"
+    },
+    {
+      "id": "run",
+      "from": "substrate",
+      "to": "sandbox",
+      "label": "runs actor",
+      "variant": "emphasis"
+    },
+    {
+      "id": "egress",
+      "from": "sandbox",
+      "to": "atenet",
+      "label": "egress",
+      "variant": "security"
+    },
+    {
+      "id": "allowed",
+      "from": "atenet",
+      "to": "emulators",
+      "label": "2 services",
+      "variant": "security"
+    },
+    {
+      "id": "result",
+      "from": "podcollector",
+      "to": "sandbox",
+      "label": "via router",
+      "variant": "security"
+    },
+    {
+      "id": "reads",
+      "from": "podcollector",
+      "to": "emulators",
+      "label": "reads"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Read this as",
+      "items": [
+        "Architecture, not execution evidence; run results are in profiles/ax/RESULTS.md.",
+        "Local lane: every port, DB file and compose project is per run, bound to loopback.",
+        "GKE lane: as deployed in run 3 (2026-10-28); identifiers are placeholders."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "After teardown (2026-10-29)",
+      "items": [
+        "Removed: lab namespace, ax-system with its PV and disk, the registry, run snapshot prefixes.",
+        "Remains on purpose: Substrate v0.6.0 and the transfer SA with its three grants.",
+        "The cluster and the bucket were the owner's before the run and stay."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Sources",
+      "items": [
+        "compose.yaml, src/config/lifecycle.ts, src/config/env.ts, .gitignore",
+        "profiles/ax/README.md (in-cluster placement), docs/PROFILES.md",
+        "profiles/ax/RESULTS.md run 3 and Teardown; profiles/ax/manifests/"
+      ]
+    }
+  ]
+}

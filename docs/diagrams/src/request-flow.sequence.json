@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "How it works: one W01 service request end to end (architecture, not execution evidence)",
+    "output": "docs/diagrams/request-flow.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "participants": [
+    {
+      "id": "coord",
+      "type": "backend",
+      "label": "Coordinator",
+      "sublabel": "collect-case"
+    },
+    {
+      "id": "slack",
+      "type": "external",
+      "label": "Emulate Slack",
+      "sublabel": "T_LAB_A thread"
+    },
+    {
+      "id": "proxy",
+      "type": "security",
+      "label": "Slack proxy",
+      "sublabel": "POST only"
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Worker",
+      "sublabel": "ingress + jobs"
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "SQLite ledger",
+      "sublabel": "inbox, outbox"
+    },
+    {
+      "id": "floci",
+      "type": "cloud",
+      "label": "Floci",
+      "sublabel": "SQS + S3"
+    },
+    {
+      "id": "collector",
+      "type": "security",
+      "label": "Collector",
+      "sublabel": "own credentials"
+    },
+    {
+      "id": "evaluator",
+      "type": "backend",
+      "label": "Evaluator",
+      "sublabel": "vs cases.json"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 375,
+      "label": "Signed ingress"
+    },
+    {
+      "from": 380,
+      "to": 605,
+      "label": "Policy and job"
+    },
+    {
+      "from": 610,
+      "to": 875,
+      "label": "Effects, then reply"
+    },
+    {
+      "from": 885,
+      "to": 1180,
+      "label": "Independent evidence"
+    }
+  ],
+  "messages": [
+    {
+      "id": "post",
+      "from": "coord",
+      "to": "slack",
+      "y": 170,
+      "label": "post as Dana: @LabBot",
+      "variant": "emphasis"
+    },
+    {
+      "id": "callback",
+      "from": "slack",
+      "to": "worker",
+      "y": 200,
+      "label": "signed Events API callback",
+      "variant": "security",
+      "note": "raw-body HMAC + 300 s; bad: 401 (G-SIG, G-OLD)"
+    },
+    {
+      "id": "accept",
+      "from": "worker",
+      "to": "ledger",
+      "y": 280,
+      "label": "durable inbox insert",
+      "note": "unique event id: a retry adds nothing (W01-D)"
+    },
+    {
+      "id": "ack",
+      "from": "worker",
+      "to": "slack",
+      "y": 360,
+      "label": "200 ok",
+      "variant": "return"
+    },
+    {
+      "id": "plan",
+      "from": "worker",
+      "to": "ledger",
+      "y": 390,
+      "label": "ticket.create envelope + outbox",
+      "variant": "emphasis",
+      "note": "policy: current grants, one transaction"
+    },
+    {
+      "id": "enqueue",
+      "from": "worker",
+      "to": "floci",
+      "y": 470,
+      "label": "SendMessage job"
+    },
+    {
+      "id": "receive",
+      "from": "floci",
+      "to": "worker",
+      "y": 500,
+      "label": "ReceiveMessage",
+      "variant": "return"
+    },
+    {
+      "id": "ticket",
+      "from": "worker",
+      "to": "ledger",
+      "y": 530,
+      "label": "grant re-check; INSERT ticket",
+      "variant": "emphasis",
+      "note": "on conflict: no second ticket (W01-Q)"
+    },
+    {
+      "id": "receipt",
+      "from": "worker",
+      "to": "floci",
+      "y": 620,
+      "label": "PutObject receipt",
+      "note": "retries all fail: no commit (W01-S)"
+    },
+    {
+      "id": "commit",
+      "from": "worker",
+      "to": "ledger",
+      "y": 700,
+      "label": "commit + outbox slack.reply",
+      "note": "no commit, no completion reply"
+    },
+    {
+      "id": "reply",
+      "from": "worker",
+      "to": "proxy",
+      "y": 780,
+      "label": "chat.postMessage, re-checked",
+      "variant": "security",
+      "note": "timeout after send: UNKNOWN (W01-T)"
+    },
+    {
+      "id": "forward",
+      "from": "proxy",
+      "to": "slack",
+      "y": 860,
+      "label": "forward to thread"
+    },
+    {
+      "id": "finish",
+      "from": "coord",
+      "to": "collector",
+      "y": 900,
+      "label": "finish"
+    },
+    {
+      "id": "replies",
+      "from": "collector",
+      "to": "slack",
+      "y": 930,
+      "label": "conversations.replies",
+      "variant": "security"
+    },
+    {
+      "id": "get",
+      "from": "collector",
+      "to": "floci",
+      "y": 960,
+      "label": "GetObject (own key)",
+      "variant": "security"
+    },
+    {
+      "id": "query",
+      "from": "collector",
+      "to": "ledger",
+      "y": 990,
+      "label": "read-only query",
+      "variant": "security"
+    },
+    {
+      "id": "bundle",
+      "from": "collector",
+      "to": "evaluator",
+      "y": 1020,
+      "label": "C4 ObservationBundle",
+      "variant": "emphasis",
+      "note": "failed capture: fact absent, not 0"
+    },
+    {
+      "id": "report",
+      "from": "evaluator",
+      "to": "coord",
+      "y": 1100,
+      "label": "C5 RunReport",
+      "variant": "return",
+      "note": "receipt missing: FAIL; unobserved: UNKNOWN"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "worker",
+      "from": 195,
+      "to": 786,
+      "type": "backend"
+    },
+    {
+      "participant": "collector",
+      "from": 895,
+      "to": 1026,
+      "type": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Happy path (F3-A1)",
+      "items": [
+        "Architecture, not execution evidence; the run is C-05 in docs/CLAIM_LEDGER.md.",
+        "One ticket, one S3 receipt matching the request, one reply in the original thread.",
+        "The reply is written only in the transaction that commits the receipt."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Failure branches",
+      "items": [
+        "Forged or stale signature: 401, no inbox row (G-SIG, G-OLD).",
+        "Duplicate delivery or redelivered job: no second ticket or reply (W01-D, W01-Q).",
+        "S3 PUT fails: ticket kept, no success reply (W01-S).",
+        "Receipt gone after a success reply: the collector sees it, so FAIL (W01-F, F4-A1).",
+        "Reply timeout after send: UNKNOWN, never blindly re-posted (W01-T)."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Sources",
+      "items": [
+        "src/http/slack.ts, src/adapters/slack/signature.ts, src/ledger/db.ts",
+        "src/workflows/w01.ts, src/workflows/context.ts, src/worker/worker.ts",
+        "src/collector/probe.ts, src/evaluator/collect-case.ts, src/reports/report.ts",
+        "docs/CASEBOOK.md W01; tests/integration/slack.test.ts, workflows.test.ts"
+      ]
+    }
+  ]
+}
