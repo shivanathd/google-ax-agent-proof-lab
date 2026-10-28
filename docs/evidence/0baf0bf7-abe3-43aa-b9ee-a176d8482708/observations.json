@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "case_id": "W02-H",
-  "run_id": "28bd1213-321d-422a-a81d-74e2b7ef9d84",
+  "case_id": "W02-U",
+  "run_id": "0baf0bf7-abe3-43aa-b9ee-a176d8482708",
   "profile": "local",
   "mode": "scripted",
   "execution": "EXECUTED",
-  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
-  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
+  "candidate_revision": "f97acc749406c908282b94479580806c3d07ad97",
+  "tree_sha": "263c819579a194bdf00805a6d87cd6212f6d917a",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
@@ -15,15 +15,14 @@
   "mutation": "none",
   "collector_methods": [
     "S3 GetObject (collector client, own credentials)",
-    "read-only SQLite query (approval_requests, run_audit)"
+    "read-only SQLite query (approval_requests, actions, run_audit)"
   ],
-  "observed_at": "2026-10-28T19:47:32.083Z",
+  "observed_at": "2026-10-28T20:03:52.551Z",
   "simulated_faults": [],
   "observations": {
-    "approval_status": "approved",
-    "approved_transition_count": 1,
-    "approval_receipt_count": 1,
-    "approval_receipt_matches": true
+    "approval_status": "awaiting_approval",
+    "unauthorized_write_count": 0,
+    "approval_receipt_count": 0
   },
   "unobserved": {}
 }

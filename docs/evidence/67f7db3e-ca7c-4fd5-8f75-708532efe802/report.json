@@ -1,25 +1,27 @@
 {
   "schema_version": 1,
-  "case_id": "W02-U",
-  "run_id": "304234f2-1b2c-47fb-8979-2ee7d7590827",
+  "case_id": "W01-F",
+  "run_id": "67f7db3e-ca7c-4fd5-8f75-708532efe802",
   "profile": "local",
   "mode": "scripted",
-  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
-  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
+  "candidate_revision": "f97acc749406c908282b94479580806c3d07ad97",
+  "tree_sha": "263c819579a194bdf00805a6d87cd6212f6d917a",
   "dirty": false,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
   "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
   "seed": 0,
   "floci_image": "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
-  "collector": "apl-collector pid=87035 (separate process; reader token, own S3/SQS client, read-only SQLite)",
-  "observed_at": "2026-10-28T19:47:18.822Z",
+  "collector": "apl-collector pid=15276 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T20:04:30.259Z",
   "execution": "EXECUTED",
   "mutation": "none",
-  "simulated_faults": [],
-  "status": "PASS",
+  "simulated_faults": [
+    "receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault)"
+  ],
+  "status": "FAIL",
   "lanes": {
     "local": {
-      "status": "PASS",
+      "status": "FAIL",
       "selected": true,
       "reason": "local core: required assertions only"
     },
@@ -44,50 +46,63 @@
       "reason": "not selected"
     }
   },
-  "all_lanes_status": "PASS",
+  "all_lanes_status": "FAIL",
   "banner": {
-    "green": true,
-    "text": "PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))"
+    "green": false,
+    "text": "NOT A SUCCESS: local core FAIL"
   },
   "assertions": [
     {
-      "id": "approval_status",
+      "id": "ticket_count",
       "required": true,
-      "expected": "awaiting_approval",
-      "observed": "awaiting_approval",
+      "expected": 1,
+      "observed": 1,
       "evidence_refs": [
-        "evidence/approval-ledger.json"
+        "evidence/w01-ledger.json"
       ],
       "status": "PASS",
       "reason": null
     },
     {
-      "id": "unauthorized_write_count",
+      "id": "receipt_count",
       "required": true,
-      "expected": 0,
+      "expected": 1,
       "observed": 0,
       "evidence_refs": [
-        "evidence/approval-ledger.json"
+        "evidence/w01-s3.json"
       ],
-      "status": "PASS",
-      "reason": null
+      "status": "FAIL",
+      "reason": "observed value differs"
     },
     {
-      "id": "approval_receipt_count",
+      "id": "receipt_matches_request",
       "required": true,
-      "expected": 0,
-      "observed": 0,
+      "expected": true,
+      "observed": false,
       "evidence_refs": [
-        "evidence/approval-s3.json"
+        "evidence/w01-ledger.json",
+        "evidence/w01-s3.json",
+        "evidence/w01-thread.json"
+      ],
+      "status": "FAIL",
+      "reason": "observed value differs"
+    },
+    {
+      "id": "completion_reply_count",
+      "required": true,
+      "expected": 1,
+      "observed": 1,
+      "evidence_refs": [
+        "evidence/w01-thread.json"
       ],
       "status": "PASS",
       "reason": null
     }
   ],
   "counts": {
-    "required": 3,
-    "passed": 3,
-    "failed": 0,
+    "required": 4,
+    "passed": 2,
+    "failed": 2,
     "blocked": 0,
     "skipped": 0,
     "not_run": 0,
@@ -95,6 +110,7 @@
   },
   "limitations": [
     "Mode: local integration run (scripted driver).",
+    "Simulated faults injected by the test coordinator: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault).",
     "Public challenge cases are visible to builders; they are not secret holdouts.",
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
@@ -102,11 +118,11 @@
     "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces."
   ],
   "cleanup_status": "CLEAN",
-  "started_at": "2026-10-28T19:47:16.902Z",
-  "ended_at": "2026-10-28T19:47:19.509Z",
+  "started_at": "2026-10-28T20:04:28.501Z",
+  "ended_at": "2026-10-28T20:04:31.206Z",
   "durations": {
     "wall_clock_seconds": {
-      "value": 2.607,
+      "value": 2.705,
       "reason": null
     }
   }

@@ -3,105 +3,105 @@
   "clip": "clip-mental-model",
   "title": "Mental model: the reply is not the acceptance test",
   "run_ids": [
-    "56dbbe65-d864-43ac-a66b-d4c34ac00dfa",
-    "25b02c98-2157-4772-a40e-89aae825964d"
+    "4f002b0a-4daf-4ad5-a118-8d4239dc343e",
+    "67f7db3e-ca7c-4fd5-8f75-708532efe802"
   ],
   "scenario_ids": [
     "W01-H",
     "W01-F"
   ],
-  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
-  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
-  "application_tree_sha256": "e5a9baa038d91845639544b9897930d95839a56ab27797d70bca46f7dc166c21",
+  "candidate_revision": "f97acc749406c908282b94479580806c3d07ad97",
+  "tree_sha": "263c819579a194bdf00805a6d87cd6212f6d917a",
+  "application_tree_sha256": "5828dcd6ccc770d2957d575adcacfd3bd8dc454aa14117530ae19bf771aefd24",
   "profile": "local",
   "mode": "scripted",
-  "recorded_at": "2026-10-28T19:46:44.824Z",
+  "recorded_at": "2026-10-28T20:03:17.706Z",
   "marks": [
     {
       "t_ms": 0,
       "label": "console loaded"
     },
     {
-      "t_ms": 28,
+      "t_ms": 37,
       "label": "select W01-H"
     },
     {
-      "t_ms": 4030,
+      "t_ms": 4041,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 4030,
+      "t_ms": 4041,
       "label": "run clicked W01-H"
     },
     {
-      "t_ms": 7040,
+      "t_ms": 8078,
       "label": "reported W01-H"
     },
     {
-      "t_ms": 11044,
+      "t_ms": 12084,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 11113,
+      "t_ms": 12155,
       "label": "tab report"
     },
     {
-      "t_ms": 16117,
+      "t_ms": 17159,
       "label": "dwell 5000ms"
     },
     {
-      "t_ms": 16128,
+      "t_ms": 17171,
       "label": "tab workflow"
     },
     {
-      "t_ms": 16161,
+      "t_ms": 17203,
       "label": "select W01-F"
     },
     {
-      "t_ms": 20165,
+      "t_ms": 21206,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 20165,
+      "t_ms": 21206,
       "label": "run clicked W01-F"
     },
     {
-      "t_ms": 23123,
+      "t_ms": 24182,
       "label": "reported W01-F"
     },
     {
-      "t_ms": 27128,
+      "t_ms": 28186,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 27146,
+      "t_ms": 28205,
       "label": "tab report"
     },
     {
-      "t_ms": 33150,
+      "t_ms": 34209,
       "label": "dwell 6000ms"
     },
     {
-      "t_ms": 33150,
+      "t_ms": 34209,
       "label": "end"
     }
   ],
   "original_capture": "mental-frames.json",
-  "original_capture_sha256": "1a86ed11f378ab833c02f78b93ae8126c6c13c40bd9f3dfd6b0a257061b4e557",
+  "original_capture_sha256": "25094e421862c913244a2bf6c29752feb33378e67dd5ae146b8e58b9a66c8507",
   "webm_cross_check": "mental.webm",
-  "webm_sha256": "47e473feab96eff125e9cfaff215e27ebb06bb9ba4bbde779d7640ae4afb0997",
-  "mp4_sha256": "d95ceb3234e03d355575762d68a2c833842254adc57dbef871adc1b4f0a336cd",
+  "webm_sha256": "906312c9fb4451caf903a44d082e543c2351a5cb80f5bed11d02dd8a4aa9683a",
+  "mp4_sha256": "1f684be8bca81ec95a52356637f00f7b4a0ca5aed8f560e6d70dabcb5b5019c3",
   "edits": [
-    "trimmed to 0.18-33.33 s of the source capture",
+    "trimmed to 0.26-34.46 s of the source capture",
     "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
     "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
     "captions: mental-model.vtt (WebVTT, generated from capture marks and the run report)"
   ],
   "evidence_refs": [
-    "docs/evidence/56dbbe65-d864-43ac-a66b-d4c34ac00dfa/report.json",
-    "docs/evidence/56dbbe65-d864-43ac-a66b-d4c34ac00dfa/observations.json",
-    "docs/evidence/25b02c98-2157-4772-a40e-89aae825964d/report.json",
-    "docs/evidence/25b02c98-2157-4772-a40e-89aae825964d/observations.json"
+    "docs/evidence/4f002b0a-4daf-4ad5-a118-8d4239dc343e/report.json",
+    "docs/evidence/4f002b0a-4daf-4ad5-a118-8d4239dc343e/observations.json",
+    "docs/evidence/67f7db3e-ca7c-4fd5-8f75-708532efe802/report.json",
+    "docs/evidence/67f7db3e-ca7c-4fd5-8f75-708532efe802/observations.json"
   ],
   "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
 }

@@ -3,77 +3,77 @@
   "clip": "clip-duplicate-delivery",
   "title": "Duplicate delivery",
   "run_ids": [
-    "c56e3668-6014-4178-b2b7-44adf04d67c3"
+    "5b9cb5d9-c56f-42e1-bc2e-576b84f7f0f7"
   ],
   "scenario_ids": [
     "W01-D"
   ],
-  "candidate_revision": "6d83d7578671588d8e997f89b29f1d85edbad743",
-  "tree_sha": "ffbde74c84cc51e8fc470ab02892470b59a08fe6",
-  "application_tree_sha256": "e5a9baa038d91845639544b9897930d95839a56ab27797d70bca46f7dc166c21",
+  "candidate_revision": "f97acc749406c908282b94479580806c3d07ad97",
+  "tree_sha": "263c819579a194bdf00805a6d87cd6212f6d917a",
+  "application_tree_sha256": "5828dcd6ccc770d2957d575adcacfd3bd8dc454aa14117530ae19bf771aefd24",
   "profile": "local",
   "mode": "scripted",
-  "recorded_at": "2026-10-28T19:46:44.824Z",
+  "recorded_at": "2026-10-28T20:03:17.706Z",
   "marks": [
     {
       "t_ms": 0,
       "label": "console loaded"
     },
     {
-      "t_ms": 36,
+      "t_ms": 41,
       "label": "select W01-D"
     },
     {
-      "t_ms": 1040,
+      "t_ms": 1044,
       "label": "dwell 1000ms"
     },
     {
-      "t_ms": 1040,
+      "t_ms": 1044,
       "label": "run clicked W01-D"
     },
     {
-      "t_ms": 6536,
+      "t_ms": 6520,
       "label": "reported W01-D"
     },
     {
-      "t_ms": 9540,
+      "t_ms": 9524,
       "label": "dwell 3000ms"
     },
     {
-      "t_ms": 9656,
+      "t_ms": 9640,
       "label": "tab report"
     },
     {
-      "t_ms": 13657,
+      "t_ms": 13643,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 13672,
+      "t_ms": 13657,
       "label": "tab workflow"
     },
     {
-      "t_ms": 15677,
+      "t_ms": 15661,
       "label": "dwell 2000ms"
     },
     {
-      "t_ms": 15678,
+      "t_ms": 15661,
       "label": "end"
     }
   ],
   "original_capture": "w01d-frames.json",
-  "original_capture_sha256": "f101e31cdebadcf1389fc56c6af02ab5a03f0c9d479e00add0540d0ff183b1a6",
+  "original_capture_sha256": "48633f9e0606b7c4b707c86e1100624f48d280aecc582a95b057455edf655a2c",
   "webm_cross_check": "w01d.webm",
-  "webm_sha256": "a86a23f6b4d6f7d83a1be87f65e8e9cba07e2a8df908b363853f1a239ab48218",
-  "mp4_sha256": "e9fcd433604835f50f43cbac3b1cc5e798124d11e128a8cebc87605b4bfd6084",
+  "webm_sha256": "38fa036a7de8c20260cca1b4d9cf6a073e96589e7127d0a733418224e4628268",
+  "mp4_sha256": "a38749fb7d28a4e48783b33a2ee08a5b74ca0bf44684b14f8a63ca032ca9e74e",
   "edits": [
-    "trimmed to 0.19-15.87 s of the source capture",
+    "trimmed to 0.26-15.92 s of the source capture",
     "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
     "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
     "captions: duplicate-delivery.vtt (WebVTT, generated from capture marks and the run report)"
   ],
   "evidence_refs": [
-    "docs/evidence/c56e3668-6014-4178-b2b7-44adf04d67c3/report.json",
-    "docs/evidence/c56e3668-6014-4178-b2b7-44adf04d67c3/observations.json"
+    "docs/evidence/5b9cb5d9-c56f-42e1-bc2e-576b84f7f0f7/report.json",
+    "docs/evidence/5b9cb5d9-c56f-42e1-bc2e-576b84f7f0f7/observations.json"
   ],
   "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
 }

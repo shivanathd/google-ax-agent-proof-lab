@@ -6,12 +6,12 @@ Raw evidence files (ledger rows, Slack payloads) stay in the gitignored `artifac
 
 Runs used by the README media:
 
-- [`7e63be51-eb89-4fa6-b40d-3edfa1e6f9e9`](7e63be51-eb89-4fa6-b40d-3edfa1e6f9e9/report.json): W01-H, local core PASS
-- [`c56e3668-6014-4178-b2b7-44adf04d67c3`](c56e3668-6014-4178-b2b7-44adf04d67c3/report.json): W01-D, local core PASS
-- [`304234f2-1b2c-47fb-8979-2ee7d7590827`](304234f2-1b2c-47fb-8979-2ee7d7590827/report.json): W02-U, local core PASS
-- [`28bd1213-321d-422a-a81d-74e2b7ef9d84`](28bd1213-321d-422a-a81d-74e2b7ef9d84/report.json): W02-H, local core PASS
-- [`56dbbe65-d864-43ac-a66b-d4c34ac00dfa`](56dbbe65-d864-43ac-a66b-d4c34ac00dfa/report.json): W01-H, local core PASS
-- [`25b02c98-2157-4772-a40e-89aae825964d`](25b02c98-2157-4772-a40e-89aae825964d/report.json): W01-F, local core FAIL
-- [`2a6647f6-13df-44a5-9fbf-dc7960a5be71`](2a6647f6-13df-44a5-9fbf-dc7960a5be71/report.json): W03-V, local core PASS
+- [`1326a187-7058-4c59-978d-151e893f64fa`](1326a187-7058-4c59-978d-151e893f64fa/report.json): W01-H, local core PASS
+- [`5b9cb5d9-c56f-42e1-bc2e-576b84f7f0f7`](5b9cb5d9-c56f-42e1-bc2e-576b84f7f0f7/report.json): W01-D, local core PASS
+- [`0baf0bf7-abe3-43aa-b9ee-a176d8482708`](0baf0bf7-abe3-43aa-b9ee-a176d8482708/report.json): W02-U, local core PASS
+- [`73f489dd-3a38-4733-a292-2a37f08c16ac`](73f489dd-3a38-4733-a292-2a37f08c16ac/report.json): W02-H, local core PASS
+- [`4f002b0a-4daf-4ad5-a118-8d4239dc343e`](4f002b0a-4daf-4ad5-a118-8d4239dc343e/report.json): W01-H, local core PASS
+- [`67f7db3e-ca7c-4fd5-8f75-708532efe802`](67f7db3e-ca7c-4fd5-8f75-708532efe802/report.json): W01-F, local core FAIL
+- [`a914ea56-a732-4878-a801-cea2df304a8b`](a914ea56-a732-4878-a801-cea2df304a8b/report.json): W03-V, local core PASS
 
 Other directories here are written by other steps and are not media evidence: harness runs cited by `docs/CLAIM_LEDGER.md` and `blind-holdouts/`.

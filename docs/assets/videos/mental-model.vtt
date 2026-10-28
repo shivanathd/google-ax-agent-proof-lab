@@ -1,35 +1,35 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:04.030
+00:00:00.000 --> 00:00:04.041
 Four layers kept apart: execution (where the work runs), emulation (what it talks to), authorization (what it may do) and evidence (what the independent collector can prove).
 Scenario W01-H: Service request. Dana asks LabBot to log an offline printer; expect one ticket, one S3 receipt and one reply in the same thread.
 
 2
-00:00:04.030 --> 00:00:07.040
+00:00:04.041 --> 00:00:08.078
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 3
-00:00:07.040 --> 00:00:11.113
-Collector report for run 56dbbe65 (W01-H): PASS: all 4 required assertions passed with evidence (local integration run (scripted driver)).
+00:00:08.078 --> 00:00:12.155
+Collector report for run 4f002b0a (W01-H): PASS: all 4 required assertions passed with evidence (local integration run (scripted driver)).
 
 4
-00:00:11.113 --> 00:00:16.128
+00:00:12.155 --> 00:00:17.171
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
 
 5
-00:00:16.128 --> 00:00:20.165
+00:00:17.171 --> 00:00:21.206
 Back to the emulated Slack thread and the before/after state.
 Scenario W01-F: Missing receipt (injected fault). Same as W01-H, but the test coordinator deletes the S3 receipt after the worker reports success; the W01 completion check must FAIL.
 
 6
-00:00:20.165 --> 00:00:23.123
+00:00:21.206 --> 00:00:24.182
 Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.
 
 7
-00:00:23.123 --> 00:00:27.146
-Collector report for run 25b02c98 (W01-F): NOT A SUCCESS: local core FAIL. Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault).
+00:00:24.182 --> 00:00:28.205
+Collector report for run 67f7db3e (W01-F): NOT A SUCCESS: local core FAIL. Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault).
 
 8
-00:00:27.146 --> 00:00:33.200
+00:00:28.205 --> 00:00:34.267
 Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.
