@@ -162,13 +162,14 @@ export class Probe {
 }
 
 // Shared W01 facts: ledger ticket, S3 object and Slack thread must agree (F3-A1, S1, S2, F4-A1).
-export async function captureTicket(p: Probe, tag: string, tenant: string, ts: string) {
-  const ledger = await p.capture(`${tag}-ledger`, "read-only SQLite query (tickets, inbox, actions)", () => {
+// `ledgerFrom` replaces the SQLite read where the collector cannot open the ledger (AX lane: profiles/ax/collector.ts).
+export async function captureTicket(p: Probe, tag: string, tenant: string, ts: string, ledgerFrom?: { source: string; read: () => Promise<any> }) {
+  const ledger = await p.capture(`${tag}-ledger`, ledgerFrom?.source ?? "read-only SQLite query (tickets, inbox, actions)", ledgerFrom?.read ?? (() => {
     const inbox = p.rows("inbox", { message_ts: ts });
     const tickets = inbox.length ? p.rows("tickets", { inbox_id: inbox[0]!.id }) : [];
     const actions = tickets.flatMap((t) => p.rows("actions", { action_key: t.action_key }));
     return { inbox, tickets, actions };
-  });
+  }));
   const t = ledger?.tickets[0];
   await p.capture(`${tag}-s3`, "S3 GetObject (collector client, own credentials)", async () => {
     // G-UNKNOWN: without the ledger the receipt key is unknown, so "no receipt" would be an inferred zero.

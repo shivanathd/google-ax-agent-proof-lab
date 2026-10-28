@@ -33,38 +33,53 @@ export interface Workspace {
 
 const secret = (prefix: string) => `${prefix}-${randomBytes(12).toString("hex")}`;
 
+export interface WorkspaceSecrets { tokens: Workspace["tokens"]; signing_secret: string; client_secret: string }
+
+export function workspaceSecrets(ws: Fixture["workspaces"][number]): WorkspaceSecrets {
+  return {
+    tokens: {
+      worker: secret("xoxb"), narrow: secret("xoxb"), setup: secret("xoxp"), reader: secret("xoxp"),
+      users: Object.fromEntries(ws.users.map((u) => [u.name, secret("xoxp")])),
+    },
+    signing_secret: secret("sign"),
+    client_secret: secret("cs"),
+  };
+}
+
+// The `slack` seed for one workspace. The AX lane passes it to an in-cluster Emulate (profiles/ax/emulate).
+export function workspaceSeed(fx: Fixture, ws: Fixture["workspaces"][number], s: WorkspaceSecrets, o: { eventsUrl: string; interactionsUrl: string }) {
+  const { tokens, signing_secret, client_secret } = s;
+  const bot = { app_id: fx.app.app_id, bot_id: fx.app.bot_id, bot_user_id: fx.app.bot_user_id };
+  return {
+    team: ws.team, signing_secret, strict_scopes: true,
+    users: ws.users.map((u) => ({ name: u.name, real_name: u.real_name, email: u.email })),
+    channels: [{ name: ws.channel }],
+    oauth_apps: [{ ...fx.app, client_secret, redirect_uris: [], scopes: SCOPES.worker, interactivity_url: o.interactionsUrl }],
+    tokens: [
+      { token: tokens.worker, type: "bot", user: bot.bot_user_id, ...bot, scopes: SCOPES.worker },
+      { token: tokens.narrow, type: "bot", user: bot.bot_user_id, ...bot, scopes: SCOPES.narrow },
+      { token: tokens.setup, type: "user", user: ws.setup_user, scopes: SCOPES.setup },
+      { token: tokens.reader, type: "user", user: ws.reader_user, scopes: SCOPES.reader },
+      ...ws.users.map((u) => ({ token: tokens.users[u.name], type: "user", user: u.name, scopes: SCOPES.user })),
+    ],
+    event_subscriptions: [{ url: o.eventsUrl, events: ["app_mention", "app_uninstalled", "tokens_revoked"] }],
+  };
+}
+
 export async function startWorkspace(
   fx: Fixture, ws: Fixture["workspaces"][number],
   o: { port: number; eventsUrl: string; interactionsUrl: string; allowlist: Endpoint[] },
 ): Promise<Workspace> {
-  const tokens = {
-    worker: secret("xoxb"), narrow: secret("xoxb"), setup: secret("xoxp"), reader: secret("xoxp"),
-    users: Object.fromEntries(ws.users.map((u) => [u.name, secret("xoxp")])),
-  };
-  const signing_secret = secret("sign");
-  const client_secret = secret("cs");
-  const bot = { app_id: fx.app.app_id, bot_id: fx.app.bot_id, bot_user_id: fx.app.bot_user_id };
-  const emu = await createEmulator({
-    service: "slack",
-    port: o.port,
-    seed: {
-      slack: {
-        team: ws.team, signing_secret, strict_scopes: true,
-        users: ws.users.map((u) => ({ name: u.name, real_name: u.real_name, email: u.email })),
-        channels: [{ name: ws.channel }],
-        oauth_apps: [{ ...fx.app, client_secret, redirect_uris: [], scopes: SCOPES.worker, interactivity_url: o.interactionsUrl }],
-        tokens: [
-          { token: tokens.worker, type: "bot", user: bot.bot_user_id, ...bot, scopes: SCOPES.worker },
-          { token: tokens.narrow, type: "bot", user: bot.bot_user_id, ...bot, scopes: SCOPES.narrow },
-          { token: tokens.setup, type: "user", user: ws.setup_user, scopes: SCOPES.setup },
-          { token: tokens.reader, type: "user", user: ws.reader_user, scopes: SCOPES.reader },
-          ...ws.users.map((u) => ({ token: tokens.users[u.name], type: "user", user: u.name, scopes: SCOPES.user })),
-        ],
-        event_subscriptions: [{ url: o.eventsUrl, events: ["app_mention", "app_uninstalled", "tokens_revoked"] }],
-      },
-    } as never,
-  });
-  const setup = slackClient({ baseUrl: emu.url, token: tokens.setup, allowlist: o.allowlist });
+  const s = workspaceSecrets(ws);
+  const emu = await createEmulator({ service: "slack", port: o.port, seed: { slack: workspaceSeed(fx, ws, s, o) } as never });
+  return { ...(await setupWorkspace(fx, ws, emu.url, s, o.allowlist)), close: () => emu.close() };
+}
+
+// Coordinator-side setup against a running emulator: resolves generated ids and invites the bot and users.
+export async function setupWorkspace(fx: Fixture, ws: Fixture["workspaces"][number], url: string, s: WorkspaceSecrets, allowlist: Endpoint[]): Promise<Omit<Workspace, "close">> {
+  const { tokens, signing_secret, client_secret } = s;
+  const bot = { bot_user_id: fx.app.bot_user_id };
+  const setup = slackClient({ baseUrl: url, token: tokens.setup, allowlist });
   const must = async (call: SlackCall, method: string, body?: object) => {
     const r = await call(method, body);
     if (!r.ok) throw new Error(`slack setup ${method} failed: ${r.error}`);
@@ -79,9 +94,9 @@ export async function startWorkspace(
     if (!r.ok && r.error !== "already_in_channel") throw new Error(`slack setup conversations.invite failed: ${r.error}`);
   }
   return {
-    tenant_id: ws.tenant_id, installation_id: ws.installation_id, url: emu.url, team_id, channel_id,
+    tenant_id: ws.tenant_id, installation_id: ws.installation_id, url, team_id, channel_id,
     api_app_id: fx.app.app_id, bot_user_id: bot.bot_user_id, signing_secret, client_id: fx.app.client_id, client_secret,
-    users, tokens, close: () => emu.close(),
+    users, tokens,
   };
 }
 

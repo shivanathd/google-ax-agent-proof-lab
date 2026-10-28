@@ -13,6 +13,18 @@ export class EndpointRejected extends Error {
 export interface Rejection { kind: "endpoint_rejected"; reason: string; target: string; outbound_request_count: 0 }
 export type OnReject = (r: Rejection) => void;
 
+// Address rule for a listed endpoint's resolved addresses. Default (local profile, F1-R2): all loopback.
+// An optional lane may replace it once per process before any request (profiles/ax/allowlist.ts); the local
+// profile never loads such a module, and validateRunConfig still rejects non-loopback local allowlists.
+export type AddressRule = (endpoint: Endpoint, addrs: string[]) => boolean;
+let addressRule: AddressRule = (_e, addrs) => addrs.every(isLoopbackHost);
+let ruleInstalled = false;
+export function installAddressRule(rule: AddressRule) {
+  if (ruleInstalled) throw new Error("endpoint address rule already installed");
+  addressRule = rule;
+  ruleInstalled = true;
+}
+
 // Only scheme://host:port is reported; paths and query strings may carry tokens.
 const describe = (u: URL) => `${u.protocol}//${u.host}`;
 
@@ -28,11 +40,11 @@ export async function assertAllowedEndpoint(raw: string | URL, allowlist: Endpoi
   if (url.username || url.password) return reject("userinfo_not_allowed", describe(url), onReject);
   const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
   const port = Number(url.port || (scheme === "https" ? 443 : 80));
-  const listed = allowlist.some((e) => e.scheme === scheme && e.host.toLowerCase() === host && e.port === port);
+  const listed = allowlist.find((e) => e.scheme === scheme && e.host.toLowerCase() === host && e.port === port);
   if (!listed) return reject("not_allowlisted", describe(url), onReject);
-  // Resolve and require every address to be loopback, so a listed name cannot point elsewhere.
+  // Resolve and require every address to satisfy the address rule, so a listed name cannot point elsewhere.
   const addrs = isIP(host) ? [host] : (await lookup(host, { all: true }).catch(() => [])).map((a) => a.address);
-  if (!addrs.length || !addrs.every(isLoopbackHost)) return reject("non_loopback_resolution", describe(url), onReject);
+  if (!addrs.length || !addressRule(listed, addrs)) return reject(ruleInstalled ? "address_not_allowed" : "non_loopback_resolution", describe(url), onReject);
   return url;
 }
 
