@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-28T18:40:45.435Z",
-  "application_revision": "0d7173b97ab3f5bc9a101165dcd65151dc6f650e",
-  "application_tree_sha256": "3bb12281d33a9af6156ad4b283980c0e5a9acd997e027e1ef7b948ef3eef5eb0",
+  "generated_at": "2026-10-28T19:31:55.281Z",
+  "application_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
+  "application_tree_sha256": "2371a7ee8a8ec94baa33f41b8ae4143662e8b9d19074c0d7633068ba99e9686c",
   "application_tree_definition": "sha256 over 'path\\0sha256(content)\\n' for tracked files matching APP_INCLUDE minus APP_EXCLUDE in src/media/spec.ts (see docs/REPRODUCING.md)",
-  "git_tree_sha": "f168658041339b3335b646283132718c89561711",
+  "git_tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
   "capture_dirty": false,
   "capture_app_dirty_files": 0,
   "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
@@ -19,28 +19,28 @@
     },
     "device_scale_factor": 1
   },
-  "capture_session": "2026-10-28T18-38-52-461Z",
+  "capture_session": "2026-10-28T19-30-01-427Z",
   "builder": "media pipeline (lab media capture/optimize)",
   "media": [
     {
       "id": "lab-overview",
       "path": "docs/assets/screenshots/lab-overview.png",
-      "sha256": "aaae3d5c60fe016a9323e5579c820badf751957046a106613e4a6acc715108cd",
+      "sha256": "fd3bc69f647154bd09a976aeeed5b666defc57689a27b66f107ee31a3cc719b7",
       "mime_type": "image/png",
       "width": 1440,
       "height": 900,
-      "bytes": 249497,
-      "run_id": "04658407-c209-415b-9366-13cd5eb5c715",
+      "bytes": 249762,
+      "run_id": "a440ab5c-4b22-40bf-80d1-d6adb9ec9abe",
       "scenario_ids": [
         "W02-H"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "lab-overview.png",
-      "source_capture_sha256": "aaae3d5c60fe016a9323e5579c820badf751957046a106613e4a6acc715108cd",
+      "source_capture_sha256": "fd3bc69f647154bd09a976aeeed5b666defc57689a27b66f107ee31a3cc719b7",
       "evidence_refs": [
-        "docs/evidence/04658407-c209-415b-9366-13cd5eb5c715/report.json",
-        "docs/evidence/04658407-c209-415b-9366-13cd5eb5c715/observations.json"
+        "docs/evidence/a440ab5c-4b22-40bf-80d1-d6adb9ec9abe/report.json",
+        "docs/evidence/a440ab5c-4b22-40bf-80d1-d6adb9ec9abe/observations.json"
       ],
       "alt_text": "Teaching console with the scenario list, an emulated Slack thread where Eli approves Dana's purchase request, the layer map and run details",
       "redaction_review": {
@@ -51,7 +51,7 @@
         "automated": "decoded=true, 1440x900",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "The teaching console after a real local run of the approval workflow. Run `04658407` (W02-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed approval_status \"approved\", approved_transition_count 1, approval_receipt_count 1, approval_receipt_matches true. Synthetic data.",
+      "caption": "The teaching console after a real local run of the approval workflow. Run `a440ab5c` (W02-H, local profile, scripted mode, revision `751880e`): local core PASS, 4 of 4 required assertions passed; observed approval_status \"approved\", approved_transition_count 1, approval_receipt_count 1, approval_receipt_matches true. Synthetic data.",
       "edits": [
         "none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"
       ]
@@ -59,22 +59,22 @@
     {
       "id": "service-request-success",
       "path": "docs/assets/screenshots/service-request-success.png",
-      "sha256": "2e292003c76df1531bd4bc3c0623f4577cf749a645adc55e6c97861e700ca1a3",
+      "sha256": "4a7bea941a1d1ee362f2f617cb4012077497a9fa8826d6d9841a9e973d8f336d",
       "mime_type": "image/png",
       "width": 1440,
       "height": 900,
-      "bytes": 220812,
-      "run_id": "d886ccf1-d6e7-41b7-82de-9f349407181f",
+      "bytes": 220455,
+      "run_id": "61359d45-c5de-4016-b138-7437994c2d7e",
       "scenario_ids": [
         "W01-H"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "service-request-success.png",
-      "source_capture_sha256": "2e292003c76df1531bd4bc3c0623f4577cf749a645adc55e6c97861e700ca1a3",
+      "source_capture_sha256": "4a7bea941a1d1ee362f2f617cb4012077497a9fa8826d6d9841a9e973d8f336d",
       "evidence_refs": [
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/report.json",
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/observations.json"
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/report.json",
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/observations.json"
       ],
       "alt_text": "Emulated Slack thread with Dana's service request and LabBot's ticket reply, beside before and after counts showing one ticket and one S3 receipt",
       "redaction_review": {
@@ -85,7 +85,7 @@
         "automated": "decoded=true, 1440x900",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
+      "caption": "A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt. Run `61359d45` (W01-H, local profile, scripted mode, revision `751880e`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
       "edits": [
         "none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"
       ]
@@ -93,22 +93,22 @@
     {
       "id": "approval-denied",
       "path": "docs/assets/screenshots/approval-denied.png",
-      "sha256": "d9037f1e425a2cbd8cf41b7ea758d1feabd0cfad4f538e79a3823177469c7fe1",
+      "sha256": "e49812944aa24f0592fdbf80ba8b77b801127f2ae27edd365bd1d97d6be72845",
       "mime_type": "image/png",
       "width": 1440,
       "height": 900,
-      "bytes": 258529,
-      "run_id": "7a941810-c422-4867-9101-3bae695babd8",
+      "bytes": 257058,
+      "run_id": "4bdbf285-2d3d-42d8-abc5-93adcad4e057",
       "scenario_ids": [
         "W02-U"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "approval-denied.png",
-      "source_capture_sha256": "d9037f1e425a2cbd8cf41b7ea758d1feabd0cfad4f538e79a3823177469c7fe1",
+      "source_capture_sha256": "e49812944aa24f0592fdbf80ba8b77b801127f2ae27edd365bd1d97d6be72845",
       "evidence_refs": [
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/report.json",
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/observations.json"
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/report.json",
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/observations.json"
       ],
       "alt_text": "Emulated Slack thread where Dana's self-approval and Gus's approval click are both refused, with the request still awaiting approval and no receipt",
       "redaction_review": {
@@ -119,7 +119,7 @@
         "automated": "decoded=true, 1440x900",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged. Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
+      "caption": "A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged. Run `4bdbf285` (W02-U, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
       "edits": [
         "none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"
       ]
@@ -127,22 +127,22 @@
     {
       "id": "evidence-report",
       "path": "docs/assets/screenshots/evidence-report.png",
-      "sha256": "e62c954b6cdb0e672413911b6411502ebd060f06ff95c8f85609f66f3bf8319e",
+      "sha256": "29dd687e4f62ae28531a467829e02f461c6c223cf28b725f8272372de4db75d8",
       "mime_type": "image/png",
       "width": 1440,
       "height": 900,
-      "bytes": 229609,
-      "run_id": "d886ccf1-d6e7-41b7-82de-9f349407181f",
+      "bytes": 250167,
+      "run_id": "61359d45-c5de-4016-b138-7437994c2d7e",
       "scenario_ids": [
         "W01-H"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "evidence-report.png",
-      "source_capture_sha256": "e62c954b6cdb0e672413911b6411502ebd060f06ff95c8f85609f66f3bf8319e",
+      "source_capture_sha256": "29dd687e4f62ae28531a467829e02f461c6c223cf28b725f8272372de4db75d8",
       "evidence_refs": [
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/report.json",
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/observations.json"
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/report.json",
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/observations.json"
       ],
       "alt_text": "Evidence report table listing each required assertion with expected value, observed value, PASS status and evidence file, plus limitations",
       "redaction_review": {
@@ -153,7 +153,7 @@
         "automated": "decoded=true, 1440x900",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
+      "caption": "The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations. Run `61359d45` (W01-H, local profile, scripted mode, revision `751880e`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
       "edits": [
         "none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"
       ]
@@ -161,22 +161,22 @@
     {
       "id": "profile-boundaries",
       "path": "docs/assets/screenshots/profile-boundaries.png",
-      "sha256": "a060eac7b6c79fa4806924359ebc252b05c77f6cc4bd77a123ca4e0ad585a95d",
+      "sha256": "e136de5faebddbd7c2848f8e67a0e07747c88b685322837469b7c7ebc7f3c2e7",
       "mime_type": "image/png",
       "width": 1440,
       "height": 900,
-      "bytes": 330597,
-      "run_id": "d886ccf1-d6e7-41b7-82de-9f349407181f",
+      "bytes": 330520,
+      "run_id": "61359d45-c5de-4016-b138-7437994c2d7e",
       "scenario_ids": [
         "W01-H"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "profile-boundaries.png",
-      "source_capture_sha256": "a060eac7b6c79fa4806924359ebc252b05c77f6cc4bd77a123ca4e0ad585a95d",
+      "source_capture_sha256": "e136de5faebddbd7c2848f8e67a0e07747c88b685322837469b7c7ebc7f3c2e7",
       "evidence_refs": [
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/report.json",
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/observations.json"
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/report.json",
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/observations.json"
       ],
       "alt_text": "Profile boundaries table: local core PASS, while Salesforce, CodeRabbit, AX and live-model lanes are BLOCKED with their missing prerequisites",
       "redaction_review": {
@@ -187,7 +187,7 @@
         "automated": "decoded=true, 1440x900",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Optional lanes as their doctors report them on this machine: blocked lanes are not failures of the local demo and are not evidence of provider parity. AX reads BLOCKED here because no cluster is configured locally; its authorized cluster runs are reported in profiles/ax/RESULTS.md. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
+      "caption": "Optional lanes as their doctors report them on this machine: blocked lanes are not failures of the local demo and are not evidence of provider parity. AX reads BLOCKED here because no cluster is configured locally; its authorized cluster runs are reported in profiles/ax/RESULTS.md. Run `61359d45` (W01-H, local profile, scripted mode, revision `751880e`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
       "edits": [
         "none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"
       ]
@@ -195,22 +195,22 @@
     {
       "id": "slack-service-request",
       "path": "docs/assets/gifs/slack-service-request.gif",
-      "sha256": "f73e8d5224e6857944966336ebab3218f7b3cea6844897e421bc9977c3e63b28",
+      "sha256": "72d703df930da808a84acf1f1ead37c9ff3efe88e39dd142da78d9823a64d8a7",
       "mime_type": "image/gif",
       "width": 1200,
       "height": 750,
-      "bytes": 434873,
-      "run_id": "d886ccf1-d6e7-41b7-82de-9f349407181f",
+      "bytes": 450786,
+      "run_id": "61359d45-c5de-4016-b138-7437994c2d7e",
       "scenario_ids": [
         "W01-H"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "w01h-frames.json",
-      "source_capture_sha256": "8293d20f107625085dba4a290cc517194e2f727e065b792a94fbf2e271586a04",
+      "source_capture_sha256": "890cc01a91af11127ec6490a4e5accbf127ae10270338b59f57c24bf7a6726a9",
       "evidence_refs": [
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/report.json",
-        "docs/evidence/d886ccf1-d6e7-41b7-82de-9f349407181f/observations.json"
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/report.json",
+        "docs/evidence/61359d45-c5de-4016-b138-7437994c2d7e/observations.json"
       ],
       "alt_text": "Animated capture: a service request is posted in emulated Slack, LabBot replies in the thread, and the collector's report turns PASS",
       "redaction_review": {
@@ -221,14 +221,14 @@
         "automated": "decoded=true, 1200x750",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread. Run `d886ccf1` (W01-H, local profile, scripted mode, revision `0d7173b`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
-      "duration_ms": 12000,
-      "frame_count": 120,
+      "caption": "The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread. Run `61359d45` (W01-H, local profile, scripted mode, revision `751880e`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.",
+      "duration_ms": 12100,
+      "frame_count": 121,
       "fps": 10,
       "poster_path": "docs/assets/posters/slack-service-request.png",
-      "poster_sha256": "2e292003c76df1531bd4bc3c0623f4577cf749a645adc55e6c97861e700ca1a3",
+      "poster_sha256": "4a7bea941a1d1ee362f2f617cb4012077497a9fa8826d6d9841a9e973d8f336d",
       "edits": [
-        "trimmed to 1.17-13.19 s of the source capture (from the Run click to after the verified result)",
+        "trimmed to 1.19-13.23 s of the source capture (from the Run click to after the verified result)",
         "source: lossless Chromium screencast PNG frames, resampled to 10 fps; scaled 1440 to 1200 px wide (lanczos)",
         "128-colour palette (ffmpeg palettegen/paletteuse, no dither)",
         "real-time playback: no speed change; includes viewer dwell pauses after verified states, which are not latency",
@@ -240,22 +240,22 @@
     {
       "id": "duplicate-event-safe",
       "path": "docs/assets/gifs/duplicate-event-safe.gif",
-      "sha256": "3af00f5aa35abeb7ad4b432f512e35f3a3ea7ff68469a598fe4cd3b4ff42612e",
+      "sha256": "3b02b41ad7b51d5bebd790884cb360164a7ddc7980eb74724af62acc3a49624d",
       "mime_type": "image/gif",
       "width": 1200,
       "height": 750,
-      "bytes": 365533,
-      "run_id": "dc60b1dc-4bbb-4815-9e4f-e81989812e69",
+      "bytes": 374366,
+      "run_id": "7d241b93-8399-4894-aa06-a548080a68a7",
       "scenario_ids": [
         "W01-D"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "w01d-frames.json",
-      "source_capture_sha256": "85037d8f972ac35bcfcefe90561c343886556494d15aa3755861f304feb99178",
+      "source_capture_sha256": "70a8635c57f870a4021fa04bcc99cacf160cd044a2d27695dad0dae6bf8f4868",
       "evidence_refs": [
-        "docs/evidence/dc60b1dc-4bbb-4815-9e4f-e81989812e69/report.json",
-        "docs/evidence/dc60b1dc-4bbb-4815-9e4f-e81989812e69/observations.json"
+        "docs/evidence/7d241b93-8399-4894-aa06-a548080a68a7/report.json",
+        "docs/evidence/7d241b93-8399-4894-aa06-a548080a68a7/observations.json"
       ],
       "alt_text": "Animated capture: after the first ticket, the same signed event is re-delivered and the before and after counts stay unchanged",
       "redaction_review": {
@@ -266,14 +266,14 @@
         "automated": "decoded=true, 1200x750",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Emulate re-delivers the same signed event; the collector compares before and after counts. Run `dc60b1dc` (W01-D, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.",
-      "duration_ms": 12500,
-      "frame_count": 125,
+      "caption": "Emulate re-delivers the same signed event; the collector compares before and after counts. Run `7d241b93` (W01-D, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.",
+      "duration_ms": 13000,
+      "frame_count": 130,
       "fps": 10,
       "poster_path": "docs/assets/posters/duplicate-event-safe.png",
-      "poster_sha256": "0b6833bc16e1bd6cd94a65d90258fb34685add058e4094e60b62161229290a4b",
+      "poster_sha256": "1751363751161cddc924fe917b822969d05fbd1a549a76d2bf658b7f9cb07e1a",
       "edits": [
-        "trimmed to 0.91-13.36 s of the source capture (from the Run click to after the verified result)",
+        "trimmed to 0.93-13.84 s of the source capture (from the Run click to after the verified result)",
         "source: lossless Chromium screencast PNG frames, resampled to 10 fps; scaled 1440 to 1200 px wide (lanczos)",
         "128-colour palette (ffmpeg palettegen/paletteuse, no dither)",
         "real-time playback: no speed change; includes viewer dwell pauses after verified states, which are not latency",
@@ -285,22 +285,22 @@
     {
       "id": "approval-denied-gif",
       "path": "docs/assets/gifs/approval-denied.gif",
-      "sha256": "4be265d81ade3ea8e3d0c5d2e11976fa61ff92c4a2f1d09cdf0c4925ca1f486f",
+      "sha256": "0c98e065beb32d179a66a94599ee318d7c9b2caf525011b5789dedf78fe8d0f0",
       "mime_type": "image/gif",
       "width": 1200,
       "height": 750,
-      "bytes": 365837,
-      "run_id": "7a941810-c422-4867-9101-3bae695babd8",
+      "bytes": 377556,
+      "run_id": "4bdbf285-2d3d-42d8-abc5-93adcad4e057",
       "scenario_ids": [
         "W02-U"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "w02u-frames.json",
-      "source_capture_sha256": "0449e14144b2a924c7e2065a008c8d1d958db80d88662795752c124dc1a93cc3",
+      "source_capture_sha256": "15d2def3e63d7cc8820ea50d07ae589e1f11ea94e2fdb97193b4ea9f15c3ed58",
       "evidence_refs": [
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/report.json",
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/observations.json"
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/report.json",
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/observations.json"
       ],
       "alt_text": "Animated capture: Dana and Gus click Approve on Dana's request, both clicks are refused, and the request stays awaiting approval",
       "redaction_review": {
@@ -311,12 +311,12 @@
         "automated": "decoded=true, 1200x750",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused. Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
+      "caption": "Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused. Run `4bdbf285` (W02-U, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
       "duration_ms": 10500,
       "frame_count": 105,
       "fps": 10,
       "poster_path": "docs/assets/posters/approval-denied.png",
-      "poster_sha256": "d9037f1e425a2cbd8cf41b7ea758d1feabd0cfad4f538e79a3823177469c7fe1",
+      "poster_sha256": "e49812944aa24f0592fdbf80ba8b77b801127f2ae27edd365bd1d97d6be72845",
       "edits": [
         "trimmed to 0.93-11.39 s of the source capture (from the Run click to after the verified result)",
         "source: lossless Chromium screencast PNG frames, resampled to 10 fps; scaled 1440 to 1200 px wide (lanczos)",
@@ -330,15 +330,15 @@
     {
       "id": "clip-mental-model",
       "path": "docs/assets/videos/mental-model.mp4",
-      "sha256": "f02c33d77ea577fc0f28c8777d9bfc2f0ad55411fe249bf96e8d6136a0db1005",
+      "sha256": "65512032ea5231b6729ab750b8932d7f368b2cae5a8ae2b04d9844c75f05b4d1",
       "mime_type": "video/mp4",
       "width": 1280,
       "height": 800,
-      "bytes": 405013,
-      "run_id": "60722942-926f-42cf-ad48-7f1d25df4445",
+      "bytes": 427240,
+      "run_id": "81c6744f-3164-46e2-abdb-97f16e21260a",
       "run_ids": [
-        "60722942-926f-42cf-ad48-7f1d25df4445",
-        "1ff864a9-9e81-4346-b9eb-7e7a09150846"
+        "81c6744f-3164-46e2-abdb-97f16e21260a",
+        "7085c56e-5cd2-41e3-9dc8-d5a4e75d863f"
       ],
       "scenario_ids": [
         "W01-H",
@@ -347,12 +347,12 @@
       "profile": "local",
       "mode": "scripted",
       "source_capture": "mental-frames.json",
-      "source_capture_sha256": "655ad3e1c73a14b68122c1d8773520ba9826fb8e5d75dbdc1609de20c1a63598",
+      "source_capture_sha256": "9ac178ef015b220243ba0af2cc3839833d5fb055640afcac170fa51389e9bf10",
       "evidence_refs": [
-        "docs/evidence/60722942-926f-42cf-ad48-7f1d25df4445/report.json",
-        "docs/evidence/60722942-926f-42cf-ad48-7f1d25df4445/observations.json",
-        "docs/evidence/1ff864a9-9e81-4346-b9eb-7e7a09150846/report.json",
-        "docs/evidence/1ff864a9-9e81-4346-b9eb-7e7a09150846/observations.json"
+        "docs/evidence/81c6744f-3164-46e2-abdb-97f16e21260a/report.json",
+        "docs/evidence/81c6744f-3164-46e2-abdb-97f16e21260a/observations.json",
+        "docs/evidence/7085c56e-5cd2-41e3-9dc8-d5a4e75d863f/report.json",
+        "docs/evidence/7085c56e-5cd2-41e3-9dc8-d5a4e75d863f/observations.json"
       ],
       "alt_text": "Poster of the mental-model clip: a verified service request run in the teaching console",
       "redaction_review": {
@@ -363,18 +363,18 @@
         "automated": "decoded=true, 1280x800",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Mental model: the reply is not the acceptance test (MP4 clip, 33 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Shown in order (local profile, scripted mode, revision `0d7173b`): happy-path run `60722942` (W01-H): local core PASS, 4 of 4 required assertions passed; then injected-fault run `1ff864a9` (W01-F): local core FAIL, 2 of 4 required assertions passed, not a success (failing: receipt_count 0, receipt_matches_request false). Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). The poster is a frame of the first run. Synthetic data.",
+      "caption": "Mental model: the reply is not the acceptance test (MP4 clip, 33 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Shown in order (local profile, scripted mode, revision `751880e`): happy-path run `81c6744f` (W01-H): local core PASS, 4 of 4 required assertions passed; then injected-fault run `7085c56e` (W01-F): local core FAIL, 2 of 4 required assertions passed, not a success (failing: receipt_count 0, receipt_matches_request false). Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). The poster is a frame of the first run. Synthetic data.",
       "duration_ms": 33134,
       "frame_count": 497,
       "fps": 15,
       "poster_path": "docs/assets/videos/mental-model.png",
-      "poster_sha256": "38a952103bda27030fd39dff7469fedea3170cf83cf88aa52d4cf8322ff56ac3",
+      "poster_sha256": "a030fe702a742e37509bb6e7452b412b0d167e323debb7a91675cfda69915383",
       "captions_path": "docs/assets/videos/mental-model.vtt",
-      "captions_sha256": "e784668cf22dec61b2a10be364af02c1f5a0ef9dc0afdf9629baad1df37bd066",
+      "captions_sha256": "395448ac316d08f44791b67551b60027f6cfb3195a033872259393d87afb023d",
       "sidecar_path": "docs/assets/videos/mental-model.json",
-      "sidecar_sha256": "4f6b2f0c7496e8d0003fd195dd8ee7cb6a9a8984c320fd7252307843a849f331",
+      "sidecar_sha256": "75111291ff9010504a83d76e1b260a7821525442dab3548ece8ab51af0787355",
       "edits": [
-        "trimmed to 0.18-33.28 s of the source capture",
+        "trimmed to 0.18-33.30 s of the source capture",
         "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
         "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
         "captions: mental-model.vtt (WebVTT, generated from capture marks and the run report)"
@@ -385,22 +385,22 @@
     {
       "id": "clip-duplicate-delivery",
       "path": "docs/assets/videos/duplicate-delivery.mp4",
-      "sha256": "2836d57691b4fd2c5fb74c8f554bfba9965c49402a571fb014a560068a2844c3",
+      "sha256": "c3601ac376b30c72950397d9025a9e3da7a0026a62c61b510660b612b9e3db67",
       "mime_type": "video/mp4",
       "width": 1280,
       "height": 800,
-      "bytes": 194311,
-      "run_id": "dc60b1dc-4bbb-4815-9e4f-e81989812e69",
+      "bytes": 203385,
+      "run_id": "7d241b93-8399-4894-aa06-a548080a68a7",
       "scenario_ids": [
         "W01-D"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "w01d-frames.json",
-      "source_capture_sha256": "85037d8f972ac35bcfcefe90561c343886556494d15aa3755861f304feb99178",
+      "source_capture_sha256": "70a8635c57f870a4021fa04bcc99cacf160cd044a2d27695dad0dae6bf8f4868",
       "evidence_refs": [
-        "docs/evidence/dc60b1dc-4bbb-4815-9e4f-e81989812e69/report.json",
-        "docs/evidence/dc60b1dc-4bbb-4815-9e4f-e81989812e69/observations.json"
+        "docs/evidence/7d241b93-8399-4894-aa06-a548080a68a7/report.json",
+        "docs/evidence/7d241b93-8399-4894-aa06-a548080a68a7/observations.json"
       ],
       "alt_text": "Poster of the duplicate-delivery clip: the retried event leaves ticket and reply counts unchanged",
       "redaction_review": {
@@ -411,18 +411,18 @@
         "automated": "decoded=true, 1280x800",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Duplicate delivery (MP4 clip, 15 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `dc60b1dc` (W01-D, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.",
-      "duration_ms": 15267,
-      "frame_count": 229,
+      "caption": "Duplicate delivery (MP4 clip, 16 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `7d241b93` (W01-D, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.",
+      "duration_ms": 15734,
+      "frame_count": 236,
       "fps": 15,
       "poster_path": "docs/assets/videos/duplicate-delivery.png",
-      "poster_sha256": "0b6833bc16e1bd6cd94a65d90258fb34685add058e4094e60b62161229290a4b",
+      "poster_sha256": "1751363751161cddc924fe917b822969d05fbd1a549a76d2bf658b7f9cb07e1a",
       "captions_path": "docs/assets/videos/duplicate-delivery.vtt",
-      "captions_sha256": "3999fe1ded9b7bd52c57e0cfd5020132471f711e1b31728fc723775257b838c9",
+      "captions_sha256": "d50ba22b16990cf88ee317fd929f440dacbac15000503af896c65d4c6d489f8a",
       "sidecar_path": "docs/assets/videos/duplicate-delivery.json",
-      "sidecar_sha256": "1a16c3eda76337958e37ebc6e1d02ff356fda2e3d723ce8170ef1b5e6a2c0a85",
+      "sidecar_sha256": "76144af55bacdb5131625f2aa32bd41f8db6908c99f1acb525950f3b03dc25ad",
       "edits": [
-        "trimmed to 0.18-15.37 s of the source capture",
+        "trimmed to 0.18-15.85 s of the source capture",
         "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
         "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
         "captions: duplicate-delivery.vtt (WebVTT, generated from capture marks and the run report)"
@@ -433,22 +433,22 @@
     {
       "id": "clip-permission-boundary",
       "path": "docs/assets/videos/permission-boundary.mp4",
-      "sha256": "ab3b943f4d6b4449a3f583ffa071812e94b6fc643fdc51c9a43f5f394ab4b8b7",
+      "sha256": "7fee9137d158299955ba72000aa72398389846acaa3dbfa509d0b5a46948703c",
       "mime_type": "video/mp4",
       "width": 1280,
       "height": 800,
-      "bytes": 202895,
-      "run_id": "7a941810-c422-4867-9101-3bae695babd8",
+      "bytes": 212170,
+      "run_id": "4bdbf285-2d3d-42d8-abc5-93adcad4e057",
       "scenario_ids": [
         "W02-U"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "w02u-frames.json",
-      "source_capture_sha256": "0449e14144b2a924c7e2065a008c8d1d958db80d88662795752c124dc1a93cc3",
+      "source_capture_sha256": "15d2def3e63d7cc8820ea50d07ae589e1f11ea94e2fdb97193b4ea9f15c3ed58",
       "evidence_refs": [
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/report.json",
-        "docs/evidence/7a941810-c422-4867-9101-3bae695babd8/observations.json"
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/report.json",
+        "docs/evidence/4bdbf285-2d3d-42d8-abc5-93adcad4e057/observations.json"
       ],
       "alt_text": "Poster of the permission-boundary clip: the self-approval is refused and the record is unchanged",
       "redaction_review": {
@@ -459,16 +459,16 @@
         "automated": "decoded=true, 1280x800",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Permission boundary (MP4 clip, 13 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `7a941810` (W02-U, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
+      "caption": "Permission boundary (MP4 clip, 13 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `4bdbf285` (W02-U, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed approval_status \"awaiting_approval\", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.",
       "duration_ms": 13267,
       "frame_count": 199,
       "fps": 15,
       "poster_path": "docs/assets/videos/permission-boundary.png",
-      "poster_sha256": "d9037f1e425a2cbd8cf41b7ea758d1feabd0cfad4f538e79a3823177469c7fe1",
+      "poster_sha256": "e49812944aa24f0592fdbf80ba8b77b801127f2ae27edd365bd1d97d6be72845",
       "captions_path": "docs/assets/videos/permission-boundary.vtt",
-      "captions_sha256": "67e7e3d5caa1db17ee344cf746d335eb44bb93729f5f4d2a47e2e341895ab17c",
+      "captions_sha256": "1ed36a3965c1d4cfe2cec0db27f3f0725855ecceecac095f26dcfc95d526d52e",
       "sidecar_path": "docs/assets/videos/permission-boundary.json",
-      "sidecar_sha256": "55b62009598cc3a809f921b80d146765802e18626dac8eb512aaf9df9ee4526f",
+      "sidecar_sha256": "b23412c111a3bd12831c4651ad96ef45d5cf681cfe3d652a7a9876c28acb7e97",
       "edits": [
         "trimmed to 0.19-13.40 s of the source capture",
         "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
@@ -481,22 +481,22 @@
     {
       "id": "clip-emulator-vs-real-org",
       "path": "docs/assets/videos/emulator-vs-real-org.mp4",
-      "sha256": "46395f08aa0c9e9fa6aec83e4dbd523b56531aaf46b04ef0052cd33303608864",
+      "sha256": "abf8b3c70e03f34539098a119fab28f0293c45aef4c33968a8a1cb33b08d515a",
       "mime_type": "video/mp4",
       "width": 1280,
       "height": 800,
-      "bytes": 362141,
-      "run_id": "18967808-87e5-4e8e-96dc-bada1dd83819",
+      "bytes": 371081,
+      "run_id": "13c84cec-4fbf-4e9b-b412-3f2cf3b0e973",
       "scenario_ids": [
         "W03-V"
       ],
       "profile": "local",
       "mode": "scripted",
       "source_capture": "boundary-frames.json",
-      "source_capture_sha256": "526900ee09d955b2facb29bb38b31dc47f0501a685b744efce06e548fdc5976c",
+      "source_capture_sha256": "60dd08cae472ed3c6225ce5f1afe656c010883ec2e7b1d6f2ea60e20d9afcdec",
       "evidence_refs": [
-        "docs/evidence/18967808-87e5-4e8e-96dc-bada1dd83819/report.json",
-        "docs/evidence/18967808-87e5-4e8e-96dc-bada1dd83819/observations.json"
+        "docs/evidence/13c84cec-4fbf-4e9b-b412-3f2cf3b0e973/report.json",
+        "docs/evidence/13c84cec-4fbf-4e9b-b412-3f2cf3b0e973/observations.json"
       ],
       "alt_text": "Poster of the emulator-versus-real-org clip: optional lanes shown as BLOCKED with parity UNKNOWN",
       "redaction_review": {
@@ -507,18 +507,18 @@
         "automated": "decoded=true, 1280x800",
         "manual": "PENDING: independent reviewer (docs/assets/render-review.json)"
       },
-      "caption": "Emulator versus real org (MP4 clip, 22 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `18967808` (W03-V, local profile, scripted mode, revision `0d7173b`): local core PASS, 3 of 3 required assertions passed; observed result \"CONFLICT\", description_unchanged true, write_count 0. Synthetic data.",
-      "duration_ms": 22134,
-      "frame_count": 332,
+      "caption": "Emulator versus real org (MP4 clip, 22 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `13c84cec` (W03-V, local profile, scripted mode, revision `751880e`): local core PASS, 3 of 3 required assertions passed; observed result \"CONFLICT\", description_unchanged true, write_count 0. Synthetic data.",
+      "duration_ms": 22200,
+      "frame_count": 333,
       "fps": 15,
       "poster_path": "docs/assets/videos/emulator-vs-real-org.png",
-      "poster_sha256": "c77e2020f4dd546029a041333cdcb5b43750cfd7c03f934332fc0a8ad180964f",
+      "poster_sha256": "b4635de1cc4992a847efb5c81d745a787f6901e160cad1981454a62380d96141",
       "captions_path": "docs/assets/videos/emulator-vs-real-org.vtt",
-      "captions_sha256": "d09e810caa4626700dda038a03754d65fe7a7753a98a4ca36d5de804ceab5ede",
+      "captions_sha256": "ecd5e11fe46e21b82d72a5af60603ea68967291a041217451f8998a3d04645e2",
       "sidecar_path": "docs/assets/videos/emulator-vs-real-org.json",
-      "sidecar_sha256": "e049defcfc43b43ab49037f829d478e692699145e1ccb4e62c73092cab8242c0",
+      "sidecar_sha256": "63d9676fa33d314dbafb4c6eee18d46cfecf2dc1da92feaad63d329c5326a7dc",
       "edits": [
-        "trimmed to 0.19-22.31 s of the source capture",
+        "trimmed to 0.18-22.33 s of the source capture",
         "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
         "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
         "captions: emulator-vs-real-org.vtt (WebVTT, generated from capture marks and the run report)"
@@ -531,7 +531,7 @@
     "local_status": "PASS",
     "github_render_status": "NOT_RUN",
     "github_reason": "no authorized repository/ref; nothing published",
-    "readme_sha256": "c64ad2737abad7ac0d023f444b7805dc584b51557b6db127e8c93059b61322fd",
+    "readme_sha256": "e3f94e1027b6e236676adceb595f38ea77c49964d497e365b0816c13445c6840",
     "embeds": 12,
     "broken_readme_media_path_count": 0,
     "missing_alt_text_count": 0,

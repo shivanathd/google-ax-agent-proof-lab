@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "case_id": "W02-U",
+  "run_id": "4bdbf285-2d3d-42d8-abc5-93adcad4e057",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
+  "tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "floci_image": "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
+  "mutation": "none",
+  "collector_methods": [
+    "S3 GetObject (collector client, own credentials)",
+    "read-only SQLite query (approval_requests, actions, run_audit)"
+  ],
+  "observed_at": "2026-10-28T19:30:35.661Z",
+  "simulated_faults": [],
+  "observations": {
+    "approval_status": "awaiting_approval",
+    "unauthorized_write_count": 0,
+    "approval_receipt_count": 0
+  },
+  "unobserved": {}
+}

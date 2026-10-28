@@ -3,19 +3,19 @@
   "clip": "clip-mental-model",
   "title": "Mental model: the reply is not the acceptance test",
   "run_ids": [
-    "60722942-926f-42cf-ad48-7f1d25df4445",
-    "1ff864a9-9e81-4346-b9eb-7e7a09150846"
+    "81c6744f-3164-46e2-abdb-97f16e21260a",
+    "7085c56e-5cd2-41e3-9dc8-d5a4e75d863f"
   ],
   "scenario_ids": [
     "W01-H",
     "W01-F"
   ],
-  "candidate_revision": "0d7173b97ab3f5bc9a101165dcd65151dc6f650e",
-  "tree_sha": "f168658041339b3335b646283132718c89561711",
-  "application_tree_sha256": "3bb12281d33a9af6156ad4b283980c0e5a9acd997e027e1ef7b948ef3eef5eb0",
+  "candidate_revision": "751880e3e1a85005e78fa8ce06c2dbb2ddc2b45b",
+  "tree_sha": "ae312c5a357d417c09157815f3ff4ed9cb48ffae",
+  "application_tree_sha256": "2371a7ee8a8ec94baa33f41b8ae4143662e8b9d19074c0d7633068ba99e9686c",
   "profile": "local",
   "mode": "scripted",
-  "recorded_at": "2026-10-28T18:38:52.730Z",
+  "recorded_at": "2026-10-28T19:30:01.601Z",
   "marks": [
     {
       "t_ms": 0,
@@ -34,27 +34,27 @@
       "label": "run clicked W01-H"
     },
     {
-      "t_ms": 7011,
+      "t_ms": 6998,
       "label": "reported W01-H"
     },
     {
-      "t_ms": 11015,
+      "t_ms": 11001,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 11077,
+      "t_ms": 11078,
       "label": "tab report"
     },
     {
-      "t_ms": 16080,
+      "t_ms": 16081,
       "label": "dwell 5000ms"
     },
     {
-      "t_ms": 16093,
+      "t_ms": 16094,
       "label": "tab workflow"
     },
     {
-      "t_ms": 16125,
+      "t_ms": 16126,
       "label": "select W01-F"
     },
     {
@@ -66,42 +66,42 @@
       "label": "run clicked W01-F"
     },
     {
-      "t_ms": 23080,
+      "t_ms": 23096,
       "label": "reported W01-F"
     },
     {
-      "t_ms": 27084,
+      "t_ms": 27098,
       "label": "dwell 4000ms"
     },
     {
-      "t_ms": 27093,
+      "t_ms": 27109,
       "label": "tab report"
     },
     {
-      "t_ms": 33098,
+      "t_ms": 33115,
       "label": "dwell 6000ms"
     },
     {
-      "t_ms": 33098,
+      "t_ms": 33115,
       "label": "end"
     }
   ],
   "original_capture": "mental-frames.json",
-  "original_capture_sha256": "655ad3e1c73a14b68122c1d8773520ba9826fb8e5d75dbdc1609de20c1a63598",
+  "original_capture_sha256": "9ac178ef015b220243ba0af2cc3839833d5fb055640afcac170fa51389e9bf10",
   "webm_cross_check": "mental.webm",
-  "webm_sha256": "5b862b93cb9ab921b07df08ca4332108b6e36bd1ce8e5e9f518810587a108627",
-  "mp4_sha256": "f02c33d77ea577fc0f28c8777d9bfc2f0ad55411fe249bf96e8d6136a0db1005",
+  "webm_sha256": "5b9d95e56779e289a9fd1793fc0ed77d06fda1c31643b16eed7e912f818906cb",
+  "mp4_sha256": "65512032ea5231b6729ab750b8932d7f368b2cae5a8ae2b04d9844c75f05b4d1",
   "edits": [
-    "trimmed to 0.18-33.28 s of the source capture",
+    "trimmed to 0.18-33.30 s of the source capture",
     "source: lossless Chromium screencast PNG frames; scaled to 1280 px wide, 15 fps, H.264 CRF 30, no audio",
     "real-time playback: no speed change; viewer dwell pauses after verified states are not latency",
     "captions: mental-model.vtt (WebVTT, generated from capture marks and the run report)"
   ],
   "evidence_refs": [
-    "docs/evidence/60722942-926f-42cf-ad48-7f1d25df4445/report.json",
-    "docs/evidence/60722942-926f-42cf-ad48-7f1d25df4445/observations.json",
-    "docs/evidence/1ff864a9-9e81-4346-b9eb-7e7a09150846/report.json",
-    "docs/evidence/1ff864a9-9e81-4346-b9eb-7e7a09150846/observations.json"
+    "docs/evidence/81c6744f-3164-46e2-abdb-97f16e21260a/report.json",
+    "docs/evidence/81c6744f-3164-46e2-abdb-97f16e21260a/observations.json",
+    "docs/evidence/7085c56e-5cd2-41e3-9dc8-d5a4e75d863f/report.json",
+    "docs/evidence/7085c56e-5cd2-41e3-9dc8-d5a4e75d863f/observations.json"
   ],
   "synthetic_data_notice": "Synthetic data only: fictional workspaces, people and records on local emulators."
 }
