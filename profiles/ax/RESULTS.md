@@ -2,7 +2,7 @@
 
 Run `6882d106-…` on 2026-10-28, on the owner's existing GKE cluster running Agent Substrate. Identifiers are placeholders: `<project>`, `<cluster>`, `<registry>` (a private Artifact Registry Docker repo created for this run), `<snapshot-bucket>`. Raw evidence, the owned-resource list and the pre-snapshot are in the gitignored `private-runs/ax/<run_id>/`.
 
-**Lane status: BLOCKED.** The AX control plane at the pinned commit cannot create anything on the cluster's Substrate. Its Substrate client (`go.ate.dev/substrate v0.6.0`) and the installed Substrate server (wire-compatible with v0.5.0) use the same gRPC service name with renumbered protobuf fields. The first `ax apply` of a Task failed in `CreateActorTemplate` (L-030). No AX task ever started, so items 2 to 6 have no cluster evidence. Nothing is PASS on the cluster.
+**Lane status: BLOCKED.** A second attempt (run 2, below) to upgrade Substrate stopped on IAM prerequisites before changing anything. The AX control plane at the pinned commit cannot create anything on the cluster's Substrate. Its Substrate client (`go.ate.dev/substrate v0.6.0`) and the installed Substrate server (wire-compatible with v0.5.0) use the same gRPC service name with renumbered protobuf fields. The first `ax apply` of a Task failed in `CreateActorTemplate` (L-030). No AX task ever started, so items 2 to 6 have no cluster evidence. Nothing is PASS on the cluster.
 
 ## 1. Compatibility checklist (observed)
 
@@ -60,11 +60,30 @@ The in-sandbox probes (`apl-case isolation`: GCE metadata by IP and name, public
 
 No task reached Running, so there is no submit → Running → result measurement. The only setup timing observed: the run's worker pool showed 1/1 Ready at its first check, 41 s after apply. Benchmark and demo worker pools were scaled to 0 for the run (recorded replicas 3, 1, 2, 0), so the only worker pool was the run's own.
 
+## Run 2: Substrate upgrade to v0.6.0 (2026-10-28): BLOCKED on IAM
+
+The owner approved upgrading Substrate in `ate-system` to the release AX `4b7bf6f` requires. That is tag `v0.6.0` = `d3f2363590a1`: AX's `go.mod` pins `go.ate.dev/substrate v0.6.0`, and `go mod download -json` resolves it to that commit with the same `h1:` sum as AX's `go.sum`. The cluster runs Substrate `main` @ `603e006236f5` (`v0.5.0-45`, 2026-10-16), built from source with `ko` (from the install record in the ate-setup cache).
+
+The upgrade stopped before any cluster change, at what Substrate v0.6.0 requires of a GKE install:
+
+| Requirement at v0.6.0 | Source | On this cluster | Needs |
+|---|---|---|---|
+| A snapshot transfer Google service account that ate-api-server's credential exchange impersonates. ate-setup refuses to deploy ate-api-server on GKE without `storage.transferGSAName`, and the server "refuses to start without one" | `cmd/ate-setup/internal/config/config.go` `RequireTransferServiceAccount`; `tools/setup-gcp/README.md`; introduced by Substrate commit `e7cfad2e` (2026-10-21) | No such account; the only service account in the project is the default compute one | **IAM (not approved):** create the account; grant `roles/iam.serviceAccountTokenCreator` on it to the `ate-system/ate-api-server` Workload Identity principal; grant it `roles/storage.objectAdmin` and `roles/storage.bucketViewer` on the snapshot bucket |
+| Workload Identity on the cluster | same README | Enabled (`<project>.svc.id.goog`, nodes `GKE_METADATA`); ate-api-server's principal already has object admin and bucket viewer on the snapshot bucket | nothing |
+| Asset bucket `<bucket>-assets` | same README | Absent | Only for micro-VM workers; the lab uses gVisor |
+
+Two more findings that matter even once IAM is granted:
+
+- **Upgrading in place is unsupported.** v0.6.0's `docs/upgrade.md` says a minor upgrade before 1.0 is "No. Reinstall", and `tools/setup-gcp/README.md` says "Substrate does not support upgrading a cluster in place yet". A reinstall deletes the demo and benchmark atespaces, which this lab does not own.
+- **Stored records would misread.** ate-api-server stores each record as the serialized API protobuf (`substrate.actors.proto bytea`). Between `603e0062` and `v0.6.0` the `Actor` fields `actor_template`, `worker_selector`, `source_tag` and `status` moved from 4–7 to 2–5, and `ActorTemplate` field 6 changed from `sandbox_config` to `resources`. An in-place v0.6.0 server would read the four suspended demo actors with no template and state `UNSPECIFIED`, which is what the v0.6.0 `kubectl-ate` already showed in run 1 (L-030). Their records survive only as bytes the old server can read, and only until a new server rewrites them.
+
+Before stopping, a rollback baseline was taken in the private run dir: image digests and args of every Substrate workload, CRDs (all `v1alpha1`), RBAC, the `sandboxconfig-assets` admission policy (Substrate has no webhooks), ConfigMap and Secret names, all WorkerPools, the Substrate API records (7 atespaces, 4 actors, all `SUSPENDED`, 9 templates, 9 tags), and a `pg_dump` of the bundled database. Nothing was changed, so nothing needs rolling back, and `teardown.sh` was not changed. Items 2 to 6 were not rerun: they need a working AX task, and none can be created until AX and Substrate agree.
+
 ## What would unblock it
 
 One of these, each needing owner approval:
 
 1. **Use AX commit `2bfbcb8d2f6b`** (2026-10-26), the last commit that pins Substrate v0.5.0, which matches the installed server. It needs a rebuild and re-push of `ax-server` and `ax-task-runner` (new digests) and a redeploy. The AX docs read for this lane were read at `4b7bf6f`, so they would need re-reading at that commit.
-2. **Upgrade Substrate in `ate-system` to v0.6.0 or later**, which AX `4b7bf6f` expects. This touches `ate-system`, which was outside this run's approval.
+2. **Upgrade Substrate in `ate-system` to v0.6.0**, which AX `4b7bf6f` expects. Approved in run 2, then blocked: it also needs the IAM grants above, and upstream supports it only as a reinstall (run 2 section).
 
 Everything else is in place and Running. Once one option is approved, each task is: render with `orchestrate.ts manifests`, `ax apply`, attach the egress policy as soon as the actor exists, `collector.ts result` and `observe` in the collector Pod, then `evaluate_ax.py`. The operator script that does this, with timestamps for the timing table, is kept with the run's private files because it names the cluster.
