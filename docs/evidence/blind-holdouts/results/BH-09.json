@@ -1,0 +1,48 @@
+{
+  "id": "BH-09",
+  "observed": {
+    "rounds": [
+      {
+        "sim_ok": [
+          true,
+          true
+        ],
+        "status": "approved",
+        "resolve_actions": 1,
+        "receipt_resolution": "approved",
+        "resolution_replies": 1,
+        "loser_denials": [
+          "not_pending"
+        ]
+      },
+      {
+        "sim_ok": [
+          true,
+          true
+        ],
+        "status": "approved",
+        "resolve_actions": 1,
+        "receipt_resolution": "approved",
+        "resolution_replies": 1,
+        "loser_denials": [
+          "not_pending"
+        ]
+      },
+      {
+        "sim_ok": [
+          true,
+          true
+        ],
+        "status": "approved",
+        "resolve_actions": 1,
+        "receipt_resolution": "approved",
+        "resolution_replies": 1,
+        "loser_denials": [
+          "not_pending"
+        ]
+      }
+    ]
+  },
+  "verdict": "PASS",
+  "observed_at": "2026-10-28T15:20:25.706Z"
+}

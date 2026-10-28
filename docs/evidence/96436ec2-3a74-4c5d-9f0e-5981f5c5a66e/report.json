@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "case_id": "F1-A1",
+  "run_id": "96436ec2-3a74-4c5d-9f0e-5981f5c5a66e",
+  "profile": "local",
+  "mode": "scripted",
+  "candidate_revision": "f67cab3008872437ff7dd8dbac2cce5b57f45bff",
+  "tree_sha": "fb59f8f6e2653db1eb16701124a259ca0951a990",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "collector": "apl-collector pid=94313 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T18:45:25.189Z",
+  "execution": "EXECUTED",
+  "mutation": "none",
+  "simulated_faults": [],
+  "status": "PASS",
+  "lanes": {
+    "local": {
+      "status": "PASS",
+      "selected": true,
+      "reason": "local core: required assertions only"
+    },
+    "salesforce": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "coderabbit": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "ax": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "live-model": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    }
+  },
+  "all_lanes_status": "PASS",
+  "banner": {
+    "green": true,
+    "text": "PASS: all 5 required assertions passed with evidence (local integration run (scripted driver))"
+  },
+  "assertions": [
+    {
+      "id": "emulate_running",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/emulators.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "floci_running",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/floci.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "workflow_count",
+      "required": true,
+      "expected": 3,
+      "observed": 3,
+      "evidence_refs": [
+        "evidence/w01-ledger.json",
+        "evidence/w01-s3.json",
+        "evidence/w01-thread.json",
+        "evidence/w02-ledger.json",
+        "evidence/w02-s3.json",
+        "evidence/w02-thread.json",
+        "evidence/w03-ledger.json",
+        "evidence/w03-thread.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "required_external_accounts",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/run-config.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "non_loopback_endpoint_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/run-config.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    }
+  ],
+  "counts": {
+    "required": 5,
+    "passed": 5,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_run": 0,
+    "unknown": 0
+  },
+  "limitations": [
+    "Mode: local integration run (scripted driver).",
+    "Public challenge cases are visible to builders; they are not secret holdouts.",
+    "Hashes bind artifacts; they do not prove an honest collector.",
+    "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
+    "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
+  ],
+  "cleanup_status": "CLEAN",
+  "started_at": "2026-10-28T18:45:23.049Z",
+  "ended_at": "2026-10-28T18:45:25.790Z",
+  "durations": {
+    "wall_clock_seconds": {
+      "value": 2.741,
+      "reason": null
+    }
+  }
+}

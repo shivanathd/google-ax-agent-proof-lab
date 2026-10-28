@@ -1,0 +1,41 @@
+{
+  "id": "BH-15",
+  "observed": {
+    "before": {
+      "X": 1,
+      "Y": 1,
+      "sentinel": 1
+    },
+    "malformed": {
+      "code": 1,
+      "out": "",
+      "err": ""
+    },
+    "traversal": {
+      "code": 1,
+      "out": "",
+      "err": ""
+    },
+    "unknown": {
+      "code": 1,
+      "out": "",
+      "err": ""
+    },
+    "mid": {
+      "X": 1,
+      "Y": 1,
+      "sentinel": 1
+    },
+    "downY": {
+      "code": 0,
+      "out": "{\n  \"run_id\": \"d544ea61-f233-48f3-aaa2-ff3002e47af9\",\n  \"cleanup_status\": \"CLEAN\",\n  \"remaining\": []\n}\n"
+    },
+    "after": {
+      "X": 1,
+      "Y": 0,
+      "sentinel": 1
+    }
+  },
+  "verdict": "PASS",
+  "observed_at": "2026-10-28T15:21:52.811Z"
+}

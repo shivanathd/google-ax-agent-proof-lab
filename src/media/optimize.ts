@@ -3,7 +3,7 @@
 // sanitized evidence into docs/evidence/ through `lab export` (tamper check + secret and private-term scan),
 // and writes docs/assets/media-manifest.json. Raw captures stay in gitignored recordings/raw/.
 import { spawnSync } from "node:child_process";
-import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ROOT } from "../config/run-config.ts";
 import { artifactDir } from "../reports/artifacts.ts";
@@ -65,7 +65,7 @@ export async function optimizeSuite() {
   const runs = [...new Map(sess.shots.flatMap((s) => s.runs).map((r) => [r.run_id, r])).values()];
 
   // 1. Sanitized evidence for every run used by the media, through the export path (fails closed).
-  rmSync(join(ROOT, EVIDENCE_DIR), { recursive: true, force: true });
+  clearMediaEvidence(ROOT, existsSync(join(ROOT, MANIFEST)) ? readFileSync(join(ROOT, MANIFEST), "utf8") : "");
   for (const r of runs) {
     const ex = exportRun(r.run_id);
     if (ex.status !== "EXPORTED") throw new Error(`export of run ${r.run_id} ${ex.status}: ${ex.findings.map((f) => `${f.file} ${f.rule}`).join("; ")}`);
@@ -73,10 +73,12 @@ export async function optimizeSuite() {
   }
   writeFileSync(join(ROOT, EVIDENCE_DIR, "README.md"), [
     "# Sanitized run evidence", "",
-    "Each directory is the allowlisted `lab export` projection of one executed local run used by the README media: `report.json` (C5 run report),",
+    "Each run directory is the allowlisted `lab export` projection of one executed local run: `report.json` (C5 run report),",
     "`observations.json` (C4 facts) and `checksums.sha256`. Exports pass the tamper check, the secret scan and the private-terms scan first.",
     "Raw evidence files (ledger rows, Slack payloads) stay in the gitignored `artifacts/runs/<run_id>/`.", "",
+    "Runs used by the README media:", "",
     ...runs.map((r) => `- [\`${r.run_id}\`](${r.run_id}/report.json): ${r.scenario}, local core ${report(r.run_id).status}`), "",
+    "Other directories here are written by other steps and are not media evidence: harness runs cited by `docs/CLAIM_LEDGER.md` and `blind-holdouts/`.", "",
   ].join("\n"));
   const evidenceRefs = (ids: string[]) => ids.flatMap((id) => [`${EVIDENCE_DIR}/${id}/report.json`, `${EVIDENCE_DIR}/${id}/observations.json`]);
 
@@ -185,4 +187,12 @@ export async function optimizeSuite() {
   writeFileSync(join(ROOT, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
   recaption(ROOT); // captions + WebVTT cues from the manifest, sidecars and committed evidence
   return { manifest: MANIFEST, items: media.length, runs: runs.length, evidence: EVIDENCE_DIR, raw_session: `recordings/raw/${session}` };
+}
+
+// Remove only the run directories the previous media manifest referenced. docs/evidence/ also holds harness runs
+// cited by the claim ledger and the blind-holdout archive, which this pipeline does not own (LEARNINGS L-054).
+export function clearMediaEvidence(root: string, previousManifest: string) {
+  const ids = new Set(previousManifest.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g) ?? []);
+  for (const id of ids) rmSync(join(root, EVIDENCE_DIR, id), { recursive: true, force: true });
+  mkdirSync(join(root, EVIDENCE_DIR), { recursive: true });
 }

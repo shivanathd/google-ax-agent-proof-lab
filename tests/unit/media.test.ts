@@ -1,6 +1,6 @@
 // Media pipeline building blocks: application-tree scope, real decode checks and bounded README slots.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -89,5 +89,19 @@ describe("F6-A2 without the private-terms list", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("media evidence cleanup", () => {
+  it("removes only the previous capture's media runs, never other evidence", async () => {
+    const { clearMediaEvidence } = await import("../../src/media/optimize.ts");
+    const root = mkdtempSync(join(tmpdir(), "apl-ev-"));
+    const ev = join(root, "docs/evidence");
+    const oldMedia = "11111111-1111-4111-8111-111111111111", harness = "22222222-2222-4222-8222-222222222222";
+    for (const d of [oldMedia, harness, "blind-holdouts"]) { mkdirSync(join(ev, d), { recursive: true }); writeFileSync(join(ev, d, "report.json"), "{}"); }
+    clearMediaEvidence(root, JSON.stringify({ media: [{ id: "x", run_id: oldMedia }] }));
+    expect(existsSync(join(ev, oldMedia))).toBe(false);
+    expect(existsSync(join(ev, harness, "report.json"))).toBe(true);
+    expect(existsSync(join(ev, "blind-holdouts", "report.json"))).toBe(true);
   });
 });

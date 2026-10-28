@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A1",
+  "run_id": "9c8273cc-4382-4236-b0bc-2433fc37ddc2",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "f67cab3008872437ff7dd8dbac2cce5b57f45bff",
+  "tree_sha": "fb59f8f6e2653db1eb16701124a259ca0951a990",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
+  "mutation": "none",
+  "collector_methods": [
+    "browser assertion: console DOM for the stored run (collector's own Chromium)",
+    "report.json read from the run's artifact directory"
+  ],
+  "observed_at": "2026-10-28T18:46:10.888Z",
+  "simulated_faults": [],
+  "observations": {
+    "failure_visible": true,
+    "overall_success_banner": false
+  },
+  "unobserved": {}
+}

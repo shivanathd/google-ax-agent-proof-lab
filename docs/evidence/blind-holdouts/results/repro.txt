@@ -1,0 +1,2 @@
+BH-03b {"team_ids":["T000000001","T000000001"],"http":200,"inbox":[{"tenant":"T_LAB_A","actor":"UBAF1A5DB4","status":"denied","reason":"no_grant"}]}
+BH-07 {"status":"awaiting_approval","amount_cents":0,"button_ts":"1793200942.000007"}

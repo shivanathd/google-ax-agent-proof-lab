@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "case_id": "F5-A1",
+  "run_id": "e045eaf8-ee0a-41ae-ba15-92b5fcac89aa",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "f67cab3008872437ff7dd8dbac2cce5b57f45bff",
+  "tree_sha": "fb59f8f6e2653db1eb16701124a259ca0951a990",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
+  "mutation": "none",
+  "collector_methods": [
+    "`lab doctor --profile ...` stdout (child process)",
+    "collector-owned PATH shims (provider CLI invocation log)",
+    "collector-owned loopback sinkhole (HTTP(S) proxy for the CLI)"
+  ],
+  "observed_at": "2026-10-28T18:46:01.673Z",
+  "simulated_faults": [],
+  "observations": {
+    "blocked_optional_profile_count": 4,
+    "external_resource_create_count": 0,
+    "prerequisites_reported": true
+  },
+  "unobserved": {}
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "case_id": "F2-A1",
+  "run_id": "3a1baef4-22ee-47a0-a6d9-7b7572184fe1",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "f67cab3008872437ff7dd8dbac2cce5b57f45bff",
+  "tree_sha": "fb59f8f6e2653db1eb16701124a259ca0951a990",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "6ab203c2e8d10775045c03b6cc6188f0549b7bbd6e5aa53fd6d4c6d43c51d366",
+  "mutation": "none",
+  "collector_methods": [
+    "Slack conversations.history (reader token)",
+    "Slack conversations.replies (reader token)",
+    "read-only SQLite query (inbox)",
+    "read-only SQLite query (inbox, outbox, tickets)"
+  ],
+  "observed_at": "2026-10-28T18:45:32.860Z",
+  "simulated_faults": [],
+  "observations": {
+    "accepted_event_count": 1,
+    "completion_reply_count": 1,
+    "reply_in_original_thread": true,
+    "bot_loop_job_count": 0
+  },
+  "unobserved": {}
+}

@@ -1,0 +1,46 @@
+{
+  "id": "BH-14",
+  "observed": {
+    "collector_done": {
+      "done": true,
+      "observed": 2,
+      "unobserved": [
+        "receipt_count",
+        "receipt_matches_request"
+      ]
+    },
+    "observations": {
+      "ticket_count": 1,
+      "completion_reply_count": 1
+    },
+    "unobserved": {
+      "receipt_count": "not collected: w01-s3 (Error: connect ECONNREFUSED 127.0.0.1:51752)",
+      "receipt_matches_request": "not collected: w01-s3 (Error: connect ECONNREFUSED 127.0.0.1:51752)"
+    },
+    "report_status": "UNKNOWN",
+    "report_assertions": [
+      {
+        "id": "ticket_count",
+        "observed": 1,
+        "status": "PASS"
+      },
+      {
+        "id": "receipt_count",
+        "observed": null,
+        "status": "UNKNOWN"
+      },
+      {
+        "id": "receipt_matches_request",
+        "observed": null,
+        "status": "UNKNOWN"
+      },
+      {
+        "id": "completion_reply_count",
+        "observed": 1,
+        "status": "PASS"
+      }
+    ]
+  },
+  "verdict": "PASS",
+  "observed_at": "2026-10-28T15:21:45.631Z"
+}

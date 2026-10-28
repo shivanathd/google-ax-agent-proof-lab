@@ -1,0 +1,31 @@
+{
+  "id": "BH-10",
+  "observed": {
+    "http": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "inbox_rows": 1,
+    "delivery_count": 16,
+    "tickets": 1,
+    "receipt_present": true,
+    "completion_replies": 1,
+    "sqs_send_outbox": 1
+  },
+  "verdict": "PASS",
+  "observed_at": "2026-10-28T15:18:38.577Z"
+}
