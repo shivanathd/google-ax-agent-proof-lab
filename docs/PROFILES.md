@@ -72,7 +72,7 @@ No adapter reads ambient credentials. `SF_TARGET_ORG`, a default Salesforce org,
 
 ## AX (`profiles/ax/`)
 
-**Status: BLOCKED** (cluster run attempted 2026-10-28 with owner approval). AX at the pinned commit could not provision any task on the cluster's Substrate: the AX client and the installed server speak incompatible versions of the same protobuf API (LEARNINGS L-030). No AX task ran, so no AX assertion has cluster evidence and none is PASS. Details, the observed compatibility checklist and the two ways to unblock are in `profiles/ax/RESULTS.md`.
+**Status: BLOCKED** (cluster run attempted 2026-10-28 with owner approval). AX at the pinned commit could not provision any task on the cluster's Substrate: the AX client and the installed server speak incompatible versions of the same protobuf API (LEARNINGS L-030). No AX task ran, so no AX assertion has cluster evidence and none is PASS. A second approved attempt, upgrading Substrate to v0.6.0, stopped before any change: v0.6.0 needs a new Google service account and IAM grants, which were not approved (L-043). Details, the observed compatibility checklist and the ways to unblock are in `profiles/ax/RESULTS.md`.
 
 | Assertion | Status | Evidence |
 |---|---|---|
