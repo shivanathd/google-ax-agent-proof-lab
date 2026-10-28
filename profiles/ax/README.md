@@ -12,19 +12,25 @@ This lane runs one existing lab case inside an AX task on Agent Substrate, then 
 | Manifest rendering and `apl-run` labelling | EXECUTED (locally, text checks only) | same |
 | In-cluster Emulate + Floci, NetworkPolicy, run-owned WorkerPool, collector Pod | EXECUTED (cluster, 2026-10-28) | `RESULTS.md` |
 | `ax apply` of Task + Workspace | EXECUTED (cluster, run 3, after reinstalling Substrate at v0.6.0); run 1 was BLOCKED by protobuf skew (L-030) | `RESULTS.md` run 3 |
-| W01-H case, collector bundle, `evaluate_ax.py` | EXECUTED (cluster, gVisor, run 3): F3-A1 and AX-R1 PASS | `RESULTS.md` run 3 |
-| Behaviour under gVisor, Substrate egress, suspend/resume, eviction | EXECUTED (cluster, run 3); microVM never run | `RESULTS.md` run 3 |
+| W01-H case, collector bundle, `evaluate_ax.py` | EXECUTED (cluster, gVisor, run 3): F3-A1 and AX-R1 PASS | `RESULTS.md` §3.3 (2), (3) |
+| Sandbox isolation and router identity | EXECUTED (cluster, gVisor, run 3): PASS | `RESULTS.md` §3.3 (5) |
+| Termination and resume | EXECUTED (cluster, run 3): eviction SIGTERM and resume PASS; SIGTERM on `ax suspend` and on `ax delete task`, and the result after eviction + suspend/resume, FAIL | `RESULTS.md` §3.3 (4a)–(4e) |
+| Timing, submit → Running → result | EXECUTED (cluster, run 3, n = 5): expectation met | `RESULTS.md` §3.3 (6) |
+| Substrate reinstall at v0.6.0 and the transfer service account | EXECUTED (cluster, run 3, owner-approved) | `RESULTS.md` §3.1, §3.2 |
+| `owned-resources.json` writer → schema → `teardown.sh --dry-run` round trip | EXECUTED (locally, synthetic run dir with placeholder identifiers) | `profiles/ax/tests/run-dir.test.ts` |
+| `teardown.sh`, all three modes, for real | NOT RUN. Only `--dry-run` was run (run 3's run dir, then the synthetic run dir) | `RESULTS.md` §3.4 |
+| microVM sandbox class | NOT RUN | - |
 
 Three authorized cluster runs happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox; only run 3's cluster results say anything about gVisor. On Substrate v0.6.0 the collector reads `/apl/result` through the router over mTLS with its own pod certificate (L-045).
 
-## Pinned upstream revisions (read 2026-10-28)
+## Upstream revisions
 
-| Repo | Commit | Files read |
+| Repo | Deployed in run 3 | Files read |
 |---|---|---|
-| `google/ax` | `4b7bf6f84cac7eb12f21b87a76c8dc85155dce38` | `README.md`, `docs/runner.md`, `docs/manifests.md`, `docs/sandbox.md`, `pkg/apis/v1alpha1/ax.proto` |
-| `agent-substrate/substrate` | `6d7b3f49f6154d52a1de46c94a1481868a5ed042` | `README.md` |
+| `google/ax` | `4b7bf6f84cac7eb12f21b87a76c8dc85155dce38` (images from its `make images`, control plane from its `make deploy`) | `README.md`, `docs/runner.md`, `docs/manifests.md`, `docs/sandbox.md`, `pkg/apis/v1alpha1/ax.proto` |
+| `agent-substrate/substrate` | `v0.6.0` = `d3f2363590a1`, the release AX's `go.mod` pins (images built from that checkout, installed with its `ate-setup`) | at `d3f2363`: `docs/upgrade.md`, `tools/setup-gcp/README.md`, `cmd/ate-setup/internal/config/config.go`, the Control API protos. `README.md` was first read at `6d7b3f4`, which was never deployed |
 
-Both projects say they are pre-stable and may break. Re-read these files at the SHA you deploy.
+Before run 3 the cluster ran Substrate `main` @ `603e006236f5` (v0.5.0-45), which AX `4b7bf6f` cannot talk to (L-030). Both projects say they are pre-stable and may break. Re-read these files at the SHA you deploy.
 
 ## Prerequisites (`lab profile doctor ax`)
 
@@ -81,37 +87,43 @@ Deviations from the default runner:
 - `orchestrate.ts`: operator-side generator for per-run secrets, the Emulate seed, the collector env and AX manifests, written to the gitignored run dir.
 - `emulate/`: the in-cluster Emulate image (pinned base, lockfile, repository patch, loopback callback mailbox).
 - `runner/Dockerfile.lab`: the runner plus the lab code, used by both the task and the collector Pod.
-- `teardown.sh`: deletes exactly what `owned-resources.json` lists, restores scaled worker pools, then diffs a post-snapshot against the pre-snapshot.
+- `teardown.sh`: deletes exactly what `owned-resources.json` lists, restores scaled worker pools, then diffs a post-snapshot against the pre-snapshot (modes below).
+- `run-dir.schema.json` + `run-dir.ts`: the one definition of `owned-resources.json`, its writer (`ownedResources()`, called by `index.ts`) and the validator `teardown.sh` runs. `tests/run-dir.test.ts` round-trips writer → teardown `--dry-run`.
 
-## In-cluster placement (as deployed; superseded design notes below)
+## In-cluster placement (as deployed in run 3)
 
 ```
-kube context $APL_AX_CONTEXT
-├── ate-system        Substrate (pre-installed; Control API svc/api:443)
-├── ax-system         AX control plane (pre-installed)
-├── atespace apl-<run-id>    AX Workspace apl-ws-<run-id>, Task apl-task-<run-id>  (manifests/ax/task.yaml)
-└── namespace apl-<run-id>   Floci + Emulate Deployments/Services, NetworkPolicy  (manifests/k8s/emulators.yaml)
-                             collector Job (owned by the collector builder, separate identity)
+kube context <kube-context>
+├── ate-system              Substrate v0.6.0 (d3f2363), reinstalled by run 3 with its ate-setup; Control API svc/api:443,
+│                           atenet-egress, atenet-router (mTLS, SPIFFE allowlist incl. the collector)
+├── ax-system               AX control plane at 4b7bf6f, deployed by the lab with AX's make deploy (L-031)
+├── atespace apl-ax-<short-id>   per task: AX Workspace ws-<task>, Task <task>, egress policy  (orchestrate.ts)
+└── namespace apl-ax-<short-id>  Floci + Emulate Deployments/Services, NetworkPolicy, gVisor WorkerPool,
+                                 collector Pod (own ServiceAccount, tokens, S3 keys, pod certificate)
 ```
 
-- **Namespace-local emulators.** Emulate and Floci run in the run's namespace. The task reaches them by cluster DNS (`floci.apl-<id>.svc.cluster.local:4566`, `emulate.apl-<id>.svc.cluster.local:8080`). There is no tunnel to the laptop. Floci uses the digest pinned in `compose.yaml`. The Emulate image wraps the pinned npm package, must be built by the lab in W6 and is pinned by digest (`APL_EMULATE_IMAGE`).
-- **Substrate networking.** Actors are default-deny and send outbound traffic through `atenet-egress`. The task cannot reach the emulators until an egress policy allows those two services. Write that policy from Substrate's `docs/egress-traffic.md` at the pinned SHA. It is not drafted here because that doc has not been read yet. The NetworkPolicy assumes the egress gateway runs in `ate-system`; verify that before W6.
-- **Collector.** A Job in the run namespace, with its own credentials. It reads Floci and Emulate state directly, plus `/apl/result` through the Substrate router (the router's ingress SPIFFE allowlist must include the collector). It writes the C4 bundle. Task phase `Running` or `Succeeded` is never an observation of success.
-- **Manifests.** `${APL_*}` placeholders are filled by `render()` in `index.ts`, and an unknown placeholder is an error. Rendered copies and `owned-resources.json` go to gitignored `private-runs/ax/<run-id>/`. No real project, cluster or registry name appears in this directory.
+`index.ts run()` renders the same namespace from `manifests/k8s/emulators.yaml` but names its atespace `apl-<run-id>` and its objects `apl-ws-<run-id>` / `apl-task-<run-id>` (`manifests/ax/task.yaml`). Run 3 drove the cluster with `orchestrate.ts` and an operator script kept in the private run dir.
 
-## Version-compatibility checklist (fill before W6)
+- **Namespace-local emulators.** Emulate and Floci run in the run's namespace. The task reaches them by cluster DNS (`floci.apl-ax-<short-id>.svc.cluster.local:4566`, `emulate.apl-ax-<short-id>.svc.cluster.local:8080`). There is no tunnel to the laptop. Floci uses the digest pinned in `compose.yaml`. The Emulate image (`emulate/`) wraps the pinned npm package and is pinned by digest (`APL_EMULATE_IMAGE`).
+- **Substrate networking.** Actors are default-deny and send outbound traffic through `atenet-egress` (in `ate-system`, as the NetworkPolicy assumes). The egress policy was written against the Substrate v0.6.0 API: `http` rules for the Emulate host on 8080 and 8081 and the Floci host on 4566 only. AX creates every task suspended, so the policy is attached as soon as the actor exists and the task is resumed after that (L-047).
+- **Collector.** A plain Pod in the run namespace, with its own credentials. It reads Floci and Emulate state directly, plus `/apl/result` through the Substrate router over mTLS with its own pod certificate (L-045). It writes the C4 bundle. Task phase `Running` or `Succeeded` is never an observation of success.
+- **Manifests.** `${APL_*}` placeholders are filled by `render()` in `index.ts`, and an unknown placeholder is an error. Rendered copies and `owned-resources.json` go to gitignored `private-runs/ax/<run-id>/`. No real project, cluster, registry, bucket, account or kube context appears in this directory.
 
-- [ ] AX commit deployed = `4b7bf6f…` or re-read the five files above at the new SHA. Record `ax version`.
-- [ ] Substrate commit deployed = `6d7b3f4…` or re-read at the new SHA.
-- [ ] GKE ≥ 1.36 with `PodCertificateRequest` and `ClusterTrustBundle` APIs. On 1.36 they are beta APIs that must be enabled, and node pools created before enabling them must be replaced. 1.37+ serves them by default.
-- [ ] `APL_AX_KUBECTL` client ≥ 1.35.
-- [ ] Nodes are x86 (c3), so the image manifest includes `linux/amd64`.
-- [ ] `kubectl get svc api -n ate-system` succeeds and the AX server in `ax-system` is healthy.
-- [ ] Image pushed to a registry the cluster can pull, referenced by digest.
-- [ ] Egress policy for the two emulator services drafted from the pinned Substrate docs.
-- [ ] `ax apply` accepts `spec.config` keys containing `-` (`apl-run`), and the whole encoded task stays under 31 KiB.
+## Version-compatibility checklist (run 3, observed)
 
-## Tests to run once authorized (W6)
+- [x] AX deployed at `4b7bf6f84cac`, built with its `make images` and deployed with its `make deploy`. One manifest change: `AX_SNAPSHOTS_BUCKET` pointed at a run-owned prefix of `<snapshot-bucket>` (L-031).
+- [x] Substrate at `v0.6.0` = `d3f2363590a1`, the version AX's client pins. The installed `603e006` (v0.5.0-45) was wire-incompatible (L-030), so run 3 reinstalled it (in-place upgrade is unsupported upstream).
+- [x] Substrate v0.6.0 on GKE needs the snapshot transfer service account `<transfer-sa>` and its three grants (L-043); created with owner approval and recorded in `owned-resources.json` (`iam`).
+- [x] GKE 1.36.4 serves `PodCertificateRequest` and `ClusterTrustBundle` at `certificates.k8s.io/v1beta1`.
+- [x] `APL_AX_KUBECTL` client 1.36.6, installed separately.
+- [x] Nodes: 2 × c3-standard-4, amd64, no autoscaling.
+- [x] `kubectl get svc api -n ate-system` succeeds; `ate-api-server` 2/2, all v0.6.0 components Ready; `ax-server` healthy after a restart.
+- [x] Images in a private repo `<registry>`, referenced by digest, pulled with the existing node identity.
+- [x] Egress policy for the two emulator services, from the v0.6.0 API, attached per task.
+- [x] `spec.config` key `apl-run` accepted; encoded task 2.6 KiB (< 31 KiB).
+- [ ] `ax version` output: not recorded in `RESULTS.md`.
+
+## Tests (pre-registered before run 3; results in `RESULTS.md` §3.3)
 
 1. **Command result.** Run one passing case and one deliberately failing case. The collector must report PASS and FAIL from emulator state plus `/apl/result`. AX task phase is recorded but never used. Expect phase and outcome to disagree for the failing case.
 2. **Termination.** `ax delete task` (or suspend) on a long-running command that traps SIGTERM, then on one that ignores it. Expect `exit_code` 128+15 or the trap's code, and 137 after about 10 s. Measure stop latency.
@@ -122,10 +134,32 @@ kube context $APL_AX_CONTEXT
 4. **Resume.** Suspend and resume: `.apl/prepared` is unchanged, agent edits survive, and the command restarts with a new process tree.
 5. **Same assertions.** The case's `cases.ax.json` expectations equal the local lane's, apart from documented `profile: ax` fields.
 
-## Teardown (DESIGNED)
+## Run dir (`private-runs/ax/<run-id>/`, gitignored)
 
-1. Before applying, snapshot the resource inventory: `gcloud asset search-all-resources` for the approved scope, plus `kubectl get all,netpol,cm,secret -A -l apl-run=<id>` (expected empty). Keep it in `private-runs/ax/<id>/pre.json`.
-2. Run `ax delete task apl-task-<id> -a apl-<id>`, then `ax delete workspace apl-ws-<id> -a apl-<id>`.
-3. Run `kubectl delete all,netpol,cm,secret,job -n apl-<id> -l apl-run=<id>`, then `kubectl delete namespace apl-<id>`. Only names listed in `owned-resources.json` are deleted; never delete by a broader selector.
-4. Re-list with the same commands into `post.json` and diff against `pre.json`. Teardown passes only when the diff is empty, apart from unrelated changes that are recorded as such.
-5. Remove the pushed image digest only if this run pushed it.
+| File | Written by | Read by |
+|---|---|---|
+| `owned-resources.json` | `index.ts run()` via `ownedResources()`, before anything is applied; run 3's was assembled by the operator | `teardown.sh`, after validating it |
+| `pre-snapshot.json` | `teardown.sh --snapshot <run-dir> pre-snapshot.json` (`run()` calls it before applying) | `teardown.sh` post-snapshot diff |
+| `kubeconfig` | `run()`: single-context `kubectl config view --minify --flatten`, mode 0600 | the snapshot |
+| `reinstall-delta.json` (optional) | operator, around a Substrate reinstall | `teardown.sh` diff: those lines are expected |
+| rendered manifests, `secrets.json`, `emulate-seed.json`, `collector-env.json` | `index.ts` / `orchestrate.ts` | `kubectl` / `ax apply` / the collector |
+
+`owned-resources.json` is defined once, in `run-dir.schema.json`:
+
+- **Required:** `run_id`, `kube_context` (the context the run applied to), and the lists `ax` (`{kind: task|workspace, atespace, name}`), `substrate` (`{kind: atespace|egress-policy, name, atespace}`; an atespace has no `atespace`), `kubernetes` (`{kind, name, namespace}`; a `Namespace` has no `namespace`), `cluster_scoped` (`{kind, name}`), `scaled` (`{kind: WorkerPool, namespace, name, replicas_before}`) and `scaled_namespaces`. Lists may be empty.
+- **Optional, each needing `project`:** `ar` (`{location, repo}`), `gcs_snapshot_prefix(es)` (`gs://<bucket>/<prefix>/`), `iam` (a `service-account` `{email}` or an `iam-binding` `{resource_type: bucket|service-account, resource, member, role}`).
+- **Optional:** `substrate_install` (`repo`, `current` and `previous` `{version, commit, config}`, `previous.rollback_dir`), needed by `--restore-substrate-v05`; `local` (`bin` prepended to `PATH`, `ax_cli`, `bin_v050`, `docker_config`); `images`, `short_id`, `zone`, `cluster` (informational).
+
+Any other key is an error. Run `node profiles/ax/run-dir.ts <run-dir>/owned-resources.json` to check a file; errors name schema paths, never values.
+
+## Teardown (`teardown.sh`; only `--dry-run` has ever run)
+
+`profiles/ax/teardown.sh <run-dir> [mode] [--dry-run]`. Before any action it refuses unless `owned-resources.json` validates against the schema **and** the current kube context equals its `kube_context`. It then pins that context in `<run-dir>/teardown-kubeconfig` for every later call. Identifiers come only from the run dir. `--dry-run` prints every command and makes no cluster or cloud call (it does read the local kubeconfig).
+
+| Mode | What it does | Risk |
+|---|---|---|
+| (default) | `ax delete` each Task, then each Workspace, through its own port-forward to `ax-server`; `kubectl ate delete` the run's egress policies and atespaces; deletes the listed namespaced objects by exact name, then the listed namespaces and cluster-scoped objects; restores each `scaled` WorkerPool to `replicas_before` (or deletes it with `--delete-benchmarks`); removes the run's `gs://` snapshot prefixes and the `ar` repo; takes a post-snapshot and diffs it against `pre-snapshot.json`. Leaves Substrate v0.6.0, `<transfer-sa>` and its grants in place and prints them | Deletes only listed names, but for run 3 the list includes `ax-system` and AX's ClusterRole, ClusterRoleBinding and PV. A pool the reinstall removed cannot be restored here (reported). gcloud deletes keep their interactive confirmation |
+| `--remove-substrate-iam` | Default, plus removes exactly the recorded `iam-binding`s, then the recorded service account | Substrate v0.6.0's `ate-api-server` refuses to start without the account; snapshots and restarts fail from then on |
+| `--restore-substrate-v05 --yes-clear-node-image-cache` | Default, plus: clone Substrate at the recorded commits; `ate-setup delete ate-system` with the current build; clear `/var/lib/ate/image-cache` on every node; `ate-setup deploy` the previous build with its recorded config; `pg_restore` the pre-reinstall dump; recreate the scaled WorkerPools from the rollback manifests; switch `kubectl-ate` back; then `--remove-substrate-iam` | Replaces the running Substrate; everything created on v0.6.0 is lost. The cache wipe is one privileged Pod per node (`hostPath /var/lib/ate`, namespace `default`, labels `apl-run=<run-id>,apl-role=image-cache-wipe`); only Pods with those labels are waited on and deleted, but the cache removal itself affects the whole node. Without `--yes-clear-node-image-cache` a real run refuses; `--dry-run` prints a warning. Whether restored suspended actors resume is UNKNOWN (actor-identity keys are regenerated on install). Never executed |
+
+`--snapshot <run-dir> <out.json>` takes a snapshot only, with the same schema and context checks.

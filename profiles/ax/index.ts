@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DoctorResult, Prerequisite, ProfileAdapter } from "../../src/contracts/profile.ts";
+import { ownedResources } from "./run-dir.ts";
 
 export const MIN_KUBECTL_MINOR = 35;
 // Pinned in compose.yaml for the local lane; reused in-cluster so both lanes run the same emulator build.
@@ -127,19 +128,23 @@ export async function run(caseId: string, opts: { authorized: boolean; env: Node
   writeFileSync(ax, render(readFileSync(join(MANIFESTS, "ax", "task.yaml"), "utf8"), vars));
 
   const ctx = env.APL_AX_CONTEXT!;
+  // Recorded before anything is applied, so teardown.sh can clean up a run that fails half way.
+  const owned = ownedResources({ runId, kubeContext: ctx, atespace: vars.APL_AX_ATESPACE!, k8sYaml: readFileSync(k8s, "utf8"), axYaml: readFileSync(ax, "utf8"), axCli: env.APL_AX_CLI! });
+  writeFileSync(join(outDir, "owned-resources.json"), JSON.stringify(owned, null, 2));
+  // Single-context kubeconfig (mode 0600, gitignored run dir): its current-context is the one teardown.sh checks.
+  const kubeconfig = join(outDir, "kubeconfig");
+  writeFileSync(kubeconfig, execFileSync(env.APL_AX_KUBECTL!, ["config", "view", "--minify", "--flatten", "--context", ctx]), { mode: 0o600 });
   let calls = 0;
   const remote = (bin: string, ...args: string[]) => {
     calls++;
     execFileSync(bin, ["--context", ctx, ...args], { stdio: "inherit" });
   };
   remote(env.APL_AX_KUBECTL!, "get", "svc", "api", "-n", "ate-system");
+  calls++;
+  execFileSync(join(dirname(fileURLToPath(import.meta.url)), "teardown.sh"), ["--snapshot", outDir, join(outDir, "pre-snapshot.json")], { stdio: "inherit", env: { ...env, KUBECONFIG: kubeconfig } });
   remote(env.APL_AX_KUBECTL!, "apply", "-f", k8s);
   remote(env.APL_AX_KUBECTL!, "wait", "-n", `apl-ax-${vars.APL_SHORT_ID}`, "--for=condition=Available", "deployment", "-l", `apl-run=${runId}`, "--timeout=180s");
   remote(env.APL_AX_CLI!, "apply", "-a", vars.APL_AX_ATESPACE!, "-f", ax);
-  writeFileSync(
-    join(outDir, "owned-resources.json"),
-    JSON.stringify({ run_id: runId, namespace: `apl-ax-${vars.APL_SHORT_ID}`, label: `apl-run=${runId}`, atespace: vars.APL_AX_ATESPACE, ax: [`workspace/apl-ws-${runId}`, `task/apl-task-${runId}`] }, null, 2),
-  );
   return {
     ...d,
     status: "UNKNOWN",
