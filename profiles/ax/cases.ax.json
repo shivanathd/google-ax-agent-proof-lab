@@ -1,0 +1,8 @@
+{
+  "note": "AX lane expectations (ADR-12). Same observation keys and values as the local F3-A1 case, plus command_exit_code from the runner's result.json. ax_task_phase is copied into every bundle and is never asserted (L-006).",
+  "recorded_not_asserted": ["ax_task_phase"],
+  "F3-A1": {"profile":"ax","source_case":"F3-A1","expected":{"ticket_count":1,"receipt_count":1,"receipt_matches_request":true,"completion_reply_count":1,"command_exit_code":0}},
+  "AX-R1": {"profile":"ax","note":"runner contract: a failing command (exit 3) must be reported as such whatever the AX phase says","expected":{"command_exit_code":3}},
+  "AX-R2": {"profile":"ax","note":"termination: a command that traps SIGTERM and exits 42","expected":{"command_exit_code":42}},
+  "AX-R3": {"profile":"ax","note":"termination: a command that ignores SIGTERM is killed after the 10 s grace","expected":{"command_exit_code":137}}
+}

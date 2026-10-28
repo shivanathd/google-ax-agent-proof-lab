@@ -56,7 +56,7 @@ async function w01(cfg: AxCaseConfig, ax: AxEndpoint[]) {
   const fx = loadSlackFixture();
   const ws = await setupWorkspace(fx, fx.workspaces.find((w) => w.installation_id === "A")!, cfg.slack.url, cfg.slack.secrets, allowlist);
   const dbPath = "/workspace/.apl/ledger.db";
-  seedLedger(dbPath, { [ws.tenant_id]: ws.users });
+  seedLedger(dbPath, { [ws.tenant_id]: ws.users }, [ws.tenant_id]);
 
   // Same process split as the local lane: the worker knows only its loopback Slack proxy and Floci.
   const proxy = await startWorkerSlackProxy(PROXY_PORT, ws.url);
