@@ -4,7 +4,7 @@
 // Faults (W01-S/Q/T) are injected by a loopback proxy and are labelled simulated faults.
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { startRun, type RunHandle } from "../../src/config/lifecycle.ts";
 import { runDir } from "../../src/config/manifest.ts";
 import { ROOT } from "../../src/config/run-config.ts";
@@ -29,29 +29,38 @@ async function setup(opts: Parameters<typeof startRun>[0] = { slack: true }): Pr
 const inboxOf = (e: Env, ts: string) => e.L.rows("inbox", { message_ts: ts })[0];
 const repliesWith = async (e: Env, ws: Workspace, ts: string, needle: string) => (await botReplies(e.h, ws, ts)).filter((m) => String(m.text).includes(needle));
 
-// Independent W01 observation: ledger ticket + S3 object + Slack thread must all agree.
-async function observeTicket(e: Env, ts: string) {
+// What the receipt must say, derived from the fixture stimulus and the emulator's users.list alone (not from
+// the worker's rows): the scripted grammar's first token is the command word, the rest is the summary.
+const expectedTicket = (e: Env, stimulus: string, user = "dana") => ({ summary: stimulus.slice(stimulus.indexOf(" ") + 1), requester_id: e.A.users[user]! });
+
+// Independent W01 observation: ledger ticket + S3 object + Slack thread must all agree with the stimulus.
+async function observeTicket(e: Env, ts: string, stimulus: string) {
+  const want = expectedTicket(e, stimulus);
   const inbox = inboxOf(e, ts)!;
   const tickets = e.L.rows("tickets", { inbox_id: inbox.id });
   const t = tickets[0] as Record<string, any> | undefined;
   const object = t?.receipt_key ? await getObjectText(e.s3, e.h.floci!.bucket, t.receipt_key) : undefined;
   const receipt = object ? JSON.parse(object) : undefined;
   const action = t ? e.L.rows("actions", { action_key: t.action_key })[0] : undefined;
+  const completion = t ? await repliesWith(e, e.A, ts, `Ticket #${t.id} created`) : [];
   return {
     ticket_count: tickets.length,
     receipt_status: t?.receipt_status,
     receipt_count: object === undefined ? 0 : 1,
     receipt_matches_request:
       !!receipt && !!t && sha256(object!) === t.receipt_sha256 && receipt.subject_action_id === t.action_id && receipt.subject_action_id === action?.action_id &&
-      receipt.input_sha256 === sha256(canonical(receipt.input)) && receipt.input.summary === t.summary && receipt.input.requester_id === inbox.actor_id,
-    completion_reply_count: t ? (await repliesWith(e, e.A, ts, `Ticket #${t.id} created`)).length : 0,
+      receipt.input_sha256 === sha256(canonical(receipt.input)) && receipt.input.summary === t.summary && receipt.input.requester_id === inbox.actor_id &&
+      receipt.tenant_id === "T_LAB_A" && receipt.input.summary === want.summary && receipt.input.requester_id === want.requester_id,
+    completion_reply_count: completion.length,
+    // F3-R4: the reply read back through the reader token carries the scripted-mode label.
+    completion_reply_scripted: completion.length > 0 && completion.every((m) => String(m.text).startsWith("[scripted] ") && String(m.text).includes(want.summary)),
     ticket: t,
   };
 }
 
-async function waitTicketDone(e: Env, ts: string) {
+async function waitTicketDone(e: Env, ts: string, stimulus: string) {
   return waitFor(async () => {
-    const o = await observeTicket(e, ts);
+    const o = await observeTicket(e, ts, stimulus);
     return o.completion_reply_count === 1 && o.receipt_count === 1 ? o : undefined;
   }, 20000, "ticket, receipt and completion reply");
 }
@@ -85,18 +94,19 @@ describe("W01–W03 on the local stack", () => {
     await e?.h.stop();
   });
 
-  let w01First: { ts: string; ticketId: number };
+  let w01First: { ts: string; ticketId: number; stimulus: string };
   it("W01-H ×5: one ticket, one matching S3 receipt and one completion reply each (all outcomes kept)", async () => {
     for (let n = 1; n <= 5; n++) {
       const t0 = performance.now();
-      const ts = await mention(e.h, e.A, "dana", text("W01-H", n));
-      const o = await waitTicketDone(e, ts).catch(() => observeTicket(e, ts));
+      const stimulus = text("W01-H", n);
+      const ts = await mention(e.h, e.A, "dana", stimulus);
+      const o = await waitTicketDone(e, ts, stimulus).catch(() => observeTicket(e, ts, stimulus));
       reps.W01.push({ rep: n, ms_to_verified: Math.round(performance.now() - t0), ...o, ticket: undefined });
-      if (n === 1) w01First = { ts, ticketId: o.ticket?.id };
+      if (n === 1) w01First = { ts, ticketId: o.ticket?.id, stimulus };
     }
     await settle();
     for (const r of reps.W01 as any[]) {
-      expect(r).toMatchObject({ ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1, receipt_status: "committed" });
+      expect(r).toMatchObject({ ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1, completion_reply_scripted: true, receipt_status: "committed" });
     }
   });
 
@@ -110,7 +120,7 @@ describe("W01–W03 on the local stack", () => {
     await settle(1500);
     expect(e.L.rows("tickets")).toHaveLength(tickets);
     expect(e.L.rows("outbox")).toHaveLength(outbox);
-    expect(await observeTicket(e, w01First.ts)).toMatchObject({ ticket_count: 1, receipt_count: 1, completion_reply_count: 1 });
+    expect(await observeTicket(e, w01First.ts, w01First.stimulus)).toMatchObject({ ticket_count: 1, receipt_count: 1, completion_reply_count: 1 });
   });
 
   it("W01-B: the bot's own service-request mention creates no job", async () => {
@@ -160,9 +170,35 @@ describe("W01–W03 on the local stack", () => {
     expect(await repliesWith(e, e.A, approved.ts, "approved by")).toHaveLength(1);
   });
 
+  // A signed event-retry of an already processed request: nothing new anywhere, and the inbox row keeps its status.
+  async function retryAddsNothing(ts: string) {
+    const inbox = inboxOf(e, ts)!;
+    const snap = async () => ({
+      approvals: e.L.rows("approval_requests").length, tickets: e.L.rows("tickets").length, actions: e.L.rows("actions").length,
+      outbox: e.L.rows("outbox").length, crm: JSON.stringify(e.L.rows("crm_accounts")), replies: (await botReplies(e.h, e.A, ts)).length,
+    });
+    const before = await snap();
+    expect(await simulate(e.A, "event-retry", { event_id: inbox.event_id, reason: "http_timeout" })).toMatchObject({ ok: true, success: true });
+    await waitFor(() => inboxOf(e, ts)!.delivery_count === inbox.delivery_count + 1, 5000, "retry recorded");
+    await settle(1500);
+    expect(await snap()).toEqual(before);
+    expect(inboxOf(e, ts)).toMatchObject({ status: "done", reason: inbox.reason });
+  }
+
+  it("W02 dedupe: a signed retry of the request event adds no approval, action, outbox row or reply", async () => {
+    await retryAddsNothing(approved.ts);
+  });
+
   it("W02-U / F3-A2: the requester or an ungranted user cannot approve; status stays awaiting_approval", async () => {
     const { a } = await requestApproval(e, "dana", CASES["W02-U"].text);
+    // The requester holds approval.resolve, so only the self-approval rule can refuse her own click.
+    expect(e.L.rows("grants", { tenant_id: "T_LAB_A", user_id: e.A.users.dana!, permission: "approval.resolve" })[0]).toMatchObject({ active: 1 });
     await click(e.A, a.message_ts, "dana");
+    await settle();
+    expect(approval(e, a.id)).toMatchObject({ status: "awaiting_approval", approver_id: null, receipt_status: null });
+    expect(resolveActions(e, a.id)).toHaveLength(0);
+    expect(await approvalReceipt(e, a)).toBeUndefined();
+    await waitFor(() => denials(e, a.id).length === 1, 5000, "self-approval refused");
     await click(e.A, a.message_ts, "gus");
     await waitFor(() => denials(e, a.id).length === 2, 5000, "denials recorded");
     expect(denials(e, a.id)).toEqual(["self_approval", "no_grant"]);
@@ -219,10 +255,32 @@ describe("W01–W03 on the local stack", () => {
     expect(e.L.rows("run_audit", { tenant_id: "T_LAB_B" }).filter((r) => r.kind === "approval_denied").every((r) => JSON.parse(r.detail).approval_id === null)).toBe(true);
   });
 
+  it("the worker's own Slack client and token cannot reach the simulator; a forged approval is refused at the proxy", async () => {
+    const { a } = await requestApproval(e, "dana", "purchase-request 12500 forged approval probe");
+    const inst = e.h.workerConfig!.installations.find((i) => i.installation_id === "A")!;
+    const forge = (method: string, path: string, body?: object) => fetch(`${inst.api_url}${path}`, {
+      method, headers: { authorization: `Bearer ${inst.bot_token}`, "content-type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const r = await forge("POST", "/_slack/simulate/block-actions", { channel: e.A.channel_id, message_ts: a.message_ts, action_id: "approval.approve", user: "eli" });
+    await settle();
+    expect(approval(e, a.id)).toMatchObject({ status: "awaiting_approval", approver_id: null });
+    expect(resolveActions(e, a.id)).toHaveLength(0);
+    expect(await approvalReceipt(e, a)).toBeUndefined();
+    expect(r.status).toBe(403);
+    expect((await forge("POST", "/_slack/simulate/event-retry", { event_id: inboxOf(e, w01First.ts)!.event_id })).status).toBe(403);
+    expect((await forge("GET", "/_emulate")).status).toBe(403);
+    expect((await forge("POST", "/api/conversations.history", { channel: e.A.channel_id })).status).toBe(403);
+    // The worker is configured with the proxy only: no emulator URL, and no emulator port on its allowlist.
+    const emulatorPorts = e.h.workspaces.map((w) => Number(new URL(w.url).port));
+    for (const i of e.h.workerConfig!.installations) expect(emulatorPorts).not.toContain(Number(new URL(i.api_url).port));
+    expect(e.h.workerConfig!.allowlist.filter((x) => emulatorPorts.includes(x.port))).toEqual([]);
+  });
+
+  let w03Last: string;
   it("W03-H ×5: authorized update with matching version changes only the description and advances the version", async () => {
     for (let n = 1; n <= 5; n++) {
       const t0 = performance.now();
-      const ts = await mention(e.h, e.A, "fran", text("W03-H", n));
+      const ts = (w03Last = await mention(e.h, e.A, "fran", text("W03-H", n)));
       const done = await waitFor(async () => (await repliesWith(e, e.A, ts, `version ${n} → ${n + 1}`)).length === 1, 10000, "crm reply").catch(() => false);
       const acct = e.L.rows("crm_accounts", { tenant_id: "T_LAB_A", account_id: "acct-northstar" })[0]!;
       reps.W03.push({
@@ -232,6 +290,10 @@ describe("W01–W03 on the local stack", () => {
     }
     (reps.W03 as any[]).forEach((r, i) =>
       expect(r).toMatchObject({ done: true, version: i + 2, description: "Workshop follow-up requested", name: "Northstar Demo", actions: i + 1 }));
+  });
+
+  it("W03 dedupe: a signed retry of an applied update event changes no version, action, outbox row or reply", async () => {
+    await retryAddsNothing(w03Last);
   });
 
   it("W03-V / F3-A3: a stale expected version is a CONFLICT and nothing is overwritten", async () => {
@@ -288,18 +350,19 @@ describe("W01–W03 on the local stack", () => {
   });
 });
 
+// Each fault case gets its own fresh run (Floci, emulators, proxies, ledger), so one case's leftover rule,
+// ticket or worker state cannot make another fail. Each case installs its rules, then starts the worker.
 describe("W01 faults through the loopback fault proxy (simulated faults)", () => {
   let e: Env;
   let slackProxy: FaultProxy;
   let flociProxy: FaultProxy;
   const workerOpts = () => ({ overrides: { A: { api_url: slackProxy.url } }, floci_endpoint: flociProxy.url, slack_timeout_ms: 1500 });
-  beforeAll(async () => {
+  beforeEach(async () => {
     e = await setup({ slack: true, worker: false, extraPorts: ["fault_slack", "fault_floci"] });
     slackProxy = await startFaultProxy(e.h.manifest.ports.fault_slack!, e.A.url);
     flociProxy = await startFaultProxy(e.h.manifest.ports.fault_floci!, e.h.flociEndpoint);
-    await e.h.startWorker(workerOpts());
   });
-  afterAll(async () => {
+  afterEach(async () => {
     e?.L.close();
     await e?.h.stop();
     await slackProxy?.close();
@@ -309,6 +372,7 @@ describe("W01 faults through the loopback fault proxy (simulated faults)", () =>
 
   it("W01-S: S3 failure keeps the ticket, withholds completion, and an explicit recovery finishes it once", async () => {
     flociProxy.rules.push({ name: "s3-put-500", action: "http500", match: (r) => r.method === "PUT" && r.url.includes("/receipts/") });
+    await e.h.startWorker(workerOpts());
     const ts = await mention(e.h, e.A, "dana", CASES["W01-S"].text);
     const t = await waitFor(() => {
       const inbox = inboxOf(e, ts);
@@ -319,12 +383,12 @@ describe("W01 faults through the loopback fault proxy (simulated faults)", () =>
     const key = `receipts/T_LAB_A/ticket-${t.id}.json`;
     expect(auditFor("receipt_put_failed", (d) => d.key === key)).toHaveLength(3); // max_retries=2 → 3 bounded attempts
     expect(auditFor("receipt_incomplete", (d) => d.ticket_id === t.id)).toHaveLength(1);
-    expect(await observeTicket(e, ts)).toMatchObject({ ticket_count: 1, receipt_count: 0, completion_reply_count: 0 });
+    expect(await observeTicket(e, ts, CASES["W01-S"].text)).toMatchObject({ ticket_count: 1, receipt_count: 0, completion_reply_count: 0 });
 
     flociProxy.clear();
     await e.h.stopWorker();
     await e.h.startWorker(workerOpts()); // explicit recovery path: restart retries incomplete receipts
-    const o = await waitTicketDone(e, ts);
+    const o = await waitTicketDone(e, ts, CASES["W01-S"].text);
     expect(o).toMatchObject({ ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1 });
     expect(auditFor("receipt_recovery", (d) => d.ticket_id === t.id)).toHaveLength(1);
   });
@@ -334,18 +398,20 @@ describe("W01 faults through the loopback fault proxy (simulated faults)", () =>
       name: "sqs-delete-500", action: "http500", times: 1,
       match: (r) => r.headers["x-amz-target"] === "AmazonSQS.DeleteMessage" || r.body.includes("Action=DeleteMessage"),
     });
+    await e.h.startWorker(workerOpts());
     const ts = await mention(e.h, e.A, "dana", CASES["W01-Q"].text);
-    const o = await waitTicketDone(e, ts);
+    const o = await waitTicketDone(e, ts, CASES["W01-Q"].text);
     await waitFor(() => auditFor("duplicate_job", (d) => d.ticket_id === o.ticket!.id).length >= 1, 15000, "redelivery recognised");
     await settle(1500);
     expect(flociProxy.hits["sqs-delete-500"]).toBe(1);
     expect(auditFor("ack_failed", (d) => d.ticket_id === o.ticket!.id)).toHaveLength(1);
-    expect(await observeTicket(e, ts)).toMatchObject({ ticket_count: 1, receipt_count: 1, completion_reply_count: 1 });
+    expect(await observeTicket(e, ts, CASES["W01-Q"].text)).toMatchObject({ ticket_count: 1, receipt_count: 1, completion_reply_count: 1 });
     expect(e.L.rows("tickets").filter((x) => x.action_key === o.ticket!.action_key)).toHaveLength(1);
   });
 
   it("W01-T: a reply accepted by Slack whose response times out is UNKNOWN and is never re-posted", async () => {
     slackProxy.rules.push({ name: "reply-held", action: "hold-response", times: 1, match: (r) => r.url === "/api/chat.postMessage" && r.body.includes("Ticket #") });
+    await e.h.startWorker(workerOpts());
     const ts = await mention(e.h, e.A, "dana", CASES["W01-T"].text);
     const reply = await waitFor(() => e.L.rows("outbox", { kind: "slack.reply" }).find((x) => x.status === "unknown"), 20000, "reply outcome unknown");
     await settle(2500);
@@ -353,9 +419,31 @@ describe("W01 faults through the loopback fault proxy (simulated faults)", () =>
     expect(e.L.rows("outbox", { id: reply.id })[0]).toMatchObject({ status: "unknown", attempts: 1 });
     expect(auditFor("outbox_unknown", (d) => d.outbox_id === reply.id)).toHaveLength(1);
     // Slack really has the one reply; the worker neither duplicated it nor announced anything else.
-    expect(await observeTicket(e, ts)).toMatchObject({ ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1 });
+    expect(await observeTicket(e, ts, CASES["W01-T"].text)).toMatchObject({ ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1 });
     expect(slackProxy.seen.filter((s) => s.url === "/api/chat.postMessage").length).toBe(
       e.L.rows("outbox", { kind: "slack.reply" }).filter((x) => x.installation_id === "A" && x.status !== "pending").length,
     );
+  });
+
+  it("W01 job-time authority: a grant revoked between request and SQS job creates no ticket and is denied explicitly", async () => {
+    // Hold the job in the queue (every ReceiveMessage fails) until the grant has been revoked.
+    flociProxy.rules.push({ name: "sqs-receive-500", action: "http500", match: (r) => r.headers["x-amz-target"] === "AmazonSQS.ReceiveMessage" || r.body.includes("Action=ReceiveMessage") });
+    await e.h.startWorker(workerOpts());
+    const ts = await mention(e.h, e.A, "dana", "service-request coffee machine leaking");
+    await waitFor(() => {
+      const inbox = inboxOf(e, ts);
+      return inbox && e.L.rows("outbox", { kind: "sqs.send" }).some((o) => o.status === "sent" && o.payload.includes(inbox.event_id));
+    }, 10000, "job queued");
+    const admin = openLedger(e.h.manifest.db_path); // test coordinator acting as policy administrator
+    setGrant(admin, "T_LAB_A", e.A.users.dana!, "ticket.create", false);
+    admin.close();
+    flociProxy.clear();
+    await waitFor(async () => (await repliesWith(e, e.A, ts, "Not performed (ticket.create)")).length === 1, 15000, "job-time denial reply");
+    await settle(1500);
+    expect(e.L.rows("tickets")).toHaveLength(0);
+    expect(e.L.rows("actions", { operation: "ticket.create" })).toHaveLength(0);
+    expect(auditFor("job_denied", (d) => d.reason === "no_grant")).toHaveLength(1);
+    expect(await repliesWith(e, e.A, ts, "created")).toHaveLength(0);
+    expect(await botReplies(e.h, e.A, ts)).toHaveLength(1);
   });
 });
