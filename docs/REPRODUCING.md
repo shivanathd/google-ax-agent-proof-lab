@@ -57,6 +57,10 @@ Every media item lists `evidence_refs` under `docs/evidence/<run_id>/`. Those di
 - `npm run lab -- readme verify --github --repo OWNER/REPO --ref REF`: inspects the actual GitHub page only when a remote exists, both options are given and the owner has set `APL_GITHUB_RENDER_AUTHORIZED=1`. Without those it reports `NOT_RUN` (exit 2) and contacts nothing.
 - `npm run verify:task -- 6.1` and the supplied cases F6-A1 to F6-A5 and S4 run the console and media checks through the independent collector.
 
+## Captions only
+
+`npm run lab -- media captions --suite readme` rebuilds every manifest caption and the clips' WebVTT cues from the committed manifest, clip sidecars and `docs/evidence/` reports, without re-encoding media (run `readme build` and both verifiers afterwards). Multi-run clips name every run and its outcome in order; cues closer than 1.5 s are merged so no cue is shorter than 1.5 s and none overlap, and `media verify` checks both rules.
+
 ## Single recordings
 
 `npm run lab -- record --case W01-H` records one console scenario run (WebM, screenshots, session record) into `recordings/raw/` without touching the README media. See [recordings](../recordings/README.md).

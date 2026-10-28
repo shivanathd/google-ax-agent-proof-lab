@@ -28,7 +28,7 @@ function block(e: any): string {
     return `![${e.alt_text}](${e.path})\n\n${e.caption}\n\n[View the static result (PNG poster)](${e.poster_path})`;
   }
   if (e.mime_type === "video/mp4") {
-    return `[![${e.alt_text}](${e.poster_path})](${e.path})\n\n${e.caption} [Download the MP4](${e.path}) · [captions](${e.captions_path}) · [capture record](${e.sidecar_path}).`;
+    return `[![${e.alt_text}](${e.poster_path})](${e.path})\n\n${e.caption}\n\n[Download the MP4](${e.path}) · [WebVTT captions (separate sidecar)](${e.captions_path}) · [capture record](${e.sidecar_path})`;
   }
   return `![${e.alt_text}](${e.path})\n\n${e.caption}`;
 }

@@ -124,19 +124,27 @@ A local CRM double cannot show Salesforce behaviour, and a passing local run is 
 <!-- BEGIN LAB MEDIA: videos -->
 [![Poster of the mental-model clip: a verified service request run in the teaching console](docs/assets/videos/mental-model.png)](docs/assets/videos/mental-model.mp4)
 
-Mental model: the reply is not the acceptance test (MP4 clip, 37 s, silent with captions). Run `ca8e55fb` (W01-F, local profile, scripted mode, revision `ea1deca`): local core FAIL, 2 of 4 required assertions passed; observed ticket_count 1, receipt_count 0, receipt_matches_request false, completion_reply_count 1. Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). Synthetic data. [Download the MP4](docs/assets/videos/mental-model.mp4) · [captions](docs/assets/videos/mental-model.vtt) · [capture record](docs/assets/videos/mental-model.json).
+Mental model: the reply is not the acceptance test (MP4 clip, 37 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Shown in order (local profile, scripted mode, revision `ea1deca`): happy-path run `fed9685f` (W01-H): local core PASS, 4 of 4 required assertions passed; then injected-fault run `ca8e55fb` (W01-F): local core FAIL, 2 of 4 required assertions passed, not a success (failing: receipt_count 0, receipt_matches_request false). Injected fault: receipt object deleted from S3 by the test coordinator after the worker committed it (simulated fault). The poster is a frame of the first run. Synthetic data.
+
+[Download the MP4](docs/assets/videos/mental-model.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/mental-model.vtt) · [capture record](docs/assets/videos/mental-model.json)
 
 [![Poster of the duplicate-delivery clip: the retried event leaves ticket and reply counts unchanged](docs/assets/videos/duplicate-delivery.png)](docs/assets/videos/duplicate-delivery.mp4)
 
-Duplicate delivery (MP4 clip, 16 s, silent with captions). Run `8c577551` (W01-D, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data. [Download the MP4](docs/assets/videos/duplicate-delivery.mp4) · [captions](docs/assets/videos/duplicate-delivery.vtt) · [capture record](docs/assets/videos/duplicate-delivery.json).
+Duplicate delivery (MP4 clip, 16 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `8c577551` (W01-D, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed additional_business_records 0, additional_completion_replies 0, same_request_identity true. Synthetic data.
+
+[Download the MP4](docs/assets/videos/duplicate-delivery.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/duplicate-delivery.vtt) · [capture record](docs/assets/videos/duplicate-delivery.json)
 
 [![Poster of the permission-boundary clip: the self-approval is refused and the record is unchanged](docs/assets/videos/permission-boundary.png)](docs/assets/videos/permission-boundary.mp4)
 
-Permission boundary (MP4 clip, 16 s, silent with captions). Run `493034f5` (W02-U, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data. [Download the MP4](docs/assets/videos/permission-boundary.mp4) · [captions](docs/assets/videos/permission-boundary.vtt) · [capture record](docs/assets/videos/permission-boundary.json).
+Permission boundary (MP4 clip, 16 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `493034f5` (W02-U, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed approval_status "awaiting_approval", unauthorized_write_count 0, approval_receipt_count 0. Synthetic data.
+
+[Download the MP4](docs/assets/videos/permission-boundary.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/permission-boundary.vtt) · [capture record](docs/assets/videos/permission-boundary.json)
 
 [![Poster of the emulator-versus-real-org clip: optional lanes shown as BLOCKED with parity UNKNOWN](docs/assets/videos/emulator-vs-real-org.png)](docs/assets/videos/emulator-vs-real-org.mp4)
 
-Emulator versus real org (MP4 clip, 23 s, silent with captions). Run `581e434c` (W03-V, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed result "CONFLICT", description_unchanged true, write_count 0. Synthetic data. [Download the MP4](docs/assets/videos/emulator-vs-real-org.mp4) · [captions](docs/assets/videos/emulator-vs-real-org.vtt) · [capture record](docs/assets/videos/emulator-vs-real-org.json).
+Emulator versus real org (MP4 clip, 23 s, no audio; the captions are a separate WebVTT file, linked here, because a plain MP4 link does not load them). Run `581e434c` (W03-V, local profile, scripted mode, revision `ea1deca`): local core PASS, 3 of 3 required assertions passed; observed result "CONFLICT", description_unchanged true, write_count 0. Synthetic data.
+
+[Download the MP4](docs/assets/videos/emulator-vs-real-org.mp4) · [WebVTT captions (separate sidecar)](docs/assets/videos/emulator-vs-real-org.vtt) · [capture record](docs/assets/videos/emulator-vs-real-org.json)
 
 Inline playback on GitHub needs a post-publication upload of these clips; until that is approved the links above open the MP4 files from the repository.
 <!-- END LAB MEDIA: videos -->
