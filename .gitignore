@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+private-runs/
+artifacts/runs/
+**/evals/results/
+__pycache__/
+*.pyc
+*.log

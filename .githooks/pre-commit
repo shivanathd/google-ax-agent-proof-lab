@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Reject commits authored with a work identity or containing private terms.
+set -euo pipefail
+email=$(git config user.email)
+case "$email" in *.invalid|*@users.noreply.github.com) ;; *) echo "pre-commit: author email '$email' not allowed; use a project or noreply identity" >&2; exit 1;; esac
+terms=private-runs/private-terms.txt
+if [ -f "$terms" ] && git diff --cached -U0 | grep -iFf <(grep -v '^\s*$' "$terms") >/dev/null; then
+  echo "pre-commit: staged changes contain a private term (see $terms)" >&2; exit 1
+fi

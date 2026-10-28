@@ -1,0 +1,22 @@
+{
+  "F1-A1": {"profile":"local","expected":{"emulate_running":true,"floci_running":true,"workflow_count":3,"required_external_accounts":0,"non_loopback_endpoint_count":0}},
+  "F1-A2": {"profile":"local","expected":{"rejected_before_network":true,"outbound_request_count":0}},
+  "F2-A1": {"profile":"local","expected":{"accepted_event_count":1,"completion_reply_count":1,"reply_in_original_thread":true,"bot_loop_job_count":0}},
+  "F2-A2": {"profile":"local","expected":{"additional_business_records":0,"additional_completion_replies":0,"same_request_identity":true}},
+  "F3-A1": {"profile":"local","expected":{"ticket_count":1,"receipt_count":1,"receipt_matches_request":true,"completion_reply_count":1}},
+  "F3-A2": {"profile":"local","expected":{"approval_status":"awaiting_approval","unauthorized_write_count":0,"approval_receipt_count":0}},
+  "F3-A3": {"profile":"local","expected":{"result":"CONFLICT","description_unchanged":true,"write_count":0}},
+  "F4-A1": {"profile":"local","expected":{"worker_claimed_success":true,"receipt_present":false,"required_assertion_failed":true,"overall_success_banner":false}},
+  "F4-A2": {"profile":"local","expected":{"salesforce_status":"BLOCKED","salesforce_parity":"UNKNOWN","local_results_separate":true}},
+  "F5-A1": {"profile":"local","expected":{"blocked_optional_profile_count":4,"external_resource_create_count":0,"prerequisites_reported":true}},
+  "F5-A2": {"profile":"local","expected":{"external_call_count":0,"authorization_rejected":true,"local_result_preserved":true}},
+  "F6-A1": {"profile":"local","expected":{"failure_visible":true,"overall_success_banner":false}},
+  "F6-A2": {"profile":"local","expected":{"revision_visible":true,"run_id_visible":true,"synthetic_notice_visible":true,"secret_count":0,"forbidden_identity_count":0,"evidence_refs_valid":true}},
+  "F6-A3": {"profile":"local","expected":{"valid_required_screenshot_count":5,"valid_required_animated_gif_count":3,"valid_required_static_poster_count":3,"all_required_media_provenance_valid":true,"broken_readme_media_path_count":0,"missing_alt_text_count":0,"missing_caption_count":0,"static_fallbacks_valid":true,"local_render_review_passed":true,"media_budget_passed":true}},
+  "F6-A4": {"profile":"local","expected":{"missing_screenshot_detected":true,"single_frame_gif_detected":true,"stale_capture_detected":true,"broken_embed_detected":true,"false_media_success_count":0}},
+  "F6-A5": {"profile":"local","expected":{"local_media_status":"PASS","github_render_status":"NOT_RUN","unauthorized_repository_create_count":0,"unauthorized_push_count":0}},
+  "S1": {"profile":"local","expected":{"fresh_clone_completed":true,"undeclared_account_count":0,"ticket_count":1,"completion_reply_count":1,"receipt_matches_request":true,"cross_run_read_count":0}},
+  "S2": {"profile":"local","expected":{"ticket_count":1,"completion_reply_count":1,"false_success_count":0,"recovery_evidence_present":true,"duplicate_after_restart_count":0}},
+  "S3": {"profile":"local","expected":{"unauthorized_write_count":0,"cross_tenant_disclosure_count":0,"approval_receipt_count":0,"revoked_approver_denied":true}},
+  "S4": {"profile":"local","expected":{"false_green_count":0,"optional_profile_status":"BLOCKED","tampered_artifact_rejected":true,"console_matches_report":true}}
+}

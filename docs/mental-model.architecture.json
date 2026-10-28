@@ -1,0 +1,36 @@
+{
+  "schema_version":1,
+  "diagram_type":"architecture",
+  "meta":{
+    "title":"Agent Proof Lab: Proposed Mental Model",
+    "output":".archify/architecture-agent-proof-lab-20261028-163000/index.html",
+    "quality_profile":"showcase",
+    "locale":"en"
+  },
+  "components":[
+    {"id":"slack","type":"external","label":"Emulated Slack","sublabel":"Synthetic requests and threads","pos":[35,190],"size":[220,80]},
+    {"id":"policy","type":"security","label":"Action Policy","sublabel":"Identity, approval and scope","pos":[385,190],"size":[220,80]},
+    {"id":"worker","type":"backend","label":"Workflow Worker","sublabel":"Scripted first; model opt-in","pos":[735,190],"size":[220,80]},
+    {"id":"runtime","type":"cloud","label":"Execution Profile","sublabel":"Local first; AX optional","pos":[735,25],"size":[220,75]},
+    {"id":"dependencies","type":"database","label":"Test Dependencies","sublabel":"Floci S3/SQS and local ledger","pos":[735,400],"size":[220,80]},
+    {"id":"evaluator","type":"backend","label":"Independent Evaluator","sublabel":"Observe state; assert outcomes","pos":[385,400],"size":[220,80]},
+    {"id":"evidence","type":"frontend","label":"Evidence and Teaching","sublabel":"Reports, recordings and article","pos":[35,400],"size":[220,80]},
+    {"id":"review","type":"external","label":"Code Review Lane","sublabel":"CodeRabbit optional; not oracle","pos":[385,610],"size":[220,80]},
+    {"id":"salesforce","type":"cloud","label":"Salesforce Test Org","sublabel":"Opt-in actual platform checks","pos":[735,610],"size":[220,80]}
+  ],
+  "connections":[
+    {"id":"request","from":"slack","to":"policy","label":"signed event","variant":"security"},
+    {"id":"authorize","from":"policy","to":"worker","label":"allowed action","variant":"security"},
+    {"id":"execute","from":"runtime","to":"worker","label":"runs task"},
+    {"id":"effects","from":"worker","to":"dependencies","label":"bounded calls"},
+    {"id":"observe","from":"dependencies","to":"evaluator","label":"observed state"},
+    {"id":"report","from":"evaluator","to":"evidence","label":"verified report","variant":"emphasis"},
+    {"id":"review-input","from":"review","to":"evaluator","label":"review evidence","variant":"dashed"},
+    {"id":"optional-platform","from":"dependencies","to":"salesforce","label":"approved profile","variant":"dashed"}
+  ],
+  "cards":[
+    {"dot":"cyan","title":"Read the layers, not a vendor ranking","items":["Proposed architecture, not a deployed lab.","Slack starts the story; policy decides authority.","The worker also replies through the Slack API."]},
+    {"dot":"emerald","title":"What counts as proof","items":["Evaluator reads Slack, storage and ledger state independently.","A model answer or code review alone cannot pass a workflow.","Public challenge cases are reproducible, not secret holdouts."]},
+    {"dot":"amber","title":"Optional means explicitly gated","items":["Salesforce, CodeRabbit, AX and live inference need separate prerequisites.","Missing access remains BLOCKED or UNKNOWN, never PASS.","All baseline examples use fictional organizations and synthetic data."]}
+  ]
+}

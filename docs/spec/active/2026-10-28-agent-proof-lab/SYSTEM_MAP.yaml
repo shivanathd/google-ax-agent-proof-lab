@@ -1,0 +1,70 @@
+schema_version: 1
+status: proposed_not_deployed
+components:
+  - id: coordinator
+    role: trusted local setup and scenario driver
+  - id: console
+    role: read-only teaching views plus bounded test actions
+  - id: worker
+    role: scripted or optional live-model workflow execution
+  - id: slack
+    role: Emulate Slack process
+  - id: cloud
+    role: Floci S3 and SQS process
+  - id: ledger
+    role: SQLite business state and narrow CRM contract double
+  - id: evaluator
+    role: independent observation and fixed assertions
+  - id: publisher
+    role: sanitized report and recording export
+  - id: optional_adapters
+    role: explicitly authorized Salesforce, CodeRabbit, AX and live-model lanes
+boundaries:
+  - id: worker_authority
+    excludes: [evaluator_admin, emulator_simulator, production_credentials]
+  - id: local_network
+    default: loopback_allowlist
+  - id: external_profiles
+    default: disabled_and_denied
+  - id: public_export
+    requires: [synthetic_data, redaction, owner_approval]
+contracts:
+  C1: RunConfig
+  C2: WorkflowEvent
+  C3: ActionEnvelope
+  C4: ObservationBundle
+  C5: RunReport
+relationships:
+  - from: coordinator
+    to: worker
+    contract: C1
+  - from: slack
+    to: worker
+    contract: C2
+  - from: worker
+    to: cloud
+    contract: C3
+  - from: worker
+    to: ledger
+    contract: C3
+  - from: worker
+    to: slack
+    contract: C3
+  - from: evaluator
+    to: cloud
+    purpose: independent read observations
+  - from: evaluator
+    to: slack
+    purpose: independent read observations
+  - from: evaluator
+    to: ledger
+    purpose: separate read-only connection
+  - from: evaluator
+    to: publisher
+    contract: C5
+  - from: publisher
+    to: console
+    contract: C5
+  - from: optional_adapters
+    to: evaluator
+    contract: C4
