@@ -47,6 +47,8 @@ describe("deterministic policy and C3 envelopes", () => {
     const req = { ...base, actor_id: "UREQ", operation: "approval.request" as const };
     expect(() => envelope(db, { ...req, input: { item: "desk", amount_cents: 12500, approve: true } })).toThrow(/additional properties/);
     expect(() => envelope(db, { ...req, input: { item: "desk", amount_cents: -1 } })).toThrow(/amount_cents/);
+    // Null Handling Contract: zero is allowed only when a fixture declares a zero-value demo; none does (blind BH-07).
+    expect(() => envelope(db, { ...req, input: { item: "desk", amount_cents: 0 } })).toThrow(/amount_cents/);
     expect(() => envelope(db, { ...req, input: { item: "desk", amount_cents: 10_000_001 } })).toThrow(/amount_cents/);
     expect(() => envelope(db, { ...req, operation: "payment.execute" as never, input: {} })).toThrow(/operation/);
     const crm = { ...base, actor_id: "UCRM", operation: "crm.description.update" as const, input: { account_id: "a", description: "d" } };

@@ -38,7 +38,7 @@
     {
       "if": { "properties": { "operation": { "const": "approval.request" } }, "required": ["operation"] },
       "then": { "properties": { "input": { "type": "object", "additionalProperties": false, "required": ["item", "amount_cents"],
-        "properties": { "item": { "type": "string", "minLength": 1, "maxLength": 120 }, "amount_cents": { "type": "integer", "minimum": 0, "maximum": 10000000 } } } } }
+        "properties": { "item": { "type": "string", "minLength": 1, "maxLength": 120 }, "amount_cents": { "type": "integer", "minimum": 1, "maximum": 10000000, "$comment": "Zero needs a fixture-declared zero-value demo (Null Handling Contract); none is declared." } } } } }
     },
     {
       "if": { "properties": { "operation": { "const": "approval.resolve" } }, "required": ["operation"] },
