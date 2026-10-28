@@ -1,6 +1,6 @@
 # Agent Proof Lab
 
-A local-first lab for testing Slack-led agent workflows against emulated Slack, local S3/SQS and a small ledger. It keeps four questions apart that a single green checkmark tends to blur: where the work runs (execution), what it talks to (emulation), what it is allowed to do (authorization) and what an independent collector can prove happened (evidence).
+A local-first lab for testing Slack-led agent workflows against emulated Slack, local S3/SQS and a small ledger. It keeps four layers apart that a single green checkmark tends to blur: where the work runs (execution), what it talks to (emulation), what it is allowed to do (authorization) and what an independent collector can prove happened (evidence). A fifth question sits on top: what can honestly be claimed from that evidence.
 
 Everything below runs on one laptop with fictional workspaces, people and records. No Slack workspace, cloud account, CRM org or model key is needed for the local core.
 
@@ -32,7 +32,7 @@ A service request handled end to end: the reply is in the original thread and th
 
 This table and diagram describe the architecture; they are not execution evidence.
 
-| Layer | Local core (always on) | Opt-in lane (blocked until separately authorized) |
+| Layer | Local core (always on) | Opt-in lane (off by default; each needs separate authorization) |
 |---|---|---|
 | Execution | Deterministic scripted worker process | AX runner on Agent Substrate; live-model planner with a spend cap |
 | Emulation | Emulate Slack (signed callbacks, Web API, button simulations), Floci S3 + SQS, SQLite ledger, a narrow local CRM double | A real Salesforce scratch org |
@@ -41,7 +41,7 @@ This table and diagram describe the architecture; they are not execution evidenc
 
 ```text
 What business outcome do we want?
-  +-- Where does the work run?            local scripted worker (optional AX later)
+  +-- Where does the work run?            local scripted worker (optional AX lane on a cluster)
   +-- What systems does it interact with?  Emulate Slack; Floci S3/SQS; local CRM double
   +-- Is the action allowed?              trusted identity + deterministic policy + current approval
   +-- Did it meet the requirement?        independent state assertions + public challenge cases
@@ -75,7 +75,7 @@ npm run lab -- collect-case --case F3-A1 --output "$PWD/private-runs/manual/F3-A
 bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh
 ```
 
-Salesforce, CodeRabbit, AX and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)).
+Salesforce, CodeRabbit and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)). The AX lane was authorized and run on a GKE cluster under gVisor: W01-H, a failing-command case and sandbox isolation passed with independent collector evidence, and two termination assertions failed ([AX results](profiles/ax/RESULTS.md)).
 
 ## Watch the boundaries hold
 

@@ -25,7 +25,7 @@ const LEAD: Record<string, string> = {
   "service-request-success": "A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt.",
   "approval-denied": "A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged.",
   "evidence-report": "The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations.",
-  "profile-boundaries": "Optional lanes as their doctors report them: blocked lanes are not failures of the local demo and are not evidence of provider parity.",
+  "profile-boundaries": "Optional lanes as their doctors report them on this machine: blocked lanes are not failures of the local demo and are not evidence of provider parity. AX reads BLOCKED here because no cluster is configured locally; its authorized cluster runs are reported in profiles/ax/RESULTS.md.",
   "slack-service-request": "The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread.",
   "duplicate-event-safe": "Emulate re-delivers the same signed event; the collector compares before and after counts.",
   "approval-denied-gif": "Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused.",
