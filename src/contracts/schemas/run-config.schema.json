@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-proof-lab.invalid/schemas/run-config.json",
+  "title": "C1 RunConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "profile", "mode", "seed", "fixture_sha256", "candidate_revision", "dirty",
+    "tenant_id", "endpoint_allowlist", "owned_resources", "limits"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "profile": { "enum": ["local", "salesforce", "coderabbit", "ax", "live-model"] },
+    "mode": { "enum": ["scripted", "fixture-replay", "live-model"] },
+    "seed": { "type": "integer", "minimum": 0 },
+    "fixture_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "candidate_revision": { "type": "string", "minLength": 1 },
+    "dirty": { "type": "boolean" },
+    "patch_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "tenant_id": { "type": "string", "pattern": "^T_[A-Z0-9_]+$" },
+    "endpoint_allowlist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scheme", "host", "port"],
+        "properties": {
+          "scheme": { "enum": ["http", "https"] },
+          "host": { "type": "string", "minLength": 1 },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+        }
+      }
+    },
+    "owned_resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "id"],
+        "properties": {
+          "kind": { "enum": ["compose-project", "container", "process", "emulator", "file", "directory"] },
+          "id": { "type": "string", "minLength": 1 },
+          "role": { "type": "string" }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wall_clock_seconds", "max_actions", "max_retries"],
+      "properties": {
+        "wall_clock_seconds": { "type": "integer", "minimum": 1 },
+        "max_actions": { "type": "integer", "minimum": 1 },
+        "max_retries": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "connection_ref": { "type": ["string", "null"] },
+    "model_ref": { "type": ["string", "null"] },
+    "cost_cap": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+  },
+  "if": { "properties": { "dirty": { "const": true } } },
+  "then": { "required": ["patch_sha256"] },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "live-model" } }, "required": ["mode"] },
+      "then": { "required": ["cost_cap"], "properties": { "cost_cap": { "type": "number", "exclusiveMinimum": 0 } } }
+    }
+  ]
+}
