@@ -130,6 +130,9 @@ describe("credential hygiene (F1-R3)", () => {
     expect(env.HOME).toBeDefined();
     expect(env.HOME).not.toBe("/home/lab");
     expect(childEnv(ambient, { HOME: "/run-owned/home" }).HOME).toBe("/run-owned/home");
+    // A scoped HOME must not hide the browser cache: the collector's Chromium lives there (S4 regression).
+    expect(childEnv(ambient, { HOME: "/run-owned/home" }).PLAYWRIGHT_BROWSERS_PATH).toMatch(/ms-playwright$/);
+    expect(childEnv({ ...ambient, PLAYWRIGHT_BROWSERS_PATH: "/opt/pw" }, { HOME: "/x" }).PLAYWRIGHT_BROWSERS_PATH).toBe("/opt/pw");
     const w = workerConfig({ run_id: "0f8fad5b-d9cb-469f-a165-70867728950e", db_path: "/runs/r1/ledger.db", http_port: 9, allowlist: [] }, []);
     expect(workerEnv(w, ambient).HOME).toBe("/runs/r1/worker-home");
     // Docker's CLI context and credential store live under HOME; only the docker CLI child keeps it.

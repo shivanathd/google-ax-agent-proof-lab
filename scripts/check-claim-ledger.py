@@ -3,6 +3,7 @@
 # docs/assets/media-manifest.json, artifacts/bench/, artifacts/mutations/) or, for local harness runs, in the
 # gitignored artifacts/runs/; every repository path it cites exists; every short ID prefix appears in a cited
 # committed doc. Exit 1 on any miss. Run from the repository root: python3 scripts/check-claim-ledger.py
+import hashlib
 import json, re, sys
 from pathlib import Path
 
@@ -43,14 +44,25 @@ if manifest.get("application_tree_sha256", "") not in ledger:
 # Backticked or linked repository paths.
 paths = set(re.findall(r"`((?:docs|src|profiles|tests|artifacts|scripts)/[^`*<>\s]+?)`", ledger))
 paths |= {"docs/" + p for p in re.findall(r"\]\((evidence/[^)]+)\)", ledger)}
-# Cited as absent on purpose (F6-A3 review pending); if it appears, the ledger is stale.
-EXPECTED_ABSENT = {"docs/assets/render-review.json"}
+# F6-A3's review record: C-32 must say exactly what the record establishes. A record counts only when written by
+# someone other than the media pipeline, both widths pass, and its hashes match the current README and manifest.
+REVIEW = "docs/assets/render-review.json"
+c32 = next((l for l in ledger.splitlines() if l.startswith("| C-32 ")), "")
+rec = ROOT / REVIEW
+if rec.exists():
+    r = json.loads(rec.read_text())
+    sha = lambda f: hashlib.sha256((ROOT / f).read_bytes()).hexdigest()
+    valid = (r.get("desktop_ok") is True and r.get("narrow_ok") is True
+             and r.get("readme_sha256") == sha("README.md") and r.get("media_manifest_sha256") == sha("docs/assets/media-manifest.json")
+             and "media" not in str(r.get("reviewer", "")).lower())
+    if valid and "review PASS" not in c32:
+        problems.append("render review record is valid and current: C-32 must say 'review PASS'")
+    if not valid and "review pending" not in c32:
+        problems.append("render review record is stale, failed or self-written: C-32 must say 'review pending'")
+elif "review pending" not in c32:
+    problems.append("no render review record: C-32 must say 'review pending'")
 for p in sorted(paths):
-    if "<" in p or p.startswith("artifacts/runs/"):
-        continue
-    if p in EXPECTED_ABSENT:
-        if (ROOT / p).exists():
-            problems.append(f"{p} now exists: update C-32 (F6-A3 review)")
+    if "<" in p or p.startswith("artifacts/runs/") or p == REVIEW:
         continue
     if not (ROOT / p.rstrip("/")).exists():
         problems.append(f"path {p} does not exist")

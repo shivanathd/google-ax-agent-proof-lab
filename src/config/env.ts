@@ -2,7 +2,7 @@
 // pass through, cloud metadata lookup is disabled and fake AWS credentials are injected. HOME is not
 // passed through either: config dirs there (gcloud, kube, provider CLIs) must not be discoverable.
 import { mkdirSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PASS_THROUGH = ["PATH", "TMPDIR", "LANG", "LC_ALL", "TZ", "TERM", "USER", "SHELL"];
@@ -31,8 +31,13 @@ export function childEnv(ambient: NodeJS.ProcessEnv, inject: Record<string, stri
     if (PASS_THROUGH.includes(k) || (opts.docker && (DOCKER_KEYS.test(k) || k === "HOME"))) env[k] = v;
   }
   if (!opts.docker && !inject.HOME) env.HOME = emptyHome();
+  env.PLAYWRIGHT_BROWSERS_PATH = browsersPath(ambient);
   return { ...env, ...FAKE_AWS, ...inject };
 }
+// Playwright locates Chromium under HOME; with HOME scoped, point it at the real browser cache (a path, not a config).
+const browsersPath = (ambient: NodeJS.ProcessEnv) =>
+  ambient.PLAYWRIGHT_BROWSERS_PATH ??
+  join(homedir(), process.platform === "darwin" ? "Library/Caches/ms-playwright" : process.platform === "win32" ? "AppData/Local/ms-playwright" : ".cache/ms-playwright");
 const emptyHome = () => {
   const dir = join(tmpdir(), "apl-empty-home");
   mkdirSync(dir, { recursive: true });
