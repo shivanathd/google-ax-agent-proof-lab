@@ -1,0 +1,36 @@
+{
+  "note": "Fictional workspaces, people and app for local emulation only. Token values and signing secrets are generated per run.",
+  "app": { "app_id": "A_LABBOT", "name": "LabBot", "bot_id": "B_LABBOT", "bot_user_id": "U_LABBOT", "bot_name": "labbot", "client_id": "labbot-local-client" },
+  "workspaces": [
+    {
+      "tenant_id": "T_LAB_A",
+      "installation_id": "A",
+      "team": { "name": "Lab Alpha", "domain": "lab-alpha" },
+      "channel": "lab-ops",
+      "setup_user": "lab-admin",
+      "reader_user": "lab-observer",
+      "users": [
+        { "name": "lab-admin", "real_name": "Lab Setup Account", "email": "lab-admin@lab-alpha.example" },
+        { "name": "lab-observer", "real_name": "Lab Read-Only Observer", "email": "lab-observer@lab-alpha.example" },
+        { "name": "dana", "real_name": "Dana Requester", "email": "dana@lab-alpha.example" },
+        { "name": "eli", "real_name": "Eli Approver", "email": "eli@lab-alpha.example" },
+        { "name": "fran", "real_name": "Fran Coordinator", "email": "fran@lab-alpha.example" },
+        { "name": "gus", "real_name": "Gus Visitor", "email": "gus@lab-alpha.example" }
+      ]
+    },
+    {
+      "tenant_id": "T_LAB_B",
+      "installation_id": "B",
+      "team": { "name": "Lab Beta", "domain": "lab-beta" },
+      "channel": "lab-ops",
+      "setup_user": "lab-admin",
+      "reader_user": "lab-observer",
+      "users": [
+        { "name": "lab-admin", "real_name": "Lab Setup Account", "email": "lab-admin@lab-beta.example" },
+        { "name": "lab-observer", "real_name": "Lab Read-Only Observer", "email": "lab-observer@lab-beta.example" },
+        { "name": "hana", "real_name": "Hana Approver", "email": "hana@lab-beta.example" },
+        { "name": "ivan", "real_name": "Ivan Requester", "email": "ivan@lab-beta.example" }
+      ]
+    }
+  ]
+}

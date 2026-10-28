@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-proof-lab.invalid/schemas/workflow-event.json",
+  "title": "C2 WorkflowEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id", "tenant_id", "installation_id", "team_id", "event_id", "actor_id", "channel_id", "message_ts", "event_type",
+    "received_at", "raw_body_sha256", "verified_signature", "text"
+  ],
+  "properties": {
+    "run_id": { "type": "string", "pattern": "^[0-9a-f-]{36}$" },
+    "tenant_id": { "type": "string", "pattern": "^T_[A-Z0-9_]+$" },
+    "installation_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "team_id": { "type": "string", "pattern": "^T[A-Z0-9]+$" },
+    "event_id": { "type": "string", "pattern": "^Ev[A-Za-z0-9]+$", "maxLength": 64 },
+    "actor_id": { "type": "string", "pattern": "^[UW][A-Z0-9_]+$" },
+    "channel_id": { "type": "string", "pattern": "^[CGD][A-Z0-9]+$" },
+    "message_ts": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "thread_ts": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "event_type": { "enum": ["app_mention"] },
+    "received_at": { "type": "string", "minLength": 20 },
+    "raw_body_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "verified_signature": { "const": true },
+    "text": { "type": "string", "maxLength": 4000 },
+    "retry_num": { "type": "integer", "minimum": 0 }
+  }
+}
