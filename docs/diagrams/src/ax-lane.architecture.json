@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Optional AX lane: DESIGNED, not executed (architecture, not execution evidence)",
+    "output": "docs/diagrams/ax-lane.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    { "id": "operator", "type": "external", "label": "Operator laptop", "sublabel": "doctor gates, ax apply", "pos": [40, 40], "size": [190, 64], "tag": "APL_AX_AUTHORIZED=1" },
+    { "id": "axcp", "type": "backend", "label": "AX control plane", "sublabel": "ax-system; Task + Workspace", "pos": [300, 40], "size": [190, 64] },
+    { "id": "substrate", "type": "cloud", "label": "Agent Substrate", "sublabel": "ate-system; actor lifecycle", "pos": [560, 40], "size": [190, 64], "tag": "image by digest" },
+    { "id": "router", "type": "security", "label": "atenet-router", "sublabel": "ingress, SPIFFE allowlist", "pos": [300, 220], "size": [190, 64] },
+    { "id": "task", "type": "backend", "label": "Task sandbox", "sublabel": "custom runner PID 1, gVisor", "pos": [560, 220], "size": [190, 64], "tag": "writes .apl/result.json" },
+    { "id": "egress", "type": "security", "label": "atenet-egress", "sublabel": "default deny; policy TBD", "pos": [820, 220], "size": [190, 64] },
+    { "id": "collector", "type": "security", "label": "Collector Job", "sublabel": "own identity and creds", "pos": [300, 400], "size": [190, 64] },
+    { "id": "emulators", "type": "database", "label": "Emulate + Floci", "sublabel": "Deployments in apl-<run>", "pos": [820, 400], "size": [190, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "cluster context $APL_AX_CONTEXT (owner-approved)", "wraps": ["axcp", "substrate", "router", "task", "egress", "collector", "emulators"] },
+    { "kind": "security-group", "label": "atespace apl-<run>", "wraps": ["task"] },
+    { "kind": "security-group", "label": "namespace apl-<run>", "wraps": ["collector", "emulators"] }
+  ],
+  "connections": [
+    { "id": "apply", "from": "operator", "to": "axcp", "label": "ax apply (gRPC)", "variant": "dashed" },
+    { "id": "provision", "from": "axcp", "to": "substrate", "label": "ActorTemplate", "variant": "dashed" },
+    { "id": "run", "from": "substrate", "to": "task", "label": "start sandbox", "variant": "dashed" },
+    { "id": "out", "from": "task", "to": "egress", "label": "outbound", "variant": "dashed" },
+    { "id": "allow", "from": "egress", "to": "emulators", "label": "two services only", "variant": "security" },
+    { "id": "result", "from": "router", "to": "task", "label": "GET /apl/result", "variant": "dashed" },
+    { "id": "via-router", "from": "collector", "to": "router", "label": "reads result", "variant": "security" },
+    { "id": "state", "from": "collector", "to": "emulators", "label": "reads state", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Status: DESIGNED", "items": ["Nothing here has run on a cluster.", "EXECUTED locally only: doctor/run gates and the runner image under runc (profiles/ax/README.md).", "gVisor behaviour, egress policy and resume stay UNKNOWN (L-012)."] },
+    { "dot": "rose", "title": "Why the collector decides", "items": ["AX does not read the command's exit status back (L-006).", "Task phase Running or Succeeded is never an observation of success.", "Same assertions as the local lane; cases.ax.json is planned, not written."] },
+    { "dot": "cyan", "title": "Pinned upstream", "items": ["google/ax 4b7bf6f, agent-substrate/substrate 6d7b3f4", "Images by digest (L-009); egress default-deny (L-010)", "GKE 1.37+, or 1.36 with beta APIs (L-011)"] }
+  ]
+}

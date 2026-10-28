@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Evidence flow: stimulus to published claim (architecture, not execution evidence)",
+    "output": "docs/diagrams/evidence-flow.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "stages": [
+    { "label": "Stimulus" },
+    { "label": "Execute" },
+    { "label": "Effects" },
+    { "label": "Observe" },
+    { "label": "Judge, publish" }
+  ],
+  "nodes": [
+    { "id": "stim", "type": "external", "label": "Coordinator", "sublabel": "user post or click", "stage": 0, "row": 1, "tag": "drive.ts" },
+    { "id": "worker", "type": "backend", "label": "Worker", "sublabel": "verify, policy, act", "stage": 1, "row": 1, "tag": "worker.ts" },
+    { "id": "ledger", "type": "database", "label": "SQLite ledger", "sublabel": "tickets, approvals", "stage": 2, "row": 0 },
+    { "id": "s3", "type": "cloud", "label": "Floci S3", "sublabel": "receipt objects", "stage": 2, "row": 1 },
+    { "id": "thread", "type": "external", "label": "Slack thread", "sublabel": "bot replies", "stage": 2, "row": 2 },
+    { "id": "collector", "type": "security", "label": "Collector", "sublabel": "own credentials", "stage": 3, "row": 0, "tag": "probe.ts" },
+    { "id": "bundle", "type": "database", "label": "C4 bundle", "sublabel": "facts + sha256", "stage": 3, "row": 2, "tag": "observations.json" },
+    { "id": "evaluator", "type": "backend", "label": "Evaluator", "sublabel": "vs cases.json", "stage": 4, "row": 0, "tag": "report.ts" },
+    { "id": "report", "type": "database", "label": "C5 report", "sublabel": "assertions, checksums", "stage": 4, "row": 1 },
+    { "id": "console", "type": "frontend", "label": "Console, README", "sublabel": "claim ledger", "stage": 4, "row": 2 }
+  ],
+  "flows": [
+    { "id": "signed", "from": "stim", "to": "worker", "label": "signed event", "variant": "emphasis" },
+    { "id": "commit", "from": "worker", "to": "ledger", "label": "transaction" },
+    { "id": "put", "from": "worker", "to": "s3", "label": "receipt PUT" },
+    { "id": "reply", "from": "worker", "to": "thread", "label": "reply via proxy" },
+    { "id": "q-ledger", "from": "ledger", "to": "collector", "label": "readonly query", "variant": "security" },
+    { "id": "q-s3", "from": "s3", "to": "collector", "label": "GetObject", "variant": "security" },
+    { "id": "q-thread", "from": "thread", "to": "collector", "label": "replies", "variant": "security" },
+    { "id": "facts", "from": "collector", "to": "bundle", "label": "typed facts", "variant": "emphasis" },
+    { "id": "c4", "from": "bundle", "to": "evaluator", "label": "C4" },
+    { "id": "c5", "from": "evaluator", "to": "report", "label": "C5" },
+    { "id": "render", "from": "report", "to": "console", "label": "sanitized" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "What makes it evidence", "items": ["Facts come from three stores read with the collector's own clients.", "A fact whose capture failed is absent with a reason, never 0 (G-UNKNOWN).", "Expectations come only from the spec's cases.json."] },
+    { "dot": "rose", "title": "What it cannot prove", "items": ["Hashes bind files to a tree SHA; they do not make a dishonest collector honest.", "`lab report` refuses to regenerate when captured files fail their checksums.", "Export quarantines a run on any secret-shaped match."] },
+    { "dot": "cyan", "title": "Sources", "items": ["src/evaluator/collect-case.ts, src/collector/main.ts", "src/collector/probe.ts, src/reports/artifacts.ts", "src/reports/report.ts, src/reports/export.ts"] }
+  ]
+}

@@ -8,23 +8,26 @@ An agent can run successfully and still do the wrong thing. This lab separates t
 What business outcome do we want?
   |
   +-- Where does the work run?
-  |     Local process now; optional AX execution later
+  |     Local worker process (built); AX on Agent Substrate (DESIGNED, BLOCKED)
   |
   +-- What systems does it interact with?
-  |     Emulate Slack; Floci S3/SQS; narrow local CRM double
-  |     Optional actual Salesforce scratch org
+  |     Emulate Slack x2, Floci S3/SQS, SQLite ledger with a narrow CRM double (built)
+  |     Salesforce scratch org (DESIGNED, BLOCKED)
   |
   +-- Is the action allowed?
-  |     Trusted identity + deterministic policy + current approval
+  |     Signed callback + per-installation binding + deterministic policy
+  |     + approval bound to a request digest, re-checked at job time (built)
   |
   +-- Did the code and behavior meet the requirement?
-  |     Code review + independent state assertions + challenge cases
+  |     Separate collector process with its own credentials + fixed cases.json
+  |     + public challenges S1-S4 + mutation probes (built); code review lane BLOCKED
   |
   +-- What can we honestly claim?
-        Run-bound evidence + limitations + reproducible instructions
+        Claims bound to a run ID and git tree SHA, with limitations
+        (docs/CLAIM_LEDGER.md)
 ```
 
-This map describes the proposed lab, not a deployed system. The interactive architecture view is a second way to explore the same responsibilities.
+This map is architecture, not execution evidence. The local lane exists in `src/`; what it has shown is in [`CLAIM_LEDGER.md`](CLAIM_LEDGER.md). The diagrams in [`diagrams/`](diagrams/README.md) draw the same responsibilities against the code: a system map, trust boundaries and credential custody, the evidence flow, and the designed AX lane. `mental-model.architecture.json` is the Archify source for this layer view.
 
 ## Execution is one layer
 
@@ -47,6 +50,8 @@ Use the same business assertion in both lanes, but disclose what differs. “The
 ## Review and runtime evidence are complementary
 
 CodeRabbit reviews code changes and can support a review lane; that does not make it the business-outcome oracle ([CodeRabbit](https://docs.coderabbit.ai/guides/code-review-overview)). The lab's evaluator separately asks whether the ticket exists, whether the receipt matches, whether the right thread received the reply and whether a forbidden action left state unchanged.
+
+Those questions are answered by a collector that runs as its own process. It reads Slack with a token that can only call `conversations.*`, reads S3 with its own key, and opens the ledger read-only. It never talks to the worker. A worker's message that says "done" is one more observation for it, not the verdict (F4-A1).
 
 Keep both kinds of evidence. A reviewer may identify a bug the current tests miss, while a test may expose behavior a reviewer did not predict.
 

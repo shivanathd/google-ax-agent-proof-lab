@@ -1,0 +1,285 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "Agent Proof Lab: system map (architecture, not execution evidence)",
+  "output": "docs/diagrams/system-map.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "components": [
+  {
+   "id": "coord",
+   "type": "backend",
+   "label": "Test coordinator",
+   "sublabel": "collect-case: stack, stimulus",
+   "pos": [
+    40,
+    200
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "slack",
+   "type": "external",
+   "label": "Emulate Slack x2",
+   "sublabel": "T_LAB_A, T_LAB_B; strict scopes",
+   "pos": [
+    300,
+    200
+   ],
+   "size": [
+    190,
+    64
+   ],
+   "tag": "emulate 0.12.3"
+  },
+  {
+   "id": "proxy",
+   "type": "security",
+   "label": "Worker Slack proxy",
+   "sublabel": "only POST chat.postMessage",
+   "pos": [
+    560,
+    40
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "worker",
+   "type": "backend",
+   "label": "Worker process",
+   "sublabel": "signed ingress, policy, W01-W03",
+   "pos": [
+    560,
+    200
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "floci",
+   "type": "cloud",
+   "label": "Floci container",
+   "sublabel": "S3 receipts, SQS jobs",
+   "pos": [
+    840,
+    200
+   ],
+   "size": [
+    190,
+    64
+   ],
+   "tag": "floci 2.3.0 by digest"
+  },
+  {
+   "id": "ledger",
+   "type": "database",
+   "label": "SQLite ledger",
+   "sublabel": "inbox, outbox, tickets, CRM double",
+   "pos": [
+    560,
+    360
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "collector",
+   "type": "security",
+   "label": "Independent collector",
+   "sublabel": "separate process, own credentials",
+   "pos": [
+    560,
+    520
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "evaluator",
+   "type": "backend",
+   "label": "Evaluator",
+   "sublabel": "report.ts + supplied evaluate.py",
+   "pos": [
+    560,
+    680
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "reports",
+   "type": "database",
+   "label": "Run artifacts + export",
+   "sublabel": "C5 report, checksums, quarantine",
+   "pos": [
+    840,
+    680
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "console",
+   "type": "frontend",
+   "label": "Console + README media",
+   "sublabel": "reads reports only (Task 6.1)",
+   "pos": [
+    840,
+    840
+   ],
+   "size": [
+    190,
+    64
+   ]
+  },
+  {
+   "id": "lanes",
+   "type": "cloud",
+   "label": "Optional lanes",
+   "sublabel": "AX, Salesforce, CodeRabbit, live",
+   "pos": [
+    40,
+    360
+   ],
+   "size": [
+    190,
+    64
+   ],
+   "tag": "all BLOCKED"
+  }
+ ],
+ "connections": [
+  {
+   "id": "stimulus",
+   "from": "coord",
+   "to": "slack",
+   "label": "user posts",
+   "variant": "emphasis"
+  },
+  {
+   "id": "callback",
+   "from": "slack",
+   "to": "worker",
+   "label": "signed callback",
+   "variant": "emphasis"
+  },
+  {
+   "id": "reply",
+   "from": "worker",
+   "to": "proxy",
+   "label": "reply"
+  },
+  {
+   "id": "forward",
+   "from": "proxy",
+   "to": "slack",
+   "label": "forward"
+  },
+  {
+   "id": "effects",
+   "from": "worker",
+   "to": "floci",
+   "label": "S3 put, SQS"
+  },
+  {
+   "id": "commit",
+   "from": "worker",
+   "to": "ledger",
+   "label": "transactions"
+  },
+  {
+   "id": "read-db",
+   "from": "ledger",
+   "to": "collector",
+   "label": "read-only",
+   "variant": "security"
+  },
+  {
+   "id": "read-slack",
+   "from": "slack",
+   "to": "collector",
+   "label": "reader token",
+   "variant": "security"
+  },
+  {
+   "id": "read-floci",
+   "from": "floci",
+   "to": "collector",
+   "label": "own S3/SQS client",
+   "variant": "security"
+  },
+  {
+   "id": "bundle",
+   "from": "collector",
+   "to": "evaluator",
+   "label": "C4 bundle",
+   "variant": "emphasis"
+  },
+  {
+   "id": "report",
+   "from": "evaluator",
+   "to": "reports",
+   "label": "C5 report"
+  },
+  {
+   "id": "render",
+   "from": "reports",
+   "to": "console",
+   "label": "sanitized view"
+  },
+  {
+   "id": "doctor",
+   "from": "coord",
+   "to": "lanes",
+   "label": "doctor, 0 calls",
+   "variant": "dashed"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "Read this as",
+   "items": [
+    "Architecture, not execution evidence.",
+    "Each box cites the file that implements it.",
+    "Run IDs live in docs/CLAIM_LEDGER.md."
+   ]
+  },
+  {
+   "dot": "emerald",
+   "title": "Separation of duties",
+   "items": [
+    "The worker never talks to the collector.",
+    "The collector never writes business state.",
+    "Expectations live only in the spec's cases.json."
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "Not shown",
+   "items": [
+    "Fault proxy used by W01-S/W01-T cases.",
+    "Console is built in a parallel task.",
+    "Optional lanes are designed, not executed."
+   ]
+  }
+ ]
+}
