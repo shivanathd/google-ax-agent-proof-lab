@@ -13,8 +13,8 @@ const ff = (...args: string[]) => execFileSync("ffmpeg", ["-v", "error", "-y", .
 
 describe("application tree scope (ADR-9)", () => {
   it("counts code that decides a captured run, not docs, media or the media tooling", () => {
-    for (const p of ["src/workflows/w01.ts", "web/src/main.ts", "fixtures/cases/cases.json", "package-lock.json", "src/collector/cases/f3.ts", "src/console/server.ts"]) expect(isAppPath(p), p).toBe(true);
-    for (const p of ["README.md", "docs/assets/media-manifest.json", "docs/evidence/x/report.json", "src/media/verify.ts", "src/cli/commands/media.ts", "src/collector/cases/f6-media.ts", "src/collector/cases/s4.ts", "tests/unit/media.test.ts"]) expect(isAppPath(p), p).toBe(false);
+    for (const p of ["src/workflows/w01.ts", "web/src/main.ts", "fixtures/cases/cases.json", "package-lock.json", "src/collector/cases/f3.ts", "src/console/server.ts", "profiles/ax/index.ts"]) expect(isAppPath(p), p).toBe(true);
+    for (const p of ["README.md", "docs/assets/media-manifest.json", "docs/evidence/x/report.json", "src/media/verify.ts", "src/cli/commands/media.ts", "src/collector/cases/f6-media.ts", "src/collector/cases/s4.ts", "tests/unit/media.test.ts", "profiles/ax/RESULTS.md", "profiles/ax/README.md"]) expect(isAppPath(p), p).toBe(false);
   });
 });
 
@@ -73,3 +73,4 @@ describe("readme build owns only its bounded slots", () => {
     expect(() => buildReadme(root)).toThrow(/bounded slot/);
   });
 });
+

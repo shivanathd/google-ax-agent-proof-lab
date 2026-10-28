@@ -36,7 +36,7 @@ export const EVIDENCE_DIR = "docs/evidence";
 // handlers, so a docs- or media-only commit never forces a recapture. Any change to an included file
 // (workflows, worker, console, adapters, fixtures, dependency locks) makes existing captures stale.
 export const APP_INCLUDE = ["src/", "web/", "fixtures/", "profiles/", "compose.yaml", "package.json", "package-lock.json", "DEPENDENCIES.lock.json", "tsconfig.json", "scripts/patch-emulate.mjs"];
-export const APP_EXCLUDE = [/^src\/media\//, /^src\/cli\/commands\/(media|readme|record)\.ts$/, /^src\/collector\/cases\/(f6-[a-z0-9-]+|s4)\.ts$/];
+export const APP_EXCLUDE = [/\.md$/, /^src\/media\//, /^src\/cli\/commands\/(media|readme|record)\.ts$/, /^src\/collector\/cases\/(f6-[a-z0-9-]+|s4)\.ts$/];
 export const isAppPath = (p: string) => APP_INCLUDE.some((i) => (i.endsWith("/") ? p.startsWith(i) : p === i)) && !APP_EXCLUDE.some((r) => r.test(p));
 
 export function appFiles(repo = ROOT): string[] {

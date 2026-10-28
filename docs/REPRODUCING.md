@@ -42,7 +42,7 @@ GIFs and clips are encoded from Chromium's lossless screencast frames (a PNG whe
 The manifest records `application_revision` (the commit captured) and `application_tree_sha256`: a SHA-256 over `path\0sha256(content)\n` for every tracked file that decides what a captured run does. Application code is defined in `src/media/spec.ts`:
 
 - included: `src/`, `web/`, `fixtures/`, `profiles/`, `compose.yaml`, `package.json`, `package-lock.json`, `DEPENDENCIES.lock.json`, `tsconfig.json`, `scripts/patch-emulate.mjs`;
-- excluded: `src/media/` (this pipeline), `src/cli/commands/media.ts`, `readme.ts`, `record.ts`, and the F6/S4 verification handlers `src/collector/cases/f6-*.ts` and `s4.ts`.
+- excluded: every `*.md` file (write-ups beside code, such as `profiles/ax/RESULTS.md`), `src/media/` (this pipeline), `src/cli/commands/media.ts`, `readme.ts`, `record.ts`, and the F6/S4 verification handlers `src/collector/cases/f6-*.ts` and `s4.ts`.
 
 Documentation, the README, generated media, `docs/evidence/` and tests are outside the digest, so a docs- or media-only commit does not force a recapture. Any change to an included file (a workflow, the worker, the console, an adapter, a fixture or a dependency lock) makes `media verify` report `stale_capture` until the media are recaptured. Fixtures are also bound separately through `fixture_sha256`.
 
