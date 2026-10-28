@@ -29,10 +29,10 @@ export function privateTermsPath(cwd = ROOT) {
 }
 
 const REPORT_FIELDS = ["schema_version", "case_id", "run_id", "profile", "mode", "candidate_revision", "tree_sha", "dirty", "patch_sha256", "fixture_sha256",
-  "collector", "observed_at", "execution", "reason", "mutation", "simulated_faults", "status", "lanes", "all_lanes_status", "banner", "assertions", "counts",
+  "dependencies_sha256", "seed", "floci_image", "collector", "observed_at", "execution", "reason", "mutation", "simulated_faults", "status", "lanes", "all_lanes_status", "banner", "assertions", "counts",
   "limitations", "cleanup_status", "started_at", "ended_at", "durations"] as const;
 const BUNDLE_FIELDS = ["schema_version", "case_id", "run_id", "profile", "mode", "execution", "reason", "candidate_revision", "tree_sha", "dirty", "patch_sha256",
-  "fixture_sha256", "dependencies_sha256", "mutation", "collector_methods", "observed_at", "simulated_faults", "observations", "unobserved"] as const;
+  "fixture_sha256", "dependencies_sha256", "seed", "floci_image", "mutation", "collector_methods", "observed_at", "simulated_faults", "observations", "unobserved"] as const;
 const pick = (o: Record<string, unknown>, keys: readonly string[]) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 
 export interface ExportResult { status: "EXPORTED" | "QUARANTINED" | "REJECTED"; run_id: string; findings: { file: string; rule: string }[]; output: string | null }

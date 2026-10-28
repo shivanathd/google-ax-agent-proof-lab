@@ -150,6 +150,35 @@ describe("C4 symlink escape (no Docker)", () => {
   });
 });
 
+describe("F4-R2 run identity (no Docker)", () => {
+  const FLOCI = "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9";
+  it("seed, dependency hash and Floci image digest reach report.json, report.md and the sanitized export", () => {
+    const b = bundle({ case_id: "F4-A1", seed: 7, dependencies_sha256: "2".repeat(64), floci_image: FLOCI } as Partial<Bundle>);
+    expect(() => assertContract("observation-bundle", b)).not.toThrow();
+    const report = buildReport({ bundle: b, expected: { ticket_count: 1 } });
+    expect(() => assertContract("run-report", report)).not.toThrow();
+    expect(report).toMatchObject({ seed: 7, dependencies_sha256: "2".repeat(64), floci_image: FLOCI });
+    expect(reportMarkdown(report)).toContain(FLOCI);
+
+    const root = mkdtempSync(join(tmpdir(), "apl-identity-"));
+    const dir = join(root, "runs", b.run_id);
+    mkdirSync(join(dir, "evidence"), { recursive: true });
+    writeFileSync(join(dir, "observations.json"), JSON.stringify(b));
+    writeFileSync(join(dir, "report.json"), JSON.stringify(report));
+    writeFileSync(join(dir, "evidence", "ledger.json"), "[]");
+    writeChecksums(dir);
+    writeFileSync(join(root, "terms.txt"), "fictional-private-term-zz\n");
+    process.env.APL_ARTIFACTS_DIR = join(root, "runs");
+    try {
+      expect(exportRun(b.run_id, { termsPath: join(root, "terms.txt"), outRoot: join(root, "exports") })).toMatchObject({ status: "EXPORTED" });
+    } finally {
+      delete process.env.APL_ARTIFACTS_DIR;
+    }
+    expect(read(join(root, "exports", b.run_id, "observations.json"))).toMatchObject({ seed: 7, floci_image: FLOCI });
+    expect(read(join(root, "exports", b.run_id, "report.json"))).toMatchObject({ seed: 7, dependencies_sha256: "2".repeat(64), floci_image: FLOCI });
+  });
+});
+
 describe("collector independence (BUILD_PLAN §8.5)", () => {
   const ws = (id: string): Workspace => ({
     tenant_id: `T_LAB_${id}`, installation_id: id, url: `http://127.0.0.1:1${id === "A" ? 1 : 2}`, team_id: "T000000001", channel_id: "C1",

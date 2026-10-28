@@ -13,7 +13,7 @@ export interface Evidence { path: string; sha256: string; source: string; observ
 export interface Bundle {
   schema_version: 1; case_id: string; run_id: string; profile: string; mode: string; execution: "EXECUTED" | "BLOCKED" | "NOT_RUN";
   reason?: string; candidate_revision: string; tree_sha?: string; dirty?: boolean; patch_sha256?: string; fixture_sha256: string;
-  dependencies_sha256?: string; seed?: number; mutation?: string; collector: string; collector_methods?: string[]; observed_at: string;
+  dependencies_sha256?: string; seed?: number; floci_image?: string; mutation?: string; collector: string; collector_methods?: string[]; observed_at: string;
   selected_profiles?: string[]; simulated_faults?: string[]; observations: Record<string, Fact>; unobserved?: Record<string, string>;
   evidence?: Evidence[];
 }
@@ -99,7 +99,9 @@ export function buildReport(o: {
   const report = {
     schema_version: 1 as const, case_id: b.case_id, run_id: b.run_id, profile: b.profile, mode: b.mode,
     candidate_revision: b.candidate_revision, tree_sha: b.tree_sha ?? "UNKNOWN", dirty: b.dirty ?? true, ...(b.patch_sha256 ? { patch_sha256: b.patch_sha256 } : {}),
-    fixture_sha256: b.fixture_sha256, collector: b.collector, observed_at: b.observed_at, execution: b.execution, ...(b.reason ? { reason: b.reason } : {}),
+    fixture_sha256: b.fixture_sha256, // F4-R2 identity: copied only when the bundle carries it (absent stays absent, never a default).
+    ...(b.dependencies_sha256 ? { dependencies_sha256: b.dependencies_sha256 } : {}), ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.floci_image ? { floci_image: b.floci_image } : {}),
+    collector: b.collector, observed_at: b.observed_at, execution: b.execution, ...(b.reason ? { reason: b.reason } : {}),
     mutation: b.mutation ?? "none", simulated_faults: b.simulated_faults ?? [],
     status, lanes, all_lanes_status, banner: { green, text }, assertions, counts: counts(assertions), limitations,
     artifacts: o.artifacts ?? [], cleanup_status: o.cleanup_status ?? "NOT_RUN", cleanup_remaining: o.cleanup_remaining ?? [],
@@ -124,6 +126,7 @@ export function reportMarkdown(r: ReturnType<typeof buildReport>) {
     `> ${r.banner.green ? "✅" : "⚠️"} ${r.banner.text}`, "",
     `- Run: \`${r.run_id}\` · profile \`${r.profile}\` · mode \`${r.mode}\` · execution ${r.execution}`,
     `- Tree \`${r.tree_sha}\` · commit \`${r.candidate_revision}\` · dirty ${r.dirty}${r.patch_sha256 ? ` · patch \`${r.patch_sha256}\`` : ""} · mutation \`${r.mutation}\``,
+    ...("floci_image" in r || "seed" in r ? [`- Seed \`${r.seed ?? "—"}\` · Floci image \`${r.floci_image ?? "not used"}\``] : []),
     `- Local core: **${r.status}** · all selected lanes: **${r.all_lanes_status}** · cleanup ${r.cleanup_status}`,
     `- Counts: required ${c.required}, passed ${c.passed}, failed ${c.failed}, blocked ${c.blocked}, skipped ${c.skipped}, not run ${c.not_run}, unknown ${c.unknown}`, "",
     "| Assertion | Required | Expected | Observed | Status | Evidence | Reason |", "|---|---|---|---|---|---|---|", ...rows, "",

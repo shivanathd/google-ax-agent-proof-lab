@@ -55,6 +55,12 @@ if (cfg.needs?.shims) {
 
 send({ ready: true, sinkhole_port: p.sinkhole?.port, shim_dir: p.shims?.dir });
 
+// The pinned Floci image (ref@digest) this run's compose project starts; compose.yaml carries the same pin.
+const flociImage = () => {
+  const i = JSON.parse(readFileSync(join(ROOT, "DEPENDENCIES.lock.json"), "utf8")).images.floci;
+  return `${i.ref}@${i.digest}`;
+};
+
 function writeBundle() {
   const m = JSON.parse(readFileSync(cfg!.manifest_path, "utf8"));
   const c = m.config;
@@ -62,6 +68,7 @@ function writeBundle() {
     schema_version: 1, case_id: cfg!.case_id, run_id: c.run_id, profile: c.profile, mode: c.mode, execution: "EXECUTED",
     candidate_revision: c.candidate_revision, tree_sha: m.tree_sha, dirty: c.dirty, ...(c.patch_sha256 ? { patch_sha256: c.patch_sha256 } : {}),
     fixture_sha256: c.fixture_sha256, dependencies_sha256: sha256(readFileSync(join(ROOT, "package-lock.json"), "utf8")), seed: c.seed,
+    ...(cfg!.floci ? { floci_image: flociImage() } : {}),
     mutation: cfg!.mutation, collector: `apl-collector pid=${process.pid} (separate process; reader token, own S3/SQS client, read-only SQLite)`,
     collector_methods: [...p.methods].sort(), observed_at: new Date().toISOString(),
     ...(cfg!.selected_profiles ? { selected_profiles: cfg!.selected_profiles } : {}),
