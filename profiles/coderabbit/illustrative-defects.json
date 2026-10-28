@@ -1,0 +1,31 @@
+{
+  "label": "ILLUSTRATIVE FIXTURE",
+  "notice": "Hand-written seeded defects for teaching. These are NOT CodeRabbit output, NOT a review result and carry no score. A live review requires a hosted repo, an approved app and a review artifact bound to a commit.",
+  "is_review_result": false,
+  "examples": [
+    {
+      "id": "seed-approval-bypass",
+      "label": "ILLUSTRATIVE FIXTURE",
+      "file": "src/workflows/approval.ts",
+      "diff": "-  if (approval.status !== \"approved\" || approval.expiresAt <= now) return reject(\"approval required\");\n+  if (approval.status === \"rejected\") return reject(\"approval rejected\");",
+      "seeded_defect": "Pending or expired approvals now pass the gate; only an explicit rejection blocks the purchase transition.",
+      "expected_catch": "W02-X (expired approval) and the approval-bypass mutation probe should fail."
+    },
+    {
+      "id": "seed-missing-evidence-as-zero",
+      "label": "ILLUSTRATIVE FIXTURE",
+      "file": "src/evidence/collect.ts",
+      "diff": "-  if (receipt === undefined) return { status: \"UNKNOWN\", reason: \"receipt not readable\" };\n+  const receiptCount = receipt?.count ?? 0;",
+      "seeded_defect": "An unreadable receipt becomes a numeric zero, which a downstream check can treat as a clean observation.",
+      "expected_catch": "G-UNKNOWN and G-EVIDENCE should fail: missing evidence must stay UNKNOWN with a reason."
+    },
+    {
+      "id": "seed-unguarded-crm-write",
+      "label": "ILLUSTRATIVE FIXTURE",
+      "file": "src/adapters/crm.ts",
+      "diff": "-  const updated = await db.run(\"UPDATE accounts SET description = ?, version = version + 1 WHERE id = ? AND version = ?\", [text, id, expected]);\n-  if (updated.changes !== 1) return conflict();\n+  await db.run(\"UPDATE accounts SET description = ?, version = version + 1 WHERE id = ?\", [text, id]);",
+      "seeded_defect": "The compare-and-write guard is gone, so a stale expected version silently overwrites newer data.",
+      "expected_catch": "W03-V (stale version) should fail: conflict expected, no overwrite."
+    }
+  ]
+}
