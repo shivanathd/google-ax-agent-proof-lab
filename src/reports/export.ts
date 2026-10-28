@@ -21,7 +21,9 @@ export const SECRET_RULES: [string, RegExp][] = [
 ];
 
 // The private-terms list lives only in the main checkout's gitignored private-runs/ (shared by worktrees).
+// APL_PRIVATE_TERMS points elsewhere (tests use it to simulate a missing list).
 export function privateTermsPath(cwd = ROOT) {
+  if (process.env.APL_PRIVATE_TERMS) return process.env.APL_PRIVATE_TERMS;
   const common = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, encoding: "utf8" }).trim();
   return join(dirname(common), "private-runs", "private-terms.txt");
 }

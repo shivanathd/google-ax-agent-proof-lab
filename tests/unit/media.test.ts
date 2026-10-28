@@ -3,11 +3,14 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { inspectMedia } from "../../src/media/inspect.ts";
 import { cuesFor, MIN_CUE_MS, parseVtt, vtt } from "../../src/media/captions.ts";
 import { buildReadme, SLOTS } from "../../src/media/readme.ts";
 import { isAppPath, MANIFEST } from "../../src/media/spec.ts";
+import { CASES } from "../../src/collector/cases/index.ts";
+import { collectCase } from "../../src/evaluator/collect-case.ts";
+import type { CaseDef } from "../../src/collector/types.ts";
 
 const ff = (...args: string[]) => execFileSync("ffmpeg", ["-v", "error", "-y", ...args]);
 
@@ -74,3 +77,17 @@ describe("readme build owns only its bounded slots", () => {
   });
 });
 
+describe("F6-A2 without the private-terms list", () => {
+  it("is NOT_RUN with a clear reason (exit 2, nothing started), never a thrown scan or a PASS", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "apl-terms-"));
+    vi.stubEnv("APL_PRIVATE_TERMS", join(dir, "absent-private-terms.txt"));
+    try {
+      expect((CASES["F6-A2"] as CaseDef).prerequisite?.()).toMatch(/private-terms list missing/);
+      const out = join(dir, "observations.json");
+      expect(await collectCase("F6-A2", out)).toBe(2);
+      expect(JSON.parse(readFileSync(out, "utf8"))).toMatchObject({ case_id: "F6-A2", execution: "NOT_RUN", reason: expect.stringMatching(/private-terms list missing/), observations: {} });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});

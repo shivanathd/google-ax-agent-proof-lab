@@ -62,8 +62,11 @@ export function appDirty(repo = ROOT): string[] {
 export const sha256File = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
 
 // The gitignored private-terms list (main checkout's private-runs/). Missing list = refuse, never "0 findings".
+export const privateTermsMissing = (path = privateTermsPath()) => existsSync(path) ? undefined
+  : "private-terms list missing (private-runs/private-terms.txt in the main checkout, one forbidden term per line; see docs/REPRODUCING.md): the identity scan cannot be shown clean, so this is not run";
 export function loadPrivateTerms(path = privateTermsPath()): string[] {
-  if (!existsSync(path)) throw new Error("private-terms list missing (private-runs/private-terms.txt in the main checkout); refusing to scan as clean");
+  const missing = privateTermsMissing(path);
+  if (missing) throw new Error(`${missing}; refusing to scan as clean`);
   return readFileSync(path, "utf8").split("\n").map((t) => t.trim().toLowerCase()).filter(Boolean);
 }
 

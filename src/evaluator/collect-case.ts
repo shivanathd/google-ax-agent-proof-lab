@@ -83,6 +83,11 @@ export async function collectCase(caseId: string, output: string, hooks: Collect
     writeUnexecuted(caseId, output, "NOT_RUN", entry.pending);
     return 2;
   }
+  const unmet = entry.prerequisite?.();
+  if (unmet) {
+    writeUnexecuted(caseId, output, "NOT_RUN", unmet);
+    return 2;
+  }
   if (!dockerAvailable()) {
     writeUnexecuted(caseId, output, "BLOCKED", "Docker daemon not reachable (local prerequisite)");
     return 2;
