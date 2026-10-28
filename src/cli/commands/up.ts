@@ -3,10 +3,9 @@
 import Fastify from "fastify";
 import type { Command } from "commander";
 import { emit } from "../registry.ts";
-import { processResourceId, startRun, stopRun } from "../../config/lifecycle.ts";
+import { processResourceId, startRun } from "../../config/lifecycle.ts";
 import { recordResource } from "../../config/manifest.ts";
 import { isOptionalProfile, profileDoctor } from "../../config/profiles.ts";
-import { ensureRunResources, flociClients } from "../../adapters/floci/clients.ts";
 
 export function register(program: Command) {
   program
@@ -19,18 +18,20 @@ export function register(program: Command) {
         const doctor = await profileDoctor(opts.profile, process.env);
         return emit({ ...doctor, reason: `optional profile not started by up: ${doctor.reason}` }, 2);
       }
-      const handle = await startRun({ extraPorts: ["console"] });
+      const handle = await startRun({ slack: true, extraPorts: ["console"] });
       const { manifest } = handle;
       recordResource(manifest, { kind: "process", id: processResourceId(process.pid), role: "coordinator" });
-      const floci = await flociClients(handle.flociEndpoint, manifest.config.endpoint_allowlist);
-      const resources = await ensureRunResources(floci, manifest.compose_project);
 
       const consoleUrl = `http://127.0.0.1:${manifest.ports.console}/`;
       const app = Fastify();
       const status = () => ({
         run_id: manifest.config.run_id, profile: "local", mode: manifest.config.mode, console: "placeholder",
         candidate_revision: manifest.config.candidate_revision, dirty: manifest.config.dirty,
-        services: { floci: { endpoint: handle.flociEndpoint, ...resources } },
+        services: {
+          floci: { endpoint: handle.flociEndpoint, ...handle.floci },
+          slack: handle.workspaces.map((w) => ({ tenant_id: w.tenant_id, emulator: w.url, channel_id: w.channel_id })),
+          worker: { endpoint: `http://127.0.0.1:${manifest.ports.worker}`, pid: handle.worker?.pid ?? null },
+        },
       });
       app.get("/", async () => status());
       app.get("/api/status", async () => status());
@@ -38,7 +39,7 @@ export function register(program: Command) {
 
       const shutdown = async () => {
         await app.close();
-        const m = await stopRun(manifest.config.run_id);
+        const m = await handle.stop();
         console.error(`lab: run ${m.config.run_id} cleanup ${m.cleanup_status}`);
         process.exit(m.cleanup_status === "CLEAN" ? 0 : 1);
       };

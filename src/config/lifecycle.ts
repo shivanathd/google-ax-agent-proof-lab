@@ -1,10 +1,14 @@
 // Run lifecycle owned by the coordinator: per-run Floci compose project, ports and DB file; scoped teardown.
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { createWriteStream } from "node:fs";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { childEnv } from "./env.ts";
 import { candidateIdentity, createRunConfig, ROOT, type Endpoint } from "./run-config.ts";
-import { createManifest, freePort, loadManifest, recordResource, saveManifest, type Manifest } from "./manifest.ts";
+import { createManifest, freePort, loadManifest, recordResource, runDir, saveManifest, type Manifest } from "./manifest.ts";
+import { ensureRunResources, flociClients } from "../adapters/floci/clients.ts";
+import { loadSlackFixture, startWorkspace, type Workspace } from "../adapters/slack/emulator.ts";
+import { workerConfig, workerEnv, type InstallationOverride, type WorkerConfig } from "../worker/config.ts";
 
 const run = promisify(execFile);
 export const RUN_LABEL = "dev.agent-proof-lab.run-id";
@@ -23,22 +27,106 @@ const composeEnv = (m: Manifest) =>
 const compose = (m: Manifest, args: string[]) =>
   run("docker", ["compose", "-f", join(ROOT, "compose.yaml"), "-p", m.compose_project, ...args], { env: composeEnv(m) });
 
-export const loopback = (port: number): Endpoint => ({ scheme: "http", host: "127.0.0.1", port });
+// Emulate reports its URL as localhost, so each owned port is allowlisted under both loopback names.
+export const loopback = (port: number): Endpoint[] => [
+  { scheme: "http", host: "127.0.0.1", port },
+  { scheme: "http", host: "localhost", port },
+];
 
-export interface RunHandle { manifest: Manifest; flociEndpoint: string }
+export interface WorkerOptions { overrides?: Record<string, InstallationOverride>; slack_timeout_ms?: number; approval_ttl_ms?: number; floci_endpoint?: string }
+export interface RunHandle {
+  manifest: Manifest;
+  flociEndpoint: string;
+  floci?: { queue: string; bucket: string; queueUrl: string };
+  workspaces: Workspace[];
+  worker?: ChildProcess;
+  workerConfig?: WorkerConfig;
+  startWorker: (w?: WorkerOptions) => Promise<void>;
+  stopWorker: () => Promise<void>;
+  stop: () => Promise<Manifest>;
+}
 
-// Allocates ports, writes the manifest, then starts Floci. Callers extend the handle with Slack/worker.
-export async function startRun(opts: { extraPorts?: string[] } = {}): Promise<RunHandle> {
-  const ports: Record<string, number> = { floci: await freePort() };
-  for (const name of opts.extraPorts ?? []) ports[name] = await freePort();
-  const config = createRunConfig({ endpoint_allowlist: Object.values(ports).map(loopback) });
+// Allocates every port up front (so the allowlist is fixed in C1), writes the manifest, then starts
+// Floci, one Emulate instance per fictional workspace and, optionally, the worker process.
+export async function startRun(opts: { floci?: boolean; slack?: boolean; worker?: WorkerOptions | false; extraPorts?: string[] } = {}): Promise<RunHandle> {
+  const withFloci = opts.floci ?? true;
+  const fx = loadSlackFixture();
+  const names = [...(withFloci ? ["floci"] : []), ...(opts.slack ? [...fx.workspaces.map((w) => `slack_${w.installation_id}`), "worker"] : []), ...(opts.extraPorts ?? [])];
+  const ports: Record<string, number> = {};
+  for (const name of names) ports[name] = await freePort();
+  const config = createRunConfig({ endpoint_allowlist: Object.values(ports).flatMap(loopback) });
   const manifest = createManifest(config, candidateIdentity().tree_sha);
   manifest.ports = ports;
-  recordResource(manifest, { kind: "compose-project", id: manifest.compose_project, role: "floci" });
-  await compose(manifest, ["up", "-d", "--wait"]);
-  const flociEndpoint = `http://127.0.0.1:${ports.floci}`;
-  await waitHttp(flociEndpoint, 30000);
-  return { manifest, flociEndpoint };
+  const allowlist = config.endpoint_allowlist;
+  const h: RunHandle = {
+    manifest, flociEndpoint: withFloci ? `http://127.0.0.1:${ports.floci}` : "", workspaces: [],
+    startWorker: (w = {}) => startWorker(h, w),
+    stopWorker: () => stopWorker(h),
+    stop: async () => {
+      await stopWorker(h);
+      for (const ws of h.workspaces) await ws.close().catch(() => undefined);
+      return stopRun(manifest.config.run_id);
+    },
+  };
+  try {
+    if (withFloci) {
+      recordResource(manifest, { kind: "compose-project", id: manifest.compose_project, role: "floci" });
+      await compose(manifest, ["up", "-d", "--wait"]);
+      await waitHttp(h.flociEndpoint, 30000);
+      h.floci = await ensureRunResources(await flociClients(h.flociEndpoint, allowlist), manifest.compose_project);
+    }
+    if (opts.slack) {
+      for (const ws of fx.workspaces) {
+        const base = `http://127.0.0.1:${ports.worker}/slack/${ws.installation_id}`;
+        recordResource(manifest, { kind: "emulator", id: `slack-${ws.installation_id}@${ports[`slack_${ws.installation_id}`]}`, role: ws.tenant_id });
+        h.workspaces.push(await startWorkspace(fx, ws, { port: ports[`slack_${ws.installation_id}`]!, eventsUrl: `${base}/events`, interactionsUrl: `${base}/interactions`, allowlist }));
+      }
+      if (opts.worker !== false) await h.startWorker(opts.worker || {});
+    }
+  } catch (e) {
+    await h.stop();
+    throw e;
+  }
+  return h;
+}
+
+async function startWorker(h: RunHandle, w: WorkerOptions) {
+  const m = h.manifest;
+  const cfg = workerConfig(
+    {
+      run_id: m.config.run_id, db_path: m.db_path, http_port: m.ports.worker!, allowlist: m.config.endpoint_allowlist,
+      max_retries: m.config.limits.max_retries, ...(w.slack_timeout_ms ? { slack_timeout_ms: w.slack_timeout_ms } : {}),
+      ...(w.approval_ttl_ms ? { approval_ttl_ms: w.approval_ttl_ms } : {}),
+      ...(h.floci ? { floci: { endpoint: w.floci_endpoint ?? h.flociEndpoint, queue_url: h.floci.queueUrl, bucket: h.floci.bucket } } : {}),
+    },
+    h.workspaces, w.overrides,
+  );
+  const child = spawn(process.execPath, ["--import", "tsx", "src/worker/main.ts", "--run-id", m.config.run_id], {
+    cwd: ROOT, env: workerEnv(cfg), stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stderr!.pipe(createWriteStream(join(runDir(m.config.run_id), "worker.log"), { flags: "a" }));
+  recordResource(m, { kind: "process", id: processResourceId(child.pid!), role: "worker" });
+  await new Promise<void>((resolve, reject) => {
+    let out = "";
+    child.stdout!.on("data", (d) => {
+      out += d;
+      if (out.includes('"ready":true')) resolve();
+    });
+    child.once("exit", (code) => reject(new Error(`worker exited ${code} before ready (see worker.log)`)));
+  });
+  h.worker = child;
+  h.workerConfig = cfg;
+}
+
+async function stopWorker(h: RunHandle) {
+  const child = h.worker;
+  if (!child || child.exitCode !== null) return;
+  const exited = new Promise((r) => child.once("exit", r));
+  child.kill("SIGTERM");
+  const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+  await exited;
+  clearTimeout(timer);
+  h.worker = undefined;
 }
 
 export async function waitHttp(url: string, ms: number) {
