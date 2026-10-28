@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A3",
+  "run_id": "589891e8-3970-4649-97b1-dfc634327d75",
+  "profile": "local",
+  "mode": "scripted",
+  "candidate_revision": "f67cab3008872437ff7dd8dbac2cce5b57f45bff",
+  "tree_sha": "fb59f8f6e2653db1eb16701124a259ca0951a990",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "collector": "apl-collector pid=2154 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-28T18:46:21.041Z",
+  "execution": "EXECUTED",
+  "mutation": "none",
+  "simulated_faults": [],
+  "status": "FAIL",
+  "lanes": {
+    "local": {
+      "status": "FAIL",
+      "selected": true,
+      "reason": "local core: required assertions only"
+    },
+    "salesforce": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "coderabbit": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "ax": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "live-model": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    }
+  },
+  "all_lanes_status": "FAIL",
+  "banner": {
+    "green": false,
+    "text": "NOT A SUCCESS: local core FAIL"
+  },
+  "assertions": [
+    {
+      "id": "valid_required_screenshot_count",
+      "required": true,
+      "expected": 5,
+      "observed": 5,
+      "evidence_refs": [
+        "evidence/media-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "valid_required_animated_gif_count",
+      "required": true,
+      "expected": 3,
+      "observed": 3,
+      "evidence_refs": [
+        "evidence/media-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "valid_required_static_poster_count",
+      "required": true,
+      "expected": 3,
+      "observed": 3,
+      "evidence_refs": [
+        "evidence/media-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "all_required_media_provenance_valid",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/media-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "broken_readme_media_path_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/readme-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "missing_alt_text_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/readme-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "missing_caption_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/readme-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "static_fallbacks_valid",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/readme-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "local_render_review_passed",
+      "required": true,
+      "expected": true,
+      "observed": false,
+      "evidence_refs": [
+        "evidence/readme-verify.json",
+        "evidence/render-review.json"
+      ],
+      "status": "FAIL",
+      "reason": "observed value differs"
+    },
+    {
+      "id": "media_budget_passed",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/media-verify.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    }
+  ],
+  "counts": {
+    "required": 10,
+    "passed": 9,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0,
+    "not_run": 0,
+    "unknown": 0
+  },
+  "limitations": [
+    "Mode: local integration run (scripted driver).",
+    "Public challenge cases are visible to builders; they are not secret holdouts.",
+    "Hashes bind artifacts; they do not prove an honest collector.",
+    "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
+    "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them."
+  ],
+  "cleanup_status": "CLEAN",
+  "started_at": "2026-10-28T18:46:17.340Z",
+  "ended_at": "2026-10-28T18:46:21.105Z",
+  "durations": {
+    "wall_clock_seconds": {
+      "value": 3.765,
+      "reason": null
+    }
+  }
+}
