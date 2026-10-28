@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { inspectMedia } from "../../src/media/inspect.ts";
+import { cuesFor, MIN_CUE_MS, parseVtt, vtt } from "../../src/media/captions.ts";
 import { buildReadme, SLOTS } from "../../src/media/readme.ts";
 import { isAppPath, MANIFEST } from "../../src/media/spec.ts";
 
@@ -31,6 +32,19 @@ describe("inspectMedia decodes files instead of trusting extensions", () => {
     writeFileSync(join(dir, "fake.png"), "not an image");
     expect(inspectMedia(join(dir, "fake.png"))).toMatchObject({ signature: "unknown", decoded: false });
     expect(inspectMedia(join(dir, "absent.png"))).toMatchObject({ exists: false });
+  });
+});
+
+describe("clip captions", () => {
+  it("merge marks closer than the minimum cue length, never overlap and end with the clip", () => {
+    const marks = [{ t_ms: 0, label: "console loaded" }, { t_ms: 34, label: "select W01-H" }, { t_ms: 4000, label: "run clicked W01-H" },
+      { t_ms: 9000, label: "tab report" }, { t_ms: 9031, label: "tab workflow" }, { t_ms: 15900, label: "tab profiles" }];
+    const cues = cuesFor(marks, [], "Opening.", 16500);
+    expect(cues.map((c) => c.to - c.from).every((d) => d >= MIN_CUE_MS)).toBe(true);
+    cues.forEach((c, i) => i && expect(c.from).toBeGreaterThanOrEqual(cues[i - 1]!.to));
+    expect(cues.at(-1)!.to).toBe(16500);
+    expect(cues[0]!.text).toContain("Opening.\nScenario W01-H");
+    expect(parseVtt(vtt(cues))).toEqual(cues);
   });
 });
 

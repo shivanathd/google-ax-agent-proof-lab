@@ -8,8 +8,8 @@ import { dirname, join } from "node:path";
 import { ROOT } from "../config/run-config.ts";
 import { artifactDir } from "../reports/artifacts.ts";
 import { exportRun } from "../reports/export.ts";
-import { scenario } from "../reports/scenarios.ts";
-import { RAW, type Mark, type Session, type Shot } from "./capture.ts";
+import { RAW, type Session, type Shot } from "./capture.ts";
+import { CLIPS, recaption } from "./captions.ts";
 import { inspectMedia, toolVersions } from "./inspect.ts";
 import { EVIDENCE_DIR, MANIFEST, REQUIRED, sha256File } from "./spec.ts";
 
@@ -34,17 +34,6 @@ const GIF_SEGMENTS: Record<string, { shot: string; end: string }> = {
   "duplicate-event-safe": { shot: "w01d", end: "tab workflow" },
   "approval-denied-gif": { shot: "w02u", end: "tab workflow" },
 };
-const CLIPS: Record<string, { shot: string; title: string; opening: string }> = {
-  "clip-mental-model": { shot: "mental", title: "Mental model: the reply is not the acceptance test",
-    opening: "Five questions: where the work runs, what it connects to, what it is allowed to do, what happened, and what we can claim." },
-  "clip-duplicate-delivery": { shot: "w01d", title: "Duplicate delivery",
-    opening: "Deliver the same signed event again. A second delivery must not become a second business action." },
-  "clip-permission-boundary": { shot: "w02u", title: "Permission boundary",
-    opening: "The requester cannot approve their own request. The action should fail without changing the record." },
-  "clip-emulator-vs-real-org": { shot: "boundary", title: "Emulator versus real org",
-    opening: "A local CRM contract double cannot prove Salesforce behaviour. That lane needs a real, separately authorized test org." },
-};
-
 const ALT: Record<string, string> = {
   "lab-overview": "Teaching console with the scenario list, an emulated Slack thread where Eli approves Dana's purchase request, the layer map and run details",
   "service-request-success": "Emulated Slack thread with Dana's service request and LabBot's ticket reply, beside before and after counts showing one ticket and one S3 receipt",
@@ -62,46 +51,6 @@ const ALT: Record<string, string> = {
 
 function report(runId: string) {
   return JSON.parse(readFileSync(join(artifactDir(runId), "report.json"), "utf8"));
-}
-// Caption text built only from the stored C5 report: scenario, run, mode, status and observed values.
-function caption(lead: string, runId: string, revision: string) {
-  const r = report(runId);
-  const observed = r.assertions.map((a: any) => `${a.id} ${JSON.stringify(a.observed)}`).join(", ");
-  const faults = r.simulated_faults.length ? ` Injected fault: ${r.simulated_faults.join("; ")}.` : "";
-  return `${lead} Run \`${runId.slice(0, 8)}\` (${r.case_id}, ${r.profile} profile, ${r.mode} mode, revision \`${revision.slice(0, 7)}\`): local core ${r.status}, ${r.counts.passed} of ${r.counts.required} required assertions passed; observed ${observed}.${faults} Synthetic data.`;
-}
-const LEAD: Record<string, string> = {
-  "lab-overview": "The teaching console after a real local run of the approval workflow.",
-  "service-request-success": "A service request handled end to end: the reply is in the original thread and the collector found the ticket and the matching S3 receipt.",
-  "approval-denied": "A self-approval and an ungranted approval click, both refused; the request record and receipts are unchanged.",
-  "evidence-report": "The evidence report is the C5 report.json shown as written: expected and observed values, status and evidence file per assertion, plus limitations.",
-  "profile-boundaries": "Optional lanes as their doctors report them: blocked lanes are not failures of the local demo and are not evidence of provider parity.",
-  "slack-service-request": "The local scripted worker processes a synthetic request; the evaluator checks the ticket, receipt and reply thread.",
-  "duplicate-event-safe": "Emulate re-delivers the same signed event; the collector compares before and after counts.",
-  "approval-denied-gif": "Dana tries to approve her own request and Gus, who has no grant, tries too; both clicks are refused.",
-};
-
-function vtt(cues: { from: number; to: number; text: string }[]) {
-  const ts = (ms: number) => new Date(Math.max(0, ms)).toISOString().slice(11, 23);
-  return `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${ts(c.from)} --> ${ts(c.to)}\n${c.text}\n`).join("\n")}`;
-}
-function cuesFor(s: Shot, opening: string, start: number) {
-  const describe = (m: Mark) => {
-    if (m.label === "console loaded") return opening;
-    if (m.label.startsWith("select ")) {
-      const sc = scenario(m.scenario!);
-      return sc ? `Scenario ${sc.id}: ${sc.title}. ${sc.summary}` : null;
-    }
-    if (m.label.startsWith("run clicked")) return "Run: an isolated stack starts (two Emulate Slack workspaces, a Floci container, the scripted worker) and the independent collector attaches.";
-    if (m.label.startsWith("reported")) return `Collector report for run ${m.run_id!.slice(0, 8)}: ${m.detail}`;
-    if (m.label === "tab report") return "Evidence report: expected and observed values copied from report.json, with the evidence file behind each assertion.";
-    if (m.label === "tab profiles") return `Optional lanes as reported by their doctors: ${m.detail}.`;
-    if (m.label === "tab workflow") return "Back to the emulated Slack thread and the before/after state.";
-    return null;
-  };
-  const marks = s.marks.filter((m) => describe(m));
-  const end = mark(s, "end").t_ms;
-  return marks.map((m, i) => ({ from: m.t_ms - start, to: (marks[i + 1]?.t_ms ?? end) - start, text: describe(m)! }));
 }
 
 export async function optimizeSuite() {
@@ -151,7 +100,7 @@ export async function optimizeSuite() {
     const s = screenshot(req.id);
     mkdirSync(dirname(join(ROOT, req.path)), { recursive: true });
     copyFileSync(raw(s.file), join(ROOT, req.path));
-    media.push({ ...base(req, [s.run_id], s.file), caption: caption(LEAD[req.id]!, s.run_id, sess.candidate_revision), edits: ["none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"] });
+    media.push({ ...base(req, [s.run_id], s.file), caption: "", edits: ["none: PNG exactly as captured by Playwright at 1440x900, device scale factor 1"] });
   }
 
   // Lossless screencast frames for [start, end] as an ffconcat list: each PNG lasts until the next repaint.
@@ -181,7 +130,7 @@ export async function optimizeSuite() {
     copyFileSync(raw(posterShot.file), join(ROOT, req.poster!));
     const f = inspectMedia(join(ROOT, req.path));
     media.push({
-      ...base(req, [s.runs[0]!.run_id], s.frames!), caption: caption(LEAD[req.id]!, s.runs[0]!.run_id, sess.candidate_revision),
+      ...base(req, [s.runs[0]!.run_id], s.frames!), caption: "",
       duration_ms: f.duration_ms, frame_count: f.frame_count, fps: f.fps, poster_path: req.poster, poster_sha256: sha256File(join(ROOT, req.poster!)),
       edits: [`trimmed to ${secs(start)}-${secs(end)} s of the source capture (from the Run click to after the verified result)`,
         `source: lossless Chromium screencast PNG frames, resampled to ${GIF.fps} fps; scaled 1440 to ${GIF.width} px wide (lanczos)`,
@@ -201,8 +150,7 @@ export async function optimizeSuite() {
       "-c:v", "libx264", "-preset", "slow", "-crf", String(MP4.crf), "-tune", "stillimage", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", join(ROOT, req.path)]);
     const posterShot = screenshot(`vposter:${req.path.split("/").pop()!.replace(".mp4", "")}`);
     copyFileSync(raw(posterShot.file), join(ROOT, req.poster!));
-    const captions = req.path.replace(".mp4", ".vtt");
-    writeFileSync(join(ROOT, captions), vtt(cuesFor(s, c.opening, start)));
+    const captions = req.path.replace(".mp4", ".vtt"); // written by recaption() below
     const f = inspectMedia(join(ROOT, req.path));
     const runIds = s.runs.map((r) => r.run_id);
     const edits = [`trimmed to ${secs(start)}-${secs(end)} s of the source capture`, `source: lossless Chromium screencast PNG frames; scaled to ${MP4.width} px wide, ${MP4.fps} fps, H.264 CRF ${MP4.crf}, no audio`,
@@ -217,9 +165,9 @@ export async function optimizeSuite() {
     };
     writeFileSync(join(ROOT, req.path.replace(".mp4", ".json")), `${JSON.stringify(sidecar, null, 2)}\n`);
     media.push({
-      ...base(req, runIds, s.frames!), caption: caption(`${c.title} (MP4 clip, ${Math.round(f.duration_ms / 1000)} s, silent with captions).`, runIds.at(-1)!, sess.candidate_revision),
+      ...base(req, runIds, s.frames!), caption: "",
       duration_ms: f.duration_ms, frame_count: f.frame_count, fps: f.fps, poster_path: req.poster, poster_sha256: sha256File(join(ROOT, req.poster!)),
-      captions_path: captions, captions_sha256: sha256File(join(ROOT, captions)), sidecar_path: req.path.replace(".mp4", ".json"),
+      captions_path: captions, captions_sha256: "", sidecar_path: req.path.replace(".mp4", ".json"),
       sidecar_sha256: sha256File(join(ROOT, req.path.replace(".mp4", ".json"))), edits,
       video_url: null, video_url_reason: "inline GitHub playback needs a post-publication user-attachment upload (NOT_RUN, not authorized)",
     });
@@ -235,5 +183,6 @@ export async function optimizeSuite() {
     readme_verification: { local_status: "NOT_RUN", github_render_status: "NOT_RUN", reason: "run `lab readme verify --local --record` after `lab readme build`" },
   };
   writeFileSync(join(ROOT, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
+  recaption(ROOT); // captions + WebVTT cues from the manifest, sidecars and committed evidence
   return { manifest: MANIFEST, items: media.length, runs: runs.length, evidence: EVIDENCE_DIR, raw_session: `recordings/raw/${session}` };
 }

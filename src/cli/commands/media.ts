@@ -9,6 +9,7 @@ import { candidateIdentity, ROOT } from "../../config/run-config.ts";
 import { captureSuite } from "../../media/capture.ts";
 import { optimizeSuite } from "../../media/optimize.ts";
 import { verifyMedia } from "../../media/verify.ts";
+import { recaption } from "../../media/captions.ts";
 import { appDirty, loadPrivateTerms } from "../../media/spec.ts";
 import { toolVersions } from "../../media/inspect.ts";
 
@@ -67,6 +68,11 @@ export function register(program: Command) {
     suite(o.suite);
     emit({ status: "OPTIMIZED", ...(await optimizeSuite()) });
   });
+  media.command("captions").description("rebuild manifest captions and clip WebVTT cues from committed sidecars and evidence (no re-encode)")
+    .requiredOption("--suite <name>").action((o: { suite: string }) => {
+      suite(o.suite);
+      emit({ status: "RECAPTIONED", ...recaption() });
+    });
   media.command("verify").description("decode and check every required asset, its provenance and the budget").requiredOption("--suite <name>")
     .option("--root <dir>", "verify a copy of the repository instead of this checkout")
     .action((o: { suite: string; root?: string }) => {

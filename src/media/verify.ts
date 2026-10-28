@@ -8,6 +8,7 @@ import { fixtureSha256, ROOT } from "../config/run-config.ts";
 import { verifyChecksums } from "../reports/report.ts";
 import { SECRET_RULES } from "../reports/export.ts";
 import { inspectMedia } from "./inspect.ts";
+import { MIN_CUE_MS, parseVtt } from "./captions.ts";
 import { appFiles, applicationTreeSha256, BUDGET, EVIDENCE_DIR, GIF_RULES, MANIFEST, REQUIRED, sha256File } from "./spec.ts";
 
 export interface Problem { code: string; id: string; detail: string }
@@ -58,6 +59,21 @@ export function verifyMedia(root = ROOT, o: { appTree?: string } = {}) {
         if (f.duration_ms < req.min_s! * 1000 || f.duration_ms > req.max_s! * 1000) bad("duration", `${f.duration_ms} ms (allowed ${req.min_s}-${req.max_s} s)`);
       }
       if (req.kind === "video" && f.frame_count <= 1) bad("single_frame", `${f.frame_count} frame(s)`);
+      // Clip captions: present, hashed, every cue at least MIN_CUE_MS long, no overlaps, inside the clip.
+      if (req.kind === "video" && e) {
+        const cp = e.captions_path ? join(root, e.captions_path) : "";
+        if (!cp || !existsSync(cp)) bad("captions", "WebVTT captions missing");
+        else {
+          const cues = parseVtt(readFileSync(cp, "utf8"));
+          if (e.captions_sha256 !== sha256File(cp)) bad("captions", "captions differ from manifest sha256");
+          if (!cues.length) bad("captions", "no cues");
+          cues.forEach((c, i) => {
+            if (c.to - c.from < MIN_CUE_MS) bad("captions", `cue ${i + 1} lasts ${c.to - c.from} ms (< ${MIN_CUE_MS})`);
+            if (i > 0 && c.from < cues[i - 1]!.to) bad("captions", `cue ${i + 1} overlaps cue ${i}`);
+            if (c.to > f.duration_ms + 50) bad("captions", `cue ${i + 1} ends after the clip`);
+          });
+        }
+      }
       if (e) {
         if (e.path !== req.path || !relOk(e.path)) bad("path", String(e.path));
         if (e.sha256 !== sha256File(abs)) bad("hash", "file differs from manifest sha256");
