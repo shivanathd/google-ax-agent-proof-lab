@@ -8,14 +8,19 @@
 #     --delete-benchmarks      delete the scaled pools instead of restoring them
 #     --remove-substrate-iam   also delete the snapshot transfer SA and exactly its recorded grants (breaks v0.6.0)
 #     --restore-substrate-v05  also reinstall the recorded previous Substrate build, restore its pg_dump and demo
-#                              WorkerPools, then remove the transfer SA and grants (implies --remove-substrate-iam)
+#                              WorkerPools, then remove the transfer SA and grants (implies --remove-substrate-iam).
+#                              Needs --yes-clear-node-image-cache as well: it deletes /var/lib/ate/image-cache on
+#                              every node with one privileged Pod per node
 #     --dry-run                print every action and change nothing (makes no cloud or cluster call)
 #   profiles/ax/teardown.sh --snapshot <run-dir> <out.json>   # snapshot only (used for pre-snapshot.json)
 #
-# Every identifier (project, zone, cluster, registry, bucket, account) comes from the gitignored run dir, never
-# from this file. Nothing here uses --force; gcloud deletes keep their interactive confirmation.
+# Before acting, owned-resources.json must validate against run-dir.schema.json and the current kube context must
+# equal its kube_context; otherwise nothing runs. Every identifier (context, project, registry, bucket, account)
+# comes from the gitignored run dir, never from this file. Nothing here uses --force; gcloud deletes keep their
+# interactive confirmation.
 set -euo pipefail
 
+HERE=$(cd "$(dirname "$0")" && pwd)
 die() { echo "teardown: $*" >&2; exit 1; }
 # j a.b.c: value at a dotted path of owned-resources.json; a list prints space-separated, a missing key prints "".
 j() { python3 -c "import json,sys,functools; v=functools.reduce(lambda o,k: (o or {}).get(k), sys.argv[2].split('.'), json.load(open(sys.argv[1]))); print(' '.join(v) if isinstance(v,list) else (v or ''))" "$OWNED" "$1"; }
@@ -26,6 +31,22 @@ run() { echo "+ $*"; [ "$DRY" = 1 ] || "$@"; }
 # run_in <dir> <cmd...>: same, from a directory (the Substrate installer reads manifests from its checkout).
 run_in() { local d=$1; shift; echo "+ (cd $d && $*)"; [ "$DRY" = 1 ] || (cd "$d" && "$@"); }
 
+# load_run_dir <run-dir>: refuse unless owned-resources.json matches the schema and the current kube context is the
+# one the run recorded; then (unless dry) pin that context in a single-context kubeconfig for every later call.
+load_run_dir() {
+  RUN_DIR=$1; OWNED="$RUN_DIR/owned-resources.json"
+  [ -f "$OWNED" ] || die "missing $OWNED"
+  node "$HERE/run-dir.ts" "$OWNED" >&2 || die "$OWNED does not match profiles/ax/run-dir.schema.json; refusing to act"
+  local cur; cur=$(kubectl config current-context 2>/dev/null) || die "no current kube context; switch to the run's kube_context first"
+  [ "$cur" = "$(j kube_context)" ] || die "current kube context is not the run's kube_context ($OWNED); refusing to act on another cluster"
+  PROJECT=$(j project)
+  echo "+ kubectl config view --minify --flatten > $RUN_DIR/teardown-kubeconfig; export KUBECONFIG=$RUN_DIR/teardown-kubeconfig"
+  if [ "$DRY" = 0 ]; then
+    (umask 077; kubectl config view --minify --flatten >"$RUN_DIR/teardown-kubeconfig")
+    export KUBECONFIG="$RUN_DIR/teardown-kubeconfig"
+  fi
+}
+
 snapshot() { # <out.json>
   local out=$1 tmp; tmp=$(mktemp -d)
   kubectl get ns -o json >"$tmp/ns.json"
@@ -33,8 +54,11 @@ snapshot() { # <out.json>
     kubectl -n "$n" get deploy,workerpool -o json >"$tmp/scaled-$n.json" 2>/dev/null || echo '{"items":[]}' >"$tmp/scaled-$n.json"
   done
   kubectl get crd,clusterrole,clusterrolebinding,validatingwebhookconfiguration,mutatingwebhookconfiguration,validatingadmissionpolicy,validatingadmissionpolicybinding,pv -o json >"$tmp/cluster.json"
-  gcloud artifacts repositories list --project "$(j project)" --format=json >"$tmp/ar.json" 2>/dev/null || echo '[]' >"$tmp/ar.json"
-  gcloud compute disks list --project "$(j project)" --format=json >"$tmp/disks.json" 2>/dev/null || echo '[]' >"$tmp/disks.json"
+  echo '[]' >"$tmp/ar.json"; echo '[]' >"$tmp/disks.json"
+  if [ -n "$PROJECT" ]; then
+    gcloud artifacts repositories list --project "$PROJECT" --format=json >"$tmp/ar.json" 2>/dev/null || echo '[]' >"$tmp/ar.json"
+    gcloud compute disks list --project "$PROJECT" --format=json >"$tmp/disks.json" 2>/dev/null || echo '[]' >"$tmp/disks.json"
+  fi
   kubectl ate get atespaces -o json >"$tmp/atespaces.json" 2>/dev/null || echo '{"atespaces":[]}' >"$tmp/atespaces.json"
   python3 - "$tmp" "$out" <<'PY'
 import json, os, sys, glob, datetime
@@ -59,49 +83,58 @@ PY
 
 if [ "${1:-}" = "--snapshot" ]; then
   [ $# -eq 3 ] || die "usage: $0 --snapshot <run-dir> <out.json>"
-  OWNED="$2/owned-resources.json"; [ -f "$OWNED" ] || die "missing $OWNED"
-  : "${KUBECONFIG:?set KUBECONFIG to the dedicated kubeconfig of the run}"
-  snapshot "$3"; exit 0
+  load_run_dir "$2"; snapshot "$3"; exit 0
 fi
 
-RUN_DIR=${1:?usage: $0 <run-dir> [--delete-benchmarks] [--remove-substrate-iam] [--restore-substrate-v05] [--dry-run]}; shift
-DELETE_BENCH=0; REMOVE_IAM=0; RESTORE=0
+[ $# -ge 1 ] && [ "${1#--}" = "$1" ] || die "usage: $0 <run-dir> [--delete-benchmarks] [--remove-substrate-iam] [--restore-substrate-v05 --yes-clear-node-image-cache] [--dry-run]"
+ARG_DIR=$1; shift
+DELETE_BENCH=0; REMOVE_IAM=0; RESTORE=0; CLEAR_CACHE=0
 for o in "$@"; do
   case "$o" in
     --delete-benchmarks) DELETE_BENCH=1 ;;
     --remove-substrate-iam) REMOVE_IAM=1 ;;
     --restore-substrate-v05) RESTORE=1; REMOVE_IAM=1 ;;
+    --yes-clear-node-image-cache) CLEAR_CACHE=1 ;;
     --dry-run) DRY=1 ;;
     *) die "unknown option $o" ;;
   esac
 done
-OWNED="$RUN_DIR/owned-resources.json"; PRE="$RUN_DIR/pre-snapshot.json"
-[ -f "$OWNED" ] && [ -f "$PRE" ] || die "need $OWNED and $PRE"
 [ "$RESTORE" = 1 ] && [ "$DELETE_BENCH" = 1 ] && die "--restore-substrate-v05 restores the demo pools; it cannot be combined with --delete-benchmarks"
+[ "$CLEAR_CACHE" = 1 ] && [ "$RESTORE" = 0 ] && die "--yes-clear-node-image-cache only applies to --restore-substrate-v05"
+[ "$RESTORE" = 1 ] && [ "$CLEAR_CACHE" = 0 ] && [ "$DRY" = 0 ] &&
+  die "--restore-substrate-v05 deletes /var/lib/ate/image-cache on every node (privileged Pod per node); add --yes-clear-node-image-cache to accept that"
+load_run_dir "$ARG_DIR"
+PRE="$RUN_DIR/pre-snapshot.json"; [ -f "$PRE" ] || die "missing $PRE"
+if [ "$RESTORE" = 1 ]; then
+  for k in substrate_install.repo local.bin local.bin_v050 local.docker_config; do
+    [ -n "$(j "$k")" ] || die "--restore-substrate-v05 needs $k in $OWNED"
+  done
+fi
 
-PROJECT=$(j project); ZONE=$(j zone); CLUSTER=$(j cluster)
-BIN=$(j local.bin); export PATH="$BIN:$PATH" AX_HOME="$RUN_DIR/axhome"
-export KUBECONFIG="$RUN_DIR/teardown-kubeconfig"
+BIN=$(j local.bin); [ -z "$BIN" ] || export PATH="$BIN:$PATH"
+export AX_HOME="$RUN_DIR/axhome"
+AXCLI=$(j local.ax_cli); AXCLI=${AXCLI:-ax}
 [ "$DRY" = 1 ] && echo "teardown: DRY RUN, nothing below is executed"
-run gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "$PROJECT"
-echo "teardown: run $(j run_id) on context in $KUBECONFIG"
+echo "teardown: run $(j run_id), kube context matches the run's kube_context"
 
 # 1. AX objects (Task before Workspace), through the AX API while ax-server still runs. The ax CLI's own tunnel
 #    gives up after a 400 ms health check (L-033), so this script holds its own port-forward.
-PORT=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1])")
-echo "+ kubectl -n ax-system port-forward svc/ax-server $PORT:8080 &"
-if [ "$DRY" = 0 ]; then
-  kubectl -n ax-system port-forward svc/ax-server "$PORT:8080" >"$RUN_DIR/teardown-pf.log" 2>&1 &
-  PF=$!; trap 'kill $PF 2>/dev/null' EXIT; sleep 5
+if [ -n "$(rows "[(1,)] if d['ax'] else []")" ]; then
+  PORT=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1])")
+  echo "+ kubectl -n ax-system port-forward svc/ax-server $PORT:8080 &"
+  if [ "$DRY" = 0 ]; then
+    kubectl -n ax-system port-forward svc/ax-server "$PORT:8080" >"$RUN_DIR/teardown-pf.log" 2>&1 &
+    PF=$!; trap 'kill $PF 2>/dev/null' EXIT; sleep 5
+  fi
+  rows "sorted(((r['kind'], r['atespace'], r['name']) for r in d['ax']), key=lambda r: r[0] == 'workspace')" |
+    while read -r kind atespace name; do
+      run "$AXCLI" --server "http://127.0.0.1:$PORT" delete "$kind" "$name" -a "$atespace" || echo "teardown: ax delete $kind $name failed (continuing)"
+    done
 fi
-rows "sorted(((r['kind'], r['atespace'], r['name']) for r in d['ax']), key=lambda r: r[0] == 'workspace')" |
-  while read -r kind atespace name; do
-    run ax --server "http://127.0.0.1:$PORT" delete "$kind" "$name" -a "$atespace" || echo "teardown: ax delete $kind $name failed (continuing)"
-  done
 
 # 2. Substrate objects (egress policies go with their actor; listed for the diff). Atespaces last: they must be empty.
 #    local.bin holds a kubectl-ate built at the deployed Substrate's API version (L-030).
-rows "sorted(((r['kind'], r['atespace'] or '-', r['name']) for r in d['substrate'] if r['kind'] != 'egress-policy'), key=lambda r: r[0] == 'atespace')" |
+rows "sorted(((r['kind'], r.get('atespace') or '-', r['name']) for r in d['substrate'] if r['kind'] != 'egress-policy'), key=lambda r: r[0] == 'atespace')" |
   while read -r kind atespace name; do
     if [ "$kind" = atespace ]; then run kubectl ate delete atespace "$name"; else run kubectl ate delete "$kind" "$name" -a "$atespace"; fi ||
       echo "teardown: kubectl ate delete $kind $name failed (continuing)"
@@ -135,7 +168,7 @@ for PREFIX in $(j gcs_snapshot_prefix) $(j gcs_snapshot_prefixes); do
   if [ "$DRY" = 1 ]; then echo "+ gcloud storage rm --recursive $PREFIX --project $PROJECT   (only if objects exist)"
   elif gcloud storage ls "$PREFIX" --project "$PROJECT" >/dev/null 2>&1; then run gcloud storage rm --recursive "$PREFIX" --project "$PROJECT"; fi
 done
-run gcloud artifacts repositories delete "$(j ar.repo)" --location "$(j ar.location)" --project "$PROJECT"
+[ -z "$(j ar.repo)" ] || run gcloud artifacts repositories delete "$(j ar.repo)" --location "$(j ar.location)" --project "$PROJECT"
 
 # 7. Post-snapshot and diff. Pool replicas are expected to match pre-snapshot again in restore mode. Changes the
 #    Substrate reinstall made (reinstall-delta.json: a before/after diff taken around the reinstall) are expected
@@ -188,18 +221,42 @@ remove_iam() {
 #    previous one with its recorded settings, restore the pg_dump, recreate the demo WorkerPools from the
 #    pre-reinstall manifests with the replicas recorded before the lab scaled them, switch kubectl-ate back.
 # Each atelet release refuses the other's node-local image cache layout ("delete it once no actor runs on this
-# node"), so it is removed on every node while no atelet runs. postgres:18-alpine is the image Substrate itself
-# pins, pulled by digest, so this works after the lab's registry is gone.
+# node"), so it is removed on every node while no atelet runs (only with --yes-clear-node-image-cache). One Pod per
+# node, created by this script with labels apl-run=<run_id>,apl-role=image-cache-wipe; only Pods with both labels
+# are waited on and deleted. postgres:18-alpine is the image Substrate itself pins, pulled by digest, so this works
+# after the lab's registry is gone.
 wipe_image_cache() {
-  local img=postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15 n pods
-  local nodes="node/<each-node>"; [ "$DRY" = 1 ] || nodes=$(kubectl get nodes -o name)
-  for n in $nodes; do
-    run kubectl debug "$n" -n default --image="$img" --profile=sysadmin --attach=false -- rm -rf /host/var/lib/ate/image-cache
-  done
-  [ "$DRY" = 1 ] && { echo "+ wait, print and delete the node-debugger pods in default"; return 0; }
-  sleep 20
-  pods=$(kubectl -n default get pods -o name | grep '^pod/node-debugger-' || true)
-  for p in $pods; do kubectl -n default logs "$p"; run kubectl -n default delete "$p" --wait=false; done
+  local img=postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+  local sel="apl-run=$(j run_id),apl-role=image-cache-wipe" pods="$RUN_DIR/image-cache-wipe-pods.json"
+  echo "teardown: WARNING: deletes /var/lib/ate/image-cache on EVERY node of the cluster, using one privileged Pod per"
+  echo "teardown:          node (hostPath /var/lib/ate) in namespace default. Anything else on those nodes that relies on"
+  echo "teardown:          that cache loses it. A real run requires --yes-clear-node-image-cache."
+  [ "$CLEAR_CACHE" = 1 ] || echo "teardown:          --yes-clear-node-image-cache NOT given: without --dry-run this run would refuse."
+  echo "+ render $pods: one Pod per node, image $img, rm -rf /host/var/lib/ate/image-cache, labels $sel"
+  if [ "$DRY" = 0 ]; then
+    # shellcheck disable=SC2046 # one argument per node name
+    python3 - "$img" "$(j run_id)" "$pods" $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}') <<'PY'
+import json, sys
+img, run_id, out, nodes = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
+if not nodes: sys.exit("no nodes listed")
+items = [{"apiVersion": "v1", "kind": "Pod",
+          "metadata": {"name": f"apl-cache-wipe-{run_id[:8]}-{i}", "namespace": "default",
+                       "labels": {"apl-run": run_id, "apl-role": "image-cache-wipe"}},
+          "spec": {"nodeName": n, "restartPolicy": "Never", "tolerations": [{"operator": "Exists"}],
+                   "containers": [{"name": "wipe", "image": img, "command": ["rm", "-rf", "/host/var/lib/ate/image-cache"],
+                                   "securityContext": {"privileged": True},
+                                   "volumeMounts": [{"name": "ate", "mountPath": "/host/var/lib/ate"}]}],
+                   "volumes": [{"name": "ate", "hostPath": {"path": "/var/lib/ate", "type": "Directory"}}]}}
+         for i, n in enumerate(nodes)]
+json.dump({"apiVersion": "v1", "kind": "List", "items": items}, open(out, "w"), indent=2)
+print(f"{len(items)} image-cache wipe Pods rendered, one per node")
+PY
+  fi
+  run kubectl apply -f "$pods"
+  run kubectl -n default wait pod -l "$sel" --for=jsonpath='{.status.phase}'=Succeeded --timeout=180s ||
+    die "image-cache wipe did not succeed on every node; Pods left for inspection (kubectl -n default get pods -l $sel)"
+  run kubectl -n default logs -l "$sel" --prefix
+  run kubectl -n default delete pod -l "$sel" --wait=false
 }
 checkout() { # <commit> -> prints a checkout dir under the run dir
   local dir="$RUN_DIR/src/substrate-${1:0:12}"
@@ -217,9 +274,9 @@ restore_v05() {
   cur_dir=$(checkout "$cur"); prev_dir=$(checkout "$prev")
   echo "teardown: restoring Substrate $(j substrate_install.previous.version) ($prev) over $(j substrate_install.current.version) ($cur)"
   export DOCKER_CONFIG; DOCKER_CONFIG=$(j local.docker_config)
-  run_in "$cur_dir" env GOFLAGS=-mod=vendor go run ./cmd/ate-setup --no-dev-env --config "$(j substrate_install.current.config)" --kubeconfig "$KUBECONFIG" delete ate-system
+  run_in "$cur_dir" env GOFLAGS=-mod=vendor go run ./cmd/ate-setup --no-dev-env --config "$(j substrate_install.current.config)" --kubeconfig "$RUN_DIR/teardown-kubeconfig" delete ate-system
   wipe_image_cache
-  run_in "$prev_dir" env GOFLAGS=-mod=vendor go run ./cmd/ate-setup --no-dev-env --config "$(j substrate_install.previous.config)" --kubeconfig "$KUBECONFIG" --record-dir "$RUN_DIR/ate-setup-records" deploy ate-system
+  run_in "$prev_dir" env GOFLAGS=-mod=vendor go run ./cmd/ate-setup --no-dev-env --config "$(j substrate_install.previous.config)" --kubeconfig "$RUN_DIR/teardown-kubeconfig" --record-dir "$RUN_DIR/ate-setup-records" deploy ate-system
   echo "+ kubectl -n ate-system exec -i postgres-0 -c postgres -- pg_restore -U postgres -d atepg --clean --if-exists < $dump"
   [ "$DRY" = 1 ] || kubectl -n ate-system exec -i postgres-0 -c postgres -- pg_restore -U postgres -d atepg --clean --if-exists <"$dump"
   run kubectl -n ate-system rollout restart deployment/ate-api-server
@@ -248,14 +305,14 @@ if [ "$RESTORE" = 1 ]; then restore_v05; fi
 if [ "$REMOVE_IAM" = 1 ]; then remove_iam; fi
 
 STATUS=0; diff_against_pre || STATUS=$?
-if [ "$REMOVE_IAM" = 0 ]; then
+if [ "$REMOVE_IAM" = 0 ] && [ -n "$(j substrate_install.current.version)" ]; then
   echo
   echo "teardown: LEFT IN PLACE on purpose:"
-  echo "  - Substrate $(j substrate_install.current.version) ($(j substrate_install.current.commit)) in ate-system, installed by run 3"
+  echo "  - Substrate $(j substrate_install.current.version) ($(j substrate_install.current.commit)) in ate-system, installed by this run"
   rows "[(r['kind'], r.get('email') or (r['role'] + ' for ' + r['member'] + ' on ' + r['resource'])) for r in d.get('iam', [])]" |
     while read -r line; do echo "  - $line"; done
   echo "  The v0.6.0 ate-api-server refuses to start without the transfer service account. To remove them anyway:"
   echo "    $0 $RUN_DIR --remove-substrate-iam      # breaks Substrate v0.6.0"
-  echo "    $0 $RUN_DIR --restore-substrate-v05     # previous build + its data back, then removes them"
+  echo "    $0 $RUN_DIR --restore-substrate-v05 --yes-clear-node-image-cache   # previous build + data back, then removes them"
 fi
 exit "$STATUS"

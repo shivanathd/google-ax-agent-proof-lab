@@ -2,7 +2,13 @@
 
 Run `6882d106-…` on 2026-10-28, on the owner's existing GKE cluster running Agent Substrate. Identifiers are placeholders: `<project>`, `<cluster>`, `<registry>` (a private Artifact Registry Docker repo created for this run), `<snapshot-bucket>`. Raw evidence, the owned-resource list and the pre-snapshot are in the gitignored `private-runs/ax/<run_id>/`.
 
-**Lane status after run 3: assertions PASS or FAIL individually, with cluster evidence (run 3, at the end).** Run 3 reinstalled Substrate at v0.6.0 with the owner-approved transfer service account. W01-H (F3-A1), the failing-command case and sandbox isolation PASS; SIGTERM never reaches the command on `ax suspend` or `ax delete task` (FAIL), only on worker eviction; timing met the expectation. Runs 1 and 2 below are kept as they were recorded.
+**Lane status after run 3: each assertion PASS or FAIL on its own, with cluster evidence (§3.3).** Run 3 reinstalled Substrate at v0.6.0 with the owner-approved transfer service account. Per assertion:
+
+- PASS: (2) W01-H as an AX Task (F3-A1); (3) failing command (AX-R1); (4c) worker eviction delivers SIGTERM (logs only); (4d) resume after `ax suspend` keeps the prepare-once marker and the workspace; (5) isolation from inside the sandbox; (5) router identity.
+- FAIL: (4a) `ax suspend` delivers no SIGTERM; (4b) `ax delete task` delivers no SIGTERM; (4e) after worker eviction, then `ax suspend` and resume, the result and the marker are lost (L-048).
+- Not PASS/FAIL: (5) secrets in `ax get task`, observed (L-034); (6) timing, expectation met.
+
+Runs 1 and 2 below are kept as they were recorded.
 
 **Run 1 status: BLOCKED.** A second attempt (run 2, below) to upgrade Substrate stopped on IAM prerequisites before changing anything. The AX control plane at the pinned commit cannot create anything on the cluster's Substrate. Its Substrate client (`go.ate.dev/substrate v0.6.0`) and the installed Substrate server (wire-compatible with v0.5.0) use the same gRPC service name with renumbered protobuf fields. The first `ax apply` of a Task failed in `CreateActorTemplate` (L-030). No AX task ever started, so items 2 to 6 have no cluster evidence. Nothing is PASS on the cluster.
 
@@ -161,4 +167,4 @@ Running: Substrate v0.6.0 in `ate-system`; AX in `ax-system`; the lab namespace 
 
 - `teardown.sh <run-dir>`: deletes the AX tasks and workspaces, the run's atespace, the lab namespace and `ax-system` with the AX ClusterRole, ClusterRoleBinding and PV, the run's snapshot prefixes and the Artifact Registry repo. It leaves Substrate v0.6.0 and the transfer service account and grants in place and prints them, because the v0.6.0 api-server will not start without them. Its diff treats the reinstall's own changes (`reinstall-delta.json`) as expected.
 - `--remove-substrate-iam`: also removes exactly the three recorded grants, then the account. It warns that Substrate v0.6.0 breaks.
-- `--restore-substrate-v05`: also deletes v0.6.0, clears the nodes' image cache, deploys the recorded `603e006` build with its install record, restores the pre-reinstall `pg_dump`, recreates the demo WorkerPools at their recorded replicas, switches `kubectl-ate` back to v0.5.0, then removes the account and grants. Never executed. Whether the restored suspended actors resume is UNKNOWN, because the actor-identity keys are regenerated on install.
+- `--restore-substrate-v05` (since the final review it also needs `--yes-clear-node-image-cache`, and the cache is cleared by Pods labelled `apl-run=<run_id>` that the script creates and deletes by that label): also deletes v0.6.0, clears the nodes' image cache, deploys the recorded `603e006` build with its install record, restores the pre-reinstall `pg_dump`, recreates the demo WorkerPools at their recorded replicas, switches `kubectl-ate` back to v0.5.0, then removes the account and grants. Never executed. Whether the restored suspended actors resume is UNKNOWN, because the actor-identity keys are regenerated on install.

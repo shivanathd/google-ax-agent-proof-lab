@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-proof-lab.invalid/schemas/ax-owned-resources.json",
+  "title": "AX run dir: owned-resources.json",
+  "description": "Everything one AX lane run owns. Written by profiles/ax/index.ts (ownedResources) and checked by profiles/ax/teardown.sh before it acts. Teardown deletes exactly these names, in this run's kube_context only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "kube_context", "ax", "substrate", "kubernetes", "cluster_scoped", "scaled", "scaled_namespaces"],
+  "dependencies": {
+    "ar": ["project"],
+    "gcs_snapshot_prefix": ["project"],
+    "gcs_snapshot_prefixes": ["project"],
+    "iam": ["project"]
+  },
+  "properties": {
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "short_id": { "type": "string", "pattern": "^[0-9a-f]{8}$" },
+    "kube_context": { "type": "string", "minLength": 1, "description": "Context the run applied to. Teardown refuses unless the current context equals it." },
+    "project": { "type": "string", "minLength": 1, "description": "Cloud project for the ar, gcs and iam entries." },
+    "zone": { "type": "string" },
+    "cluster": { "type": "string" },
+    "ax": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "atespace", "name"],
+        "properties": { "kind": { "enum": ["task", "workspace"] }, "atespace": { "$ref": "#/definitions/name" }, "name": { "$ref": "#/definitions/name" } }
+      }
+    },
+    "substrate": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "name"],
+        "properties": {
+          "kind": { "enum": ["atespace", "egress-policy"] },
+          "atespace": { "$ref": "#/definitions/name" },
+          "name": { "$ref": "#/definitions/name" },
+          "created_by": { "type": "string" }
+        },
+        "if": { "properties": { "kind": { "const": "egress-policy" } } },
+        "then": { "required": ["atespace"] },
+        "else": { "not": { "required": ["atespace"] } }
+      }
+    },
+    "kubernetes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "name"],
+        "properties": { "kind": { "$ref": "#/definitions/kind" }, "namespace": { "$ref": "#/definitions/name" }, "name": { "$ref": "#/definitions/name" } },
+        "if": { "properties": { "kind": { "not": { "const": "Namespace" } } } },
+        "then": { "required": ["namespace"] }
+      }
+    },
+    "cluster_scoped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "name"],
+        "properties": { "kind": { "$ref": "#/definitions/kind" }, "name": { "type": "string", "pattern": "^[a-z0-9][-a-z0-9.:]*$" }, "note": { "type": "string" } }
+      }
+    },
+    "scaled_namespaces": { "type": "array", "items": { "$ref": "#/definitions/name" } },
+    "scaled": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "namespace", "name", "replicas_before"],
+        "properties": {
+          "kind": { "const": "WorkerPool" },
+          "namespace": { "$ref": "#/definitions/name" },
+          "name": { "$ref": "#/definitions/name" },
+          "replicas_before": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "ar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "repo"],
+      "properties": { "location": { "type": "string", "minLength": 1 }, "repo": { "type": "string", "minLength": 1 }, "created": { "type": "boolean" } }
+    },
+    "gcs_snapshot_prefix": { "$ref": "#/definitions/gcs_prefix" },
+    "gcs_snapshot_prefixes": { "type": "array", "items": { "$ref": "#/definitions/gcs_prefix" } },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "digest"],
+        "properties": { "name": { "type": "string" }, "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "source": { "type": "string" } }
+      }
+    },
+    "local": {
+      "type": "object",
+      "description": "Operator-machine paths. bin is prepended to PATH; ax_cli replaces `ax`; bin_v050 and docker_config are needed by --restore-substrate-v05 only.",
+      "additionalProperties": { "type": "string" },
+      "properties": { "bin": { "type": "string" }, "ax_cli": { "type": "string" }, "bin_v050": { "type": "string" }, "docker_config": { "type": "string" } }
+    },
+    "iam": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "email"],
+            "properties": {
+              "kind": { "const": "service-account" },
+              "email": { "type": "string", "minLength": 1 },
+              "created": { "type": "string" },
+              "approval": { "type": "string" },
+              "note": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "resource_type", "resource", "member", "role"],
+            "properties": {
+              "kind": { "const": "iam-binding" },
+              "resource_type": { "enum": ["bucket", "service-account"] },
+              "resource": { "type": "string", "minLength": 1 },
+              "member": { "type": "string", "minLength": 1 },
+              "role": { "type": "string", "pattern": "^roles/" },
+              "note": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "substrate_install": {
+      "type": "object",
+      "description": "Needed by --restore-substrate-v05 only.",
+      "additionalProperties": false,
+      "required": ["repo", "current", "previous"],
+      "properties": {
+        "repo": { "type": "string", "minLength": 1 },
+        "current": {
+          "type": "object",
+          "required": ["version", "commit", "config"],
+          "properties": { "version": { "type": "string" }, "commit": { "$ref": "#/definitions/commit" }, "config": { "type": "string" } }
+        },
+        "previous": {
+          "type": "object",
+          "required": ["version", "commit", "config", "rollback_dir"],
+          "properties": { "version": { "type": "string" }, "commit": { "$ref": "#/definitions/commit" }, "config": { "type": "string" }, "rollback_dir": { "type": "string" } }
+        },
+        "node_state": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+    "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$" },
+    "kind": { "type": "string", "pattern": "^[A-Z][A-Za-z]+$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{12,40}$" },
+    "gcs_prefix": { "type": "string", "pattern": "^gs://[a-z0-9][-a-z0-9._]*/.+/$" }
+  }
+}
