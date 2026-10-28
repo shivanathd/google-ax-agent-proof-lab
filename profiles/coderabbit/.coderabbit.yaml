@@ -1,0 +1,39 @@
+# PROPOSAL ONLY. Not active: CodeRabbit reads .coderabbit.yaml from the repository root, and this file lives in
+# profiles/coderabbit/. The owner copies it to the root after hosting the repo, approving the app and accepting
+# data disclosure (see docs/PROFILES.md). Review findings are advisory; the deterministic evaluator stays the oracle.
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+early_access: false
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/node_modules/**"
+    - "!package-lock.json"
+    - "!private-runs/**"
+    - "!artifacts/**"
+    - "!recordings/**"
+  path_instructions:
+    - path: "src/**"
+      instructions: >-
+        Check that authorization decisions come from deterministic policy and trusted identity, never from agent output;
+        that writes use compare-and-set or a transaction; and that missing evidence is reported as BLOCKED/UNKNOWN,
+        never as PASS or a numeric zero.
+    - path: "profiles/**"
+      instructions: >-
+        Optional lanes must stay BLOCKED without explicit operator authorization and must make zero provider calls in
+        doctor. Flag any read of default orgs, ambient credentials or env-file API keys.
+    - path: "docs/spec/**/evals/**"
+      instructions: >-
+        Evaluator expectations are fixed. Flag any change that weakens an assertion instead of proposing a spec amendment.
+chat:
+  auto_reply: false
+knowledge_base:
+  opt_out: true

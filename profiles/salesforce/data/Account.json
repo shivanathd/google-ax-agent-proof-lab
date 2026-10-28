@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "Account", "referenceId": "NorthstarDemoRef" },
+      "Name": "Northstar Demo",
+      "Description": "Trial account",
+      "APL_Description_Version__c": 1
+    }
+  ]
+}
