@@ -18,7 +18,7 @@ This lane runs one existing lab case inside an AX task on Agent Substrate, then 
 | Timing, submit → Running → result | EXECUTED (cluster, run 3, n = 5): expectation met | `RESULTS.md` §3.3 (6) |
 | Substrate reinstall at v0.6.0 and the transfer service account | EXECUTED (cluster, run 3, owner-approved) | `RESULTS.md` §3.1, §3.2 |
 | `owned-resources.json` writer → schema → `teardown.sh --dry-run` round trip | EXECUTED (locally, synthetic run dir with placeholder identifiers) | `profiles/ax/tests/run-dir.test.ts` |
-| `teardown.sh`, all three modes, for real | NOT RUN. Only `--dry-run` was run (run 3's run dir, then the synthetic run dir) | `RESULTS.md` §3.4 |
+| `teardown.sh`, default mode, for real | EXECUTED 2026-10-29 with owner approval, then checked independently with read-only queries (lab namespace, `ax-system`, registry, disk and snapshot prefixes gone; Substrate v0.6.0 and the transfer SA + grants left in place on purpose). `--remove-substrate-iam` and `--restore-substrate-v05` NOT RUN (dry-run only) | `RESULTS.md`, "Teardown" |
 | microVM sandbox class | NOT RUN | - |
 
 Three authorized cluster runs happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox; only run 3's cluster results say anything about gVisor. On Substrate v0.6.0 the collector reads `/apl/result` through the router over mTLS with its own pod certificate (L-045).
