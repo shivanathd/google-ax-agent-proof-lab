@@ -58,7 +58,7 @@ flowchart TB
   end
   emulate["Emulate Slack x2<br/><b>L-019:</b> /_slack/simulate/* accepts any valid token"]
   ledger[("SQLite ledger<br/>worker: read-write")]
-  floci["Floci S3 + SQS<br/>credential checks not verified (UNKNOWN)"]
+  floci["Floci S3 + SQS<br/>does not check credentials (L-037)"]
   evaluator["Evaluator<br/>no provider credentials"]
 
   coord -- "setup token: seed, invite, simulate" --> emulate
@@ -83,7 +83,7 @@ What enforces each boundary, with the file that does it:
 | Collector cannot write the ledger | `better-sqlite3` opened with `{ readonly: true }` (L-015) | `src/ledger/read.ts` |
 | Evaluator cannot see stimulus internals | It reads only the bundle and the spec's `cases.json` | `src/reports/artifacts.ts` |
 
-**Residual (L-019).** Emulate checks only that a token is valid on its simulator routes. Anyone who knows an emulator URL and holds any valid token for that workspace can simulate clicks and retries. The boundary is process separation (the worker never learns the URL), not emulator authorization. **Unknown.** The worker and collector use different Floci keys, but nobody has checked that Floci rejects a wrong key, so treat the separation as labelling.
+**Residual (L-019).** Emulate checks only that a token is valid on its simulator routes. Anyone who knows an emulator URL and holds any valid token for that workspace can simulate clicks and retries. The boundary is process separation (the worker never learns the URL), not emulator authorization. **Also labelling only (L-037).** The worker and collector use different Floci keys, but Floci served the worker's receipts to the collector's never-provisioned key: it does not check credentials. The boundary is process separation here too.
 
 ## (c) Evidence flow
 
