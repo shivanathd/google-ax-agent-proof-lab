@@ -1,8 +1,10 @@
 {
   "note": "AX lane expectations (ADR-12). Same observation keys and values as the local F3-A1 case, plus command_exit_code from the runner's result.json. ax_task_phase is copied into every bundle and is never asserted (L-006).",
-  "recorded_not_asserted": ["ax_task_phase"],
+  "recorded_not_asserted": ["ax_task_phase","step","concurrency","tasks_planned","tasks_timed","probe_self_report_reached_count","foreign_secret_in_task_count"],
   "F3-A1": {"profile":"ax","source_case":"F3-A1","expected":{"ticket_count":1,"receipt_count":1,"receipt_matches_request":true,"completion_reply_count":1,"command_exit_code":0}},
   "AX-R1": {"profile":"ax","note":"runner contract: a failing command (exit 3) must be reported as such whatever the AX phase says","expected":{"command_exit_code":3}},
   "AX-R2": {"profile":"ax","note":"termination: a command that traps SIGTERM and exits 42","expected":{"command_exit_code":42}},
-  "AX-R3": {"profile":"ax","note":"termination: a command that ignores SIGTERM is killed after the 10 s grace","expected":{"command_exit_code":137}}
+  "AX-R3": {"profile":"ax","note":"termination: a command that ignores SIGTERM is killed after the 10 s grace","expected":{"command_exit_code":137}},
+  "MT-W01": {"profile":"ax","note":"steps 1 and 2: one per tenant run after its last round","expected":{"foreign_marker_count":0}},
+  "MT-ISO": {"profile":"ax","note":"step 1, own tenant runs after c = 4","expected":{"cross_tenant_upstream_count":0,"allowed_control_reached":true,"foreign_marker_count":0}}
 }
