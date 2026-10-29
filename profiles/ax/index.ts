@@ -55,7 +55,7 @@ export function prerequisites(env: NodeJS.ProcessEnv): Prerequisite[] {
     {
       id: "ax.substrate-api",
       description:
-        "Set APL_AX_SUBSTRATE_API to the expected in-cluster Substrate Control API (upstream default api.ate-system.svc.cluster.local:443); run() re-checks it with `kubectl get svc api -n ate-system`",
+        "Set APL_AX_SUBSTRATE_API to the expected in-cluster Substrate Control API (upstream default api.ate-system.svc.cluster.local:443)",
       satisfied: Boolean(env.APL_AX_SUBSTRATE_API),
     },
     {

@@ -5,7 +5,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { ROOT } from "../config/run-config.ts";
-import { p50 } from "../../profiles/ax/multi-facts.ts";
 import { SECRET_RULES, privateTermsPath } from "./export.ts";
 import { aggregate, writeChecksums, type Status } from "./report.ts";
 
@@ -55,6 +54,9 @@ export function aggregateMarkdown(a: ReturnType<typeof rollUp>) {
     ...a.rows.map((r) => `| ${r.run_id} | ${r.case} | ${r.task ?? "—"}${r.warmup ? " (warm-up, not counted)" : ""} | ${r.cluster} | ${r.tenant} | ${r.status} | ${r.reason ?? ""} |`), "",
   ].join("\n");
 }
+
+// Nearest rank: the ⌈n/2⌉-th smallest value (the 15th of 30, the 16th of 32), no interpolation; null when empty.
+export const p50 = (xs: number[]): number | null => (xs.length ? [...xs].sort((a, b) => a - b)[Math.ceil(xs.length / 2) - 1]! : null);
 
 const stat = (xs: number[]) => ({ p50: p50(xs), max: xs.length ? Math.max(...xs) : null });
 const headline = (xs: number[]) => ({ n: xs.length, ...stat(xs), ...(xs.length < 30 ? { n_below_planned: true } : {}) });

@@ -154,8 +154,7 @@ export function commandDuration(result: { started_at?: string; ended_at?: string
   return Number.isFinite(ms) && ms >= 0 ? { value: ms } : { absent: "result.json has no valid started_at and ended_at" };
 }
 
-// Nearest rank: the ⌈n/2⌉-th smallest value (the 15th of 30, the 16th of 32), no interpolation; null when empty.
-export const p50 = (xs: number[]): number | null => (xs.length ? [...xs].sort((a, b) => a - b)[Math.ceil(xs.length / 2) - 1]! : null);
+export { p50 } from "../../src/reports/aggregate.ts";
 
 // ---- the agreement rule (build §11.2) ----
 
