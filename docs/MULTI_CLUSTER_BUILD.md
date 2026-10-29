@@ -130,6 +130,7 @@ Each phase ends when its gate and the existing `npm test` pass. No cluster call 
 
 - **`multi.ts infra a`.** It writes A's `versions.json`, patches WorkerPool `apl-ax-pool` to `replicas: 3`, and scales the infrastructure run's own Floci and Emulate in `apl-ax-6882d106` to 0. It applies the collector NetworkPolicy, then deletes Pod `apl-collector` and recreates it from `collector.yaml`, because a Pod's `envFrom`, volumes and image cannot be patched. The Pod is already listed in A's run dir, so the record does not change. The preflight lists WorkerPools and stops if any other exists.
 - **`multi.ts infra b`.** It applies `collector.yaml` (Namespace, ServiceAccount, Pod, NetworkPolicy, WorkerPool at 3), recording each object in B's run dir before its create. `gcloud container clusters resize <cluster> --node-pool <pool> --num-nodes 0|2` takes the pool name from `gke_cluster.node_pool` in B's run dir (§8.3).
+- **B's install (done, recorded in B's run dir; moved from design 8.1).** Substrate v0.6.0 was installed with its own `ate-setup` from a config derived from A's install config and the v0.6.0 requirements in L-046: a cluster-wide `--snapshot-location` in B's own bucket, `--ingress-allowed-spiffe-ids` including the collector, `ax-server` as a bootstrap owner, home-built v0.6.0 images. AX `4b7bf6f` was deployed with `AX_SNAPSHOTS_BUCKET` pointed at a B-owned prefix (L-031).
 - **Gateway config.** Before step 1, and before step 2 on B, the deployed `atenet-egress` ConfigMap is read (read-only) and compared with the fixture (§9.3). A difference is stop rule 8.
 
 ### 4.2 Per tenant run
@@ -151,6 +152,7 @@ Each object is added to the step run dir's `owned-resources.json` before it is c
 3. Once all c are attached, issue the c `ax resume` calls in parallel and wait for the c results in parallel (`collector.ts result --wait-ms 120000`).
 4. For each task:
    - keep only the phase from `ax get task` in `phase-<task>.json` (the full output holds tokens in clear, L-034), and copy it into the Pod;
+   - read its actor once (`kubectl ate get actor <task> -a <atespace> -o json`, the call of §9.2) and record `status.workerAssignment.worker` as the task row's `worker` in `timing-raw.json`, or absent with a reason if it is empty (recorded, not asserted; design 7.1, 11.3). The attach poll runs before resume and the cleanup listing after delete, so neither shows the running actor's worker;
    - run `observe` while the actor still serves `/apl/result`;
    - copy the bundle to `artifacts/runs/<run_id>/` and call `writeChecksums()` (`src/reports/report.ts`) on it at once, so its first `generateReport()` already checks it.
 5. Delete the c tasks, and save the round's ax-server log extract (§12).
@@ -160,7 +162,7 @@ Each object is added to the step run dir's `owned-resources.json` before it is c
    - set `removed_at` on its entry once a second listing no longer shows it;
    - record the counts and each leftover's `status.workerAssignment.worker` in the set dir.
 
-A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the tenant run's last round, before its emulators are scaled to 0.
+A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the tenant run's last round, before its emulators are scaled to 0. For MT-ISO the collector writes the gateway-log extract into the bundle's evidence with every address replaced by its role (`redactAddresses()`), so the export carries the redacted copy; the verbatim `egress-<task>.json` stays in the set dir (design 11.1).
 
 ### 4.4 Failures within a round
 
@@ -180,6 +182,13 @@ A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the t
 ### 4.5 Actor probe
 
 One probe tenant run has `apl-<tr8>-p1` in round 1 and `apl-<tr8>-p2` in round 2. Both are rendered as W01-H tasks and run through §4.3, with `kubectl ate get actors -a <atespace> -o json` saved after each apply, result and delete. From these listings the runner records G, L, and whether a leftover holds a worker slot (a non-empty `status.workerAssignment.worker`), before step 6 of §4.3 removes it.
+
+### 4.6 Step 2 and A's half (design 8.3)
+
+- `multi.ts plan --step 2` re-runs the read-only queries of §1.3 on A into the set dir as `versions-a-step2.json` and compares it field by field with A's `versions.json` recorded for step 1. It also checks that A's and B's `versions.json` name the same `lab_image` digest.
+- If both checks pass, the plan has no A configuration. `plan.json` records `"a": {"reused": {"set_id": "<step 1 set_id>", "c": 1}}`, and the all-clusters view takes A's row from that configuration's reports.
+- If either check fails, the plan lists the differing fields, and A is planned first exactly as B: one tenant, c = 1, a warm-up round and 30 counted tasks.
+- `ax-multi.test.ts` (phase 5) covers both outcomes of the plan.
 
 ## 5. Templates and placeholders
 
@@ -325,7 +334,7 @@ These blocks are vendored, dedented and otherwise unchanged, in `profiles/ax/tes
 
 - **Self-report.** It counts a target as reached when an HTTP probe gets that target's expected 404.
 - **Planted control.** Task `apl-<tr8>-ctl` in tenant t1 runs under the planted policy of §9.1 and sends one probe to t2's Emulate ClusterIP with t2's Host. It runs before the four MT-ISO probes and is observed with `observe --run --case MT-ISO` into the set dir. Its count must be at least 1, and its window is excluded from stop rule 3.
-- **Marker control.** One tenant run is observed again with its own first task added to the markers file.
+- **Marker control.** One tenant run is observed again with its own first task added to the markers file. It runs once on each cluster for the whole experiment, before that cluster's first counted MT-W01 is observed (design 6.4).
 
 ## 11. Reports
 
@@ -425,8 +434,28 @@ One compact example per file. Values are illustrative, and private values are pl
 | `--foreign-markers-file` | set dir | `{"tenant_run_id": "<uuid>", "foreign": [<every other tenant-runs.json entry>]}` |
 | `--targets-file` | set dir | `[{"role": "t2-emulate-clusterip", "address": "<ip>", "port": 8080, "host": "emulate.apl-ax-5e6f7a8b.svc.cluster.local", "path": "/_apl/missing", "own": false}, {"role": "worker-1-80", "address": "<pod-ip>", "port": 80, "tcp": true, "own": false}, {"role": "t1-emulate-clusterip", "address": "<ip>", "port": 8080, "host": "emulate.apl-ax-1a2b3c4d.svc.cluster.local", "path": "/_apl/missing", "own": true}]` |
 | `--disclosure-file` | set dir | `{"tenant_run_id": "<uuid>", "tasks_checked": 8, "foreign_secret_in_task_count": 0, "method": "operator string search of ax get task; output not stored"}` |
-| `--egress-log-file` | set dir | `{"window": {"from": "<iso>", "to": "<iso>", "margin_s": 10, "events": {"resume_issued": "<iso>", "result_returned": "<iso>"}}, "source": "kubectl logs -l app=atenet-egress -c envoy --tail=-1 --prefix --max-log-requests=<n>, ate-system", "pods_before": [{"name": "<pod>", "restarts": 0}], "pods_after": [{"name": "<pod>", "restarts": 0}], "exit_code": 0, "line_count": 42, "lines": ["<access-log line, verbatim>"]}` |
+| `--egress-log-file` | set dir, `egress-<task>.json` per probing task | `{"window": {"from": "<iso>", "to": "<iso>", "margin_s": 10, "events": {"resume_issued": "<iso>", "result_returned": "<iso>"}}, "source": "kubectl logs -l app=atenet-egress -c envoy --tail=-1 --prefix --max-log-requests=<n>, ate-system", "pods_before": [{"name": "<pod>", "restarts": 0}], "pods_after": [{"name": "<pod>", "restarts": 0}], "exit_code": 0, "line_count": 42, "lines": ["<access-log line, verbatim>"]}` |
 | `--run-facts` | set dir | `{"step": 1, "concurrency": 2, "tasks_planned": 15, "tasks_timed": 15}` |
 | `stopped.json` | step run dir | `[{"run_id": "<uuid>", "case": "F3-A1", "execution": "NOT_RUN", "reason": "stop rule 4: ResourceExhausted at c = 4, round 3", "at": "<iso>"}]` |
-| `timing-raw.json` | set dir | `{"tasks": [{"run_id": "<uuid>", "cluster": "a", "c": 2, "round": 3, "task": "apl-1a2b3c4d-03", "server_resume_to_running_ms": 2100, "command_duration_ms": 8400, "egress_attach_ms": 9000, "submit_to_result_ms": 19700, "empty_exec_ms": 600, "unobserved": {}}], "rounds": [{"cluster": "a", "c": 2, "round": 3, "resume_spread_ms": 180, "leftover_actors": 0}]}` |
+| `timing-raw.json` | set dir | `{"tasks": [{"run_id": "<uuid>", "cluster": "a", "c": 2, "round": 3, "task": "apl-1a2b3c4d-03", "server_resume_to_running_ms": 2100, "command_duration_ms": 8400, "egress_attach_ms": 9000, "submit_to_result_ms": 19700, "empty_exec_ms": 600, "worker": "<worker-pod>", "unobserved": {}}], "rounds": [{"cluster": "a", "c": 2, "round": 3, "resume_spread_ms": 180, "leftover_actors": 0}]}` |
 | `timing.json` | `docs/evidence/<set_id>/` | `{"set_id": "<uuid>", "configurations": [{"cluster": "a", "step": 1, "case": "F3-A1", "c": 2, "server_resume_to_running_ms": {"n": 30, "p50": 2100, "max": 2600}, "command_duration_ms": {"n": 30, "p50": 8400, "max": 9100}, "resume_spread_ms": {"p50": 180, "max": 400}, "operator": {"submit_to_result_ms": {"p50": 19700, "max": 21000}}, "warmup": [{"task": "apl-1a2b3c4d-00", "server_resume_to_running_ms": 2900}]}], "raw": <timing-raw.json rows>}` |
+
+## Appendix B. The proto read for MV-PORT (moved from design 9.1)
+
+Done read-only during review rounds 3 and 4, and recorded in `docs/RESEARCH.md` (§2):
+
+- AX `4b7bf6f`, `pkg/apis/v1alpha1/ax.proto`: service `AX` is Task, Workspace and Model CRUD plus `SuspendTask` and `ResumeTask`. No import, export, snapshot or restore RPC.
+- Substrate `d3f2363`, `pkg/proto/ateapipb/ateapi.proto`: service `Control` has no import or restore RPC. Its suspend and resume RPCs act on an existing actor (the comments describe checkpointing a running actor), and an actor can be seeded from a snapshot only through `Actor.source_tag`. A `Tag`'s `source_actor` is required, names the suspended actor whose snapshot it captures, and must be in the tag's own atespace (`CreateTagRequest` validation), so a tag can only capture an actor of the same control plane.
+- Substrate `d3f2363`, `pkg/proto/objectstorepb/v1/objectstore.proto` (public): `NodeProvider` is the plugin API a storage platform implements on every node; atelet calls `FetchSnapshot` and `UploadSnapshot` to move a snapshot's files by `snapshot_uri`. `ControlProvider` (`CleanupSnapshot`, `CopySnapshot`) is likewise called by ate-api-server. Both are plugin interfaces Substrate calls, keyed by a storage URI; neither is a client API that registers a snapshot as an actor or a tag in another control plane, so neither is a documented import path.
+
+## Appendix C. Settings carried from `emulators.yaml` (design decision 4)
+
+`emulators.yaml` is frozen as run 3's record: only the BLOCKED `run()` (`index.ts`), `tests/integration/ax-profile.test.ts` and `profiles/ax/tests/run-dir.test.ts` read it. `tenant.yaml` and `collector.yaml` (§5) carry these settings from it unchanged:
+
+- **L-032:** `enableServiceLinks: false` on every Pod template (Floci, Emulate, collector), because service links set `FLOCI_PORT=tcp://<ip>:4566`, which Floci reads as its own port. Keep the comment that says so.
+- `automountServiceAccountToken: false` on every Pod and on the collector ServiceAccount.
+- Floci: `FLOCI_SERVICES_UI_ENABLED=false`, port 4566, TCP readiness probe on 4566 every 2 s.
+- Emulate: `APL_EMULATE_BASE_URL=http://emulate.apl-ax-<tr8>.svc.cluster.local:8080`, `APL_EMULATE_SEED` from Secret `emulate-seed`, ports 8080 and 8081, readiness `GET /_apl/health` on 8081 every 2 s.
+- Limits: Floci 500m and 768Mi, Emulate 500m and 512Mi, collector 500m and 512Mi.
+- Collector Pod: `restartPolicy: Never`, `command: ["sleep", "infinity"]`, and the `podidentity` (podCertificate) and `servicedns-ca` (clusterTrustBundle) projected volumes, as written there.
+- WorkerPool: `sandboxClasses: [gvisor]`, template limits 3 CPU and 4Gi, requests 1 CPU and 4Gi.
