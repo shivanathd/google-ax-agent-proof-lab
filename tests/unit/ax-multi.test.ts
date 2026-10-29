@@ -3,13 +3,14 @@
 // for real: orchestrate.ts into temp dirs, evaluate_ax.py, and doctor()'s client probe on a stub kubectl.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { ROOT } from "../../src/config/run-config.ts";
 import { artifactDir } from "../../src/reports/artifacts.ts";
 import { verifyChecksums } from "../../src/reports/report.ts";
 import { accessLogBlocks } from "../../profiles/ax/egress.ts";
+import { crossTenantUpstreams, ISOLATION, isolationWaitMs } from "../../profiles/ax/multi-facts.ts";
 import { buildPlan, Cluster, main, readInfra, Stop, type Call, type Exec, type MultiPlan, type Result } from "../../profiles/ax/multi.ts";
 import { manifestObjects } from "../../profiles/ax/run-dir.ts";
 
@@ -32,8 +33,8 @@ let root: string, runsRoot: string, evidenceRoot: string;
 const infra: Record<"a" | "b", string> = { a: "", b: "" };
 const saved = { auth: process.env.APL_AX_AUTHORIZED, art: process.env.APL_ARTIFACTS_DIR, terms: process.env.APL_PRIVATE_TERMS };
 
-function makeInfra(id: "a" | "b") {
-  const dir = join(root, `infra-${id}`), bin = join(dir, "bin");
+function makeInfra(id: "a" | "b", name = `infra-${id}`, extra: Record<string, unknown> = {}) {
+  const dir = join(root, name), bin = join(dir, "bin");
   mkdirSync(bin, { recursive: true });
   mkdirSync(join(dir, "axhome"));
   writeFileSync(join(bin, "kubectl"), `#!/bin/sh\necho '{"clientVersion":{"minor":"36","gitVersion":"v1.36.6"}}'\n`, { mode: 0o755 });
@@ -50,6 +51,7 @@ function makeInfra(id: "a" | "b") {
       { name: "registry.example.invalid/ax/ax-server", digest: `sha256:${hex("a")}`, source: "google/ax@4b7bf6f84cac" },
     ],
     local: { bin, ax_cli: join(bin, "ax"), kubectl: join(bin, "kubectl") },
+    ...extra,
   };
   writeFileSync(join(dir, "owned-resources.json"), JSON.stringify(owned));
   writeFileSync(join(dir, "versions.json"), JSON.stringify({ cluster: `cluster-${id}`, ...VERSIONS }));
@@ -75,9 +77,8 @@ afterAll(() => {
 });
 
 // A C4 bundle as the collector would write it, passing evaluate_ax.py for its case.
-function writeBundle(dir: string, kase: string, runId: string) {
+function writeBundle(dir: string, kase: string, obs: Record<string, number | boolean>, runId: string) {
   mkdirSync(join(dir, "evidence"), { recursive: true });
-  const obs = kase === "F3-A1" ? { ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1, command_exit_code: 0 } : { foreign_marker_count: 0 };
   const result = `${JSON.stringify({ http_status: 200, body: { exit_code: 0, started_at: "2026-10-30T10:00:00.000Z", ended_at: "2026-10-30T10:00:08.400Z" } })}\n`;
   const facts = `${JSON.stringify(obs)}\n`;
   writeFileSync(join(dir, "evidence", "ax-result.json"), result);
@@ -90,12 +91,19 @@ function writeBundle(dir: string, kase: string, runId: string) {
 }
 
 interface FakeOpts { actorNever?: string; exhaustedOn?: string; attachFails?: string; resumeFails?: string; noResult?: string; observeFails?: string; deleteFails?: string;
-  leftovers?: boolean; leftoverDeleteFails?: boolean; pfDies?: number; context?: string; versions?: { nodes?: string } }
+  leftovers?: boolean; leftoverDeleteFails?: boolean; pfDies?: number; context?: string; versions?: { nodes?: string }; teardownOut?: string;
+  breachOn?: string; getTaskFails?: string; markerBlind?: boolean; portBusy?: boolean }
+
+const isoTask = (t: string) => /-(iso|ctl)$/.test(t);
+const emulateIp = (ns: string) => `10.96.${Number.parseInt(ns.slice(-2), 16)}.1`; // as the fake's `get svc,endpoints` answers
 
 // The recording fake cluster. It also checks, at each create, that the object is already in owned-resources.json.
+// The collector's observe is faked from the files the runner put into the Pod: MT-W01 counts the marker control's
+// planted entry, MT-ISO computes its count from the egress extract and targets as collector.ts does.
 function fake(o: FakeOpts = {}) {
   const calls: Call[] = [], violations: string[] = [];
-  const actors = new Set<string>(), resumed: string[] = [], pending = new Map<string, string>();
+  const actors = new Set<string>(), resumed: string[] = [], pending = new Map<string, [string, Record<string, number | boolean>]>(), pod = new Map<string, string>();
+  let prober = "";
   const left: Record<string, Record<string, string[]>> = {};
   let pfs = 0;
   const ok = (stdout: unknown = "", code = 0, stderr = ""): Result => ({ code, stdout: typeof stdout === "string" ? stdout : JSON.stringify(stdout), stderr });
@@ -104,7 +112,7 @@ function fake(o: FakeOpts = {}) {
     const a = c.args, s = ` ${a.join(" ")} `;
     const owned = () => readJson(join(dirname(c.env.KUBECONFIG!), "owned-resources.json"));
     const need = (pred: (ow: any) => boolean, what: string) => { if (!pred(owned())) violations.push(`${what} created before it was recorded`); };
-    if (c.cmd === "bash") return ok("teardown: done");
+    if (c.cmd === "bash") return ok(c.args[1] === "--snapshot" ? "snapshot written" : (o.teardownOut ?? "teardown: done"));
     if (c.background) { const n = ++pfs; return { ...ok(), alive: () => !(o.pfDies && n <= o.pfDies), stop: () => {} }; }
     if (s.includes(" config current-context ")) return ok(`${o.context ?? readFileSync(a[a.indexOf("--kubeconfig") + 1]!, "utf8").trim()}\n`);
     if (c.cmd === "gcloud") return ok({ currentMasterVersion: VERSIONS.gke.master, currentNodeVersion: o.versions?.nodes ?? VERSIONS.gke.nodes });
@@ -122,10 +130,11 @@ function fake(o: FakeOpts = {}) {
         if (task === o.exhaustedOn) return ok("", 1, "rpc error: code = ResourceExhausted desc = no worker has room");
         if (task === o.resumeFails) return ok("", 1, "rpc error: code = Unavailable desc = injected");
         resumed.push(task);
+        if (isoTask(task)) prober = task;
         return ok();
       }
       if (verb === "get" && a[3] === "tasks") return ok(`NAME ATESPACE PHASE\n${[...actors].map((t) => `${t} ${a[5]} Running`).join("\n")}\n`);
-      if (verb === "get") return ok("{}");
+      if (verb === "get") return task === o.getTaskFails ? ok("", 1, "rpc error: code = Unavailable desc = injected") : ok({ metadata: { name: task }, spec: { env: {} } });
       if (verb === "delete") {
         if (task === o.deleteFails) return ok("", 1, "rpc error: code = Internal desc = injected");
         actors.delete(task);
@@ -159,7 +168,24 @@ function fake(o: FakeOpts = {}) {
       need((ow) => objs.every((x) => ow.kubernetes.some((r: any) => r.kind === x.kind && r.name === x.name)), "tenant objects");
       return ok();
     }
-    if (k[0] === "apply") { need((ow) => ow.kubernetes.some((r: any) => r.name === "collector-env-tenants"), "Secret collector-env-tenants"); return ok(); }
+    if (k[0] === "apply") {
+      const objs = c.input!.startsWith("{") ? [{ kind: "Secret", name: "collector-env-tenants" }] : manifestObjects(c.input!); // the Secret goes as JSON
+      need((ow) => objs.every((x) => ow.kubernetes.some((r: any) => r.kind === x.kind && r.name === x.name)), objs.map((x) => `${x.kind} ${x.name}`).join(","));
+      return ok();
+    }
+    if (s.includes(' cat > "$1" sh ')) { pod.set(a.at(-1)!, c.input!); return ok(); } // the runner's put() into the Pod
+    if (s.includes(" get workerpools -A ")) return ok({ items: [{ metadata: { namespace: "apl-ax-6882d106", name: "apl-ax-pool" } }] });
+    if (s.includes(" get workerpool apl-ax-pool ")) return ok({ spec: { replicas: 1 } });
+    if (s.includes(" get svc atenet-router ")) return ok({ spec: { clusterIP: "10.96.0.40" } });
+    if (s.includes(" get pods,replicasets,statefulsets ")) {
+      return ok({ items: [{ kind: "Pod", metadata: { name: "worker-0", uid: "p", ownerReferences: [{ kind: "WorkerPool", name: "apl-ax-pool", uid: "w" }] }, spec: { containers: [] }, status: { podIP: "10.244.9.9" } }] });
+    }
+    if (s.includes(" app=atenet-egress ") && s.includes(" get pods ")) return ok({ items: [{ metadata: { name: "atenet-egress-aaaa" }, status: { containerStatuses: [{ restartCount: 0 }] } }] });
+    if (s.includes(" logs -l app=atenet-egress ")) {
+      // The prober's allowed control, plus a foreign upstream for the planted control or an injected breach.
+      const ns = `apl-ax-${prober.slice(4, 12)}`, line = (up: string) => `[pod/atenet-egress-aaaa/envoy] ${JSON.stringify({ leg: "cleartext", time: new Date().toISOString(), actor: `${ns}/${prober}`, status: 404, upstream: up })}`;
+      return ok([line(`${emulateIp(ns)}:8080`), ...(prober.endsWith("-ctl") || prober === o.breachOn ? [line("10.96.250.1:8080")] : [])].join("\n"));
+    }
     if (s.includes(" get svc,endpoints ")) {
       const n = Number.parseInt(k[1]!.slice(-2), 16);
       return ok({ items: [["emulate", 1], ["floci", 2]].flatMap(([name, i]) => [
@@ -173,17 +199,28 @@ function fake(o: FakeOpts = {}) {
       const task = a[a.indexOf("--task") + 1] ?? "";
       if (s.includes(" result ")) return task === o.noResult ? ok({ http_status: 0 }, 3) : ok({ http_status: 200 });
       if (task === o.observeFails) return ok("", 2, "injected");
-      pending.set(a[a.indexOf("--run-id") + 1]!, a[a.indexOf("--case") + 1]!);
+      const kase = a[a.indexOf("--case") + 1]!, file = (flag: string) => JSON.parse(pod.get(a[a.indexOf(flag) + 1]!)!);
+      let obs: Record<string, number | boolean> = { ticket_count: 1, receipt_count: 1, receipt_matches_request: true, completion_reply_count: 1, command_exit_code: 0 };
+      if (kase === "MT-W01") obs = { foreign_marker_count: !o.markerBlind && file("--foreign-markers-file").foreign.some((f: any) => f.tenant_run_id === "marker-control") ? 1 : 0 };
+      if (kase === "MT-ISO") {
+        const targets = file("--targets-file"), own = (re: RegExp) => targets.filter((t: any) => t.own && re.test(t.role)).map((t: any) => t.address);
+        const v = crossTenantUpstreams(file("--egress-log-file"), { emulate: own(/emulate/), floci: own(/floci/) }, 0);
+        obs = { foreign_marker_count: 0, ...("value" in v.cross_tenant_upstream_count ? { cross_tenant_upstream_count: v.cross_tenant_upstream_count.value } : {}),
+          ...("value" in v.allowed_control_reached ? { allowed_control_reached: v.allowed_control_reached.value } : {}) };
+      }
+      pending.set(a[a.indexOf("--run-id") + 1]!, [kase, obs]);
       return ok();
     }
     if (k[0] === "cp") {
       const id = /\/tmp\/apl\/([^/]+)\/bundle$/.exec(k[1]!)![1]!;
-      if (pending.has(id)) writeBundle(k[2]!, pending.get(id)!, id);
+      if (pending.has(id)) writeBundle(k[2]!, ...pending.get(id)!, id);
       return ok();
     }
     if (s.includes(" logs deployment/ax-server ")) {
-      return ok(resumed.flatMap((t) => [`time=2026-10-30T10:00:00.000Z level=INFO msg="resuming actor on Substrate worker" actor=${t}`,
-        `time=2026-10-30T10:00:02.100Z level=INFO msg="task successfully reconciled and running" actor=${t} workspaceReady=true`]).join("\n"));
+      // Each resume 40 ms after the one before, so a round's spread is 40 ms per extra task.
+      const at = (i: number, ms: number) => new Date(Date.parse("2026-10-30T10:00:00.000Z") + i * 40 + ms).toISOString();
+      return ok(resumed.flatMap((t, i) => [`time=${at(i, 0)} level=INFO msg="resuming actor on Substrate worker" actor=${t}`,
+        `time=${at(i, 2100)} level=INFO msg="task successfully reconciled and running" actor=${t} workspaceReady=true`]).join("\n"));
     }
     return ok();
   };
@@ -191,7 +228,7 @@ function fake(o: FakeOpts = {}) {
 }
 
 // A one-cluster plan on A: `kind` probe (no warm-up) or configuration (warm-up 00 plus counted tasks).
-function smallPlan(kind: "probe" | "configuration", c: number, tasks: number): string {
+function smallPlan(kind: "probe" | "configuration", c: number, tasks: number, o: { marker?: boolean } = {}): string {
   const tenant_runs = Array.from({ length: c }, (_, i) => {
     const id = uuid(), tr8 = id.slice(0, 8);
     const ts = kind === "probe" ? [`apl-${tr8}-p1`, `apl-${tr8}-p2`] : Array.from({ length: tasks }, (_, n) => `apl-${tr8}-${String(n).padStart(2, "0")}`);
@@ -201,7 +238,8 @@ function smallPlan(kind: "probe" | "configuration", c: number, tasks: number): s
   const setId = uuid();
   const plan: MultiPlan = {
     set_id: setId, step: 1, created_at: new Date().toISOString(), clusters: { a: { infra_run_dir: infra.a, context: "ctx-a", step_run_id: uuid() } },
-    configurations: [{ kind, cluster: "a", c, rounds: kind === "probe" ? 2 : tasks - 1, warmup: kind === "configuration", tenant_runs }], controls: [],
+    configurations: [{ kind, cluster: "a", c, rounds: kind === "probe" ? 2 : tasks - 1, warmup: kind === "configuration", tenant_runs }],
+    controls: o.marker ? [{ kind: "marker", cluster: "a", tenant_run_id: tenant_runs[0]!.tenant_run_id, task: null, run_id: uuid() }] : [],
   };
   const dir = join(runsRoot, "sets", setId);
   mkdirSync(dir, { recursive: true });
@@ -209,9 +247,19 @@ function smallPlan(kind: "probe" | "configuration", c: number, tasks: number): s
   return join(dir, "plan.json");
 }
 
+// Step 1's MT-ISO configuration on A with its planted egress control, as buildPlan() plans them.
+function isoPlan(): string {
+  const p = buildPlan({ step: 1, setId: uuid(), clusters: { a: { infra_run_dir: infra.a, context: "ctx-a", step_run_id: uuid() } }, registry: [], uuid });
+  const plan: MultiPlan = { ...p, configurations: p.configurations.filter((c) => c.kind === "mt-iso"), controls: p.controls.filter((c) => c.kind === "egress") };
+  const dir = join(runsRoot, "sets", plan.set_id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "plan.json"), JSON.stringify(plan));
+  return join(dir, "plan.json");
+}
+
 async function runStep(planFile: string, o: FakeOpts = {}, extra: string[] = []) {
   const f = fake(o), lines: string[] = [];
-  const code = await main(["run-step", "--plan", planFile, "--cluster", "a", ...extra], { exec: f.exec, runsRoot, evidenceRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid });
+  const code = await main(["run-step", "--plan", planFile, "--cluster", "a", ...extra], { exec: f.exec, runsRoot, evidenceRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid, portFree: async () => !o.portBusy });
   const plan: MultiPlan = readJson(planFile);
   const stepDir = join(runsRoot, plan.clusters.a!.step_run_id), setDir = join(runsRoot, "sets", plan.set_id);
   const stopped = existsSync(join(stepDir, "stopped.json")) ? readJson(join(stepDir, "stopped.json")) : [];
@@ -250,15 +298,30 @@ describe("the plan (design 6.1, §7)", () => {
     expect(() => buildPlan({ step: 1, setId: SET_ID, clusters: {}, registry: [{ tr8: "5e6f7a8b" }], uuid: ids("5e6f7a8b-0000-4000-8000-000000000009") })).toThrow(/refusing tenant run <tr8> 5e6f7a8b/);
   });
 
+  // A step 1 set as run-step on A leaves it: plan.json, and the versions it ran on snapshotted as versions-a.json.
+  const step1Set = (id: string, o: { dir?: string; nodes?: string } = {}) => {
+    const dir = join(runsRoot, "sets", id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "plan.json"), JSON.stringify({ set_id: id, step: 1, clusters: { a: { infra_run_dir: o.dir ?? infra.a, context: "ctx-a", step_run_id: uuid() } }, configurations: [], controls: [] }));
+    writeFileSync(join(dir, "versions-a.json"), JSON.stringify({ cluster: "cluster-a", ...VERSIONS, gke: { ...VERSIONS.gke, nodes: o.nodes ?? VERSIONS.gke.nodes } }));
+    return id;
+  };
+  const plan2 = async (setId: string, step1: string | null, o: FakeOpts = {}, b = infra.b) => {
+    const f = fake(o), lines: string[] = [];
+    const code = await main(["plan", "--step", "2", "--set-id", setId, "--infra-a", infra.a, "--infra-b", b, ...(step1 ? ["--step1-set-id", step1] : [])],
+      { exec: f.exec, runsRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid });
+    const file = join(runsRoot, "sets", setId, "plan.json");
+    return { code, lines, calls: f.calls, plan: existsSync(file) ? (readJson(file) as MultiPlan) : undefined };
+  };
+
   it("step 2 (§4.6): reuses A's step 1 c = 1 half when A's versions are unchanged, else plans A first and lists the differences", async () => {
-    const step1 = "00000000-0000-4000-8000-000000000001";
+    const step1 = step1Set("00000000-0000-4000-8000-000000000001");
     const plan = async (setId: string, o: FakeOpts) => {
-      const f = fake(o), lines: string[] = [];
-      const code = await main(["plan", "--step", "2", "--set-id", setId, "--infra-a", infra.a, "--infra-b", infra.b, "--step1-set-id", step1], { exec: f.exec, runsRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid });
-      expect(code, lines.join("\n")).toBe(0);
-      expect(f.calls.every((c) => c.env.KUBECONFIG === join(infra.a, "kubeconfig"))).toBe(true); // read-only queries on A only
+      const r = await plan2(setId, step1, o);
+      expect(r.code, r.lines.join("\n")).toBe(0);
+      expect(r.calls.every((c) => c.env.KUBECONFIG === join(infra.a, "kubeconfig"))).toBe(true); // read-only queries on A only
       expect(existsSync(join(runsRoot, "sets", setId, "versions-a-step2.json"))).toBe(true);
-      return readJson(join(runsRoot, "sets", setId, "plan.json")) as MultiPlan;
+      return r.plan!;
     };
     const same = await plan("00000000-0000-4000-8000-000000000002", {});
     expect(same.a).toEqual({ reused: { set_id: step1, c: 1 } });
@@ -268,12 +331,40 @@ describe("the plan (design 6.1, §7)", () => {
     expect(moved.a).toEqual({ rerun: { differences: ["gke.nodes"] } });
     expect(moved.configurations.map((c) => [c.cluster, c.c, c.rounds, c.tenant_runs[0]!.tasks.length])).toEqual([["a", 1, 30, 31], ["b", 1, 30, 31]]);
   });
+
+  it("step 2 compares A with step 1's snapshot, not with the infrastructure run dir's versions.json, and needs step 1's plan on this A", async () => {
+    // versions.json and the cluster agree, but step 1 ran on other nodes: A is planned again.
+    const older = step1Set("00000000-0000-4000-8000-000000000011", { nodes: "1.36.3-gke.9" });
+    expect((await plan2("00000000-0000-4000-8000-000000000012", older)).plan!.a).toEqual({ rerun: { differences: ["gke.nodes"] } });
+    const elsewhere = step1Set("00000000-0000-4000-8000-000000000013", { dir: infra.b });
+    for (const [setId, step1, why] of [["14", elsewhere, /no step 1 plan\.json whose clusters\.a\.infra_run_dir is --infra-a/], ["15", "00000000-0000-4000-8000-0000000000ff", /no step 1 plan\.json/],
+      ["16", null, /needs --step1-set-id/]] as const) {
+      const r = await plan2(`00000000-0000-4000-8000-0000000000${setId}`, step1);
+      expect([r.code, r.plan, r.calls]).toEqual([1, undefined, []]);
+      expect(r.lines.join("\n")).toMatch(why);
+    }
+  });
+
+  it("refuses A and B that are one cluster, and a run dir named for the other cluster", async () => {
+    const step1 = step1Set("00000000-0000-4000-8000-000000000021");
+    const sameCtx = makeInfra("b", "infra-b-same-context", { kube_context: "ctx-a" });
+    const sameCluster = makeInfra("b", "infra-b-same-cluster", { gke_cluster: { name: "cluster-a", location: "zone-a", node_pool: "pool-b" } });
+    for (const [n, b, why] of [["22", sameCtx, /same kube_context/], ["23", sameCluster, /same project, location and cluster/], ["24", infra.a, /is not cluster b's infrastructure run dir/]] as const) {
+      const r = await plan2(`00000000-0000-4000-8000-0000000000${n}`, step1, {}, b);
+      expect([r.code, r.plan, r.calls]).toEqual([1, undefined, []]);
+      expect(r.lines.join("\n")).toMatch(why);
+    }
+    const f = fake(), lines: string[] = [];
+    expect(await main(["infra", "a", "--infra", infra.b], { exec: f.exec, runsRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid })).toBe(1);
+    expect(lines.join("\n")).toMatch(/is not cluster a's infrastructure run dir/);
+    expect(f.calls).toEqual([]); // A's branch never ran on B
+  });
 });
 
 describe("the context guard (§8.4)", () => {
   it("refuses another cluster's kubeconfig, ax port or gcloud cluster", async () => {
     const f = fake();
-    const d = { exec: f.exec, sleep: async () => {}, log: () => {}, runsRoot, evidenceRoot, uuid };
+    const d = { exec: f.exec, sleep: async () => {}, log: () => {}, runsRoot, evidenceRoot, uuid, portFree: async () => true };
     const a = new Cluster("a", "ctx-a", infra.a, readInfra(infra.a), d, false);
     await a.checkContext();
     const kubectl = join(infra.a, "bin/kubectl"), axCli = join(infra.a, "bin/ax");
@@ -289,9 +380,16 @@ describe("the context guard (§8.4)", () => {
     expect(refused(describe("cluster-b"))).toMatch(/gcloud names another cluster/);
     expect(refused(describe("cluster-a", "zone-b"))).toMatch(/--location/);
     expect(refused({ cmd: "/usr/bin/curl", args: [], env })).toMatch(/not a guarded tool/);
-    // A kubeconfig changed after its context was checked is refused too.
-    const b = new Cluster("a", "ctx-a", infra.a, readInfra(infra.a), d, false);
-    expect(() => b.guard({ cmd: kubectl, args: ["--kubeconfig", b.kubeconfig, "get", "ns"], env })).toThrow(/was not checked/);
+    // A kubeconfig whose context was never checked is refused; one checked and then changed is refused too.
+    const dir = mkdtempSync(join(root, "guard-"));
+    writeFileSync(join(dir, "kubeconfig"), "ctx-a\n");
+    const b = new Cluster("a", "ctx-a", dir, readInfra(infra.a), d, false);
+    const get = { cmd: kubectl, args: ["--kubeconfig", b.kubeconfig, "get", "ns"], env: b.env() };
+    expect(() => b.guard(get)).toThrow(/was not checked/);
+    await b.checkContext();
+    expect(() => b.guard(get)).not.toThrow();
+    writeFileSync(join(dir, "kubeconfig"), "ctx-a\n# another cluster's credentials\n");
+    expect(() => b.guard(get)).toThrow(/the file changed since/);
   });
 
   it("sets KUBECONFIG to the run dir's kubeconfig in every subprocess, and --kubeconfig on every kubectl call", async () => {
@@ -322,9 +420,10 @@ describe("run-step against the recording fake", () => {
     // Every planned bundle observed, copied to artifacts/runs/<run_id>/ and checksummed there.
     expect(r.stopped).toEqual([]);
     for (const b of r.bundles) expect(verifyChecksums(artifactDir(b.run_id)).ok, b.task ?? "MT-W01").toBe(true);
-    expect(readJson(join(r.setDir, "timing-raw.json")).rounds.map((x: any) => x.resume_spread_ms)).toEqual([0, 0]);
+    expect(readJson(join(r.setDir, "timing-raw.json")).rounds.map((x: any) => x.resume_spread_ms)).toEqual([40, 40]); // the fake resumes 40 ms apart
     expect(readJson(join(r.setDir, "timing-raw.json")).tasks[0]).toMatchObject({ server_resume_to_running_ms: 2100, command_duration_ms: 8400 });
-    expect(existsSync(join(r.stepDir, "teardown.json"))).toBe(true);
+    expect(readJson(join(r.setDir, "versions-a.json"))).toEqual(readJson(join(infra.a, "versions.json"))); // what plan --step 2 compares with
+    expect(readJson(join(r.stepDir, "teardown.json")).status).toBe("CLEAN");
     expect(argsOf(r.calls.at(-1)!)).toBe(`${join(ROOT, "profiles/ax/teardown.sh")} ${r.stepDir}`);
   });
 
@@ -386,6 +485,10 @@ describe("run-step against the recording fake", () => {
       const ref = (t: string) => r.bundles.find((b) => b.task === t)!.run_id;
       expect(reasons(r)[ref(bad)]).toBe("BLOCKED: egress policy not attached");
       expect(observed(ref(good))).toBe(true);
+      // The round resumed one of its two tasks, so it has no resume spread.
+      const raw = readJson(join(r.setDir, "timing-raw.json"));
+      expect(raw.rounds.map((x: any) => x.round)).toEqual([0]);
+      expect(raw.rounds_absent).toEqual([expect.objectContaining({ round: 1, resume_spread_ms: `${bad} did not resume` })]);
     });
 
     it("ax resume fails: that bundle BLOCKED with the code; the round continues", async () => {
@@ -436,16 +539,59 @@ describe("run-step against the recording fake", () => {
       const r = await runStep(smallPlan("probe", 1, 2), { pfDies: 2 });
       expect(r.code).toBe(1);
       expect(r.calls.filter((c) => c.background)).toHaveLength(2); // reopened once
+      expect(r.calls.filter((c) => basename(c.cmd) === "ax")).toEqual([]); // the reopened forward is checked before the first call
       expect(Object.values(reasons(r))).toEqual(["BLOCKED: AX API unreachable", "BLOCKED: AX API unreachable"]);
+      const busy = await runStep(smallPlan("probe", 1, 2), { portBusy: true });
+      expect(busy.calls.filter((c) => c.background)).toEqual([]);
+      expect(Object.values(reasons(busy))).toEqual(["BLOCKED: AX API unreachable: local port 18480 is already in use", "BLOCKED: AX API unreachable: local port 18480 is already in use"]);
     });
 
     it("context mismatch: stop rule 2; no other call is made, so there is nothing to tear down", async () => {
       const r = await runStep(smallPlan("probe", 1, 2), { context: "ctx-b" });
       expect(r.code).toBe(1);
       expect(r.calls.map(argsOf)).toEqual([expect.stringContaining("config current-context")]);
+      expect(Object.values(reasons(r))).toHaveLength(2);
       expect(Object.values(reasons(r)).every((x) => /^BLOCKED: stop rule 2/.test(x as string))).toBe(true);
       expect(existsSync(join(r.stepDir, "teardown.json"))).toBe(false);
     });
+  });
+
+  it("teardown output naming a delete it continued past is INCOMPLETE, not CLEAN", async () => {
+    const r = await runStep(smallPlan("probe", 1, 2), { teardownOut: "teardown: kubectl ate delete actor golden-x failed (continuing)\nteardown: done" });
+    expect(r.code).toBe(0);
+    expect(readJson(join(r.stepDir, "teardown.json"))).toMatchObject({ exit_code: 0, status: "INCOMPLETE" });
+  });
+
+  it("the tenant-run registry: a held lock stops the step before a tenant is registered; the lock is released after each write", async () => {
+    const reg = join(runsRoot, "tenant-runs.json"), before = existsSync(reg) ? readFileSync(reg, "utf8") : null;
+    writeFileSync(`${reg}.lock`, "");
+    try {
+      const r = await runStep(smallPlan("probe", 1, 2));
+      expect(r.code).toBe(1);
+      expect(r.stopped.map((x: any) => x.reason)).toEqual([expect.stringMatching(/tenant-runs\.json\.lock exists/), expect.stringMatching(/tenant-runs\.json\.lock exists/)]);
+      expect(existsSync(reg) ? readFileSync(reg, "utf8") : null).toBe(before);
+    } finally {
+      rmSync(`${reg}.lock`);
+    }
+    const ok = await runStep(smallPlan("probe", 1, 2));
+    expect(ok.code).toBe(0);
+    expect(existsSync(`${reg}.lock`)).toBe(false);
+    expect(readJson(reg).at(-1).tenant_run_id).toBe(ok.plan.configurations[0]!.tenant_runs[0]!.tenant_run_id);
+  });
+
+  it("the marker control (design 6.4) on the real path: it is observed before MT-W01; a control that does not fire blocks MT-W01", async () => {
+    const r = await runStep(smallPlan("configuration", 1, 2, { marker: true }));
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    const ctl = r.plan.controls[0]!, w01 = r.bundles.find((b) => b.case === "MT-W01")!;
+    expect(existsSync(join(r.setDir, "controls", ctl.run_id, "observations.json"))).toBe(true);
+    expect(readJson(join(r.setDir, "run-step-a.json")).detector).toEqual({});
+    expect(verifyChecksums(artifactDir(w01.run_id)).ok).toBe(true);
+    const i = (frag: string) => r.calls.findIndex((c) => argsOf(c).includes(frag));
+    expect(i(`--run-id ${ctl.run_id}`)).toBeLessThan(i(`--run-id ${w01.run_id}`));
+    const blind = await runStep(smallPlan("configuration", 1, 2, { marker: true }), { markerBlind: true });
+    const w = blind.bundles.find((b) => b.case === "MT-W01")!;
+    expect(blind.stopped).toEqual([expect.objectContaining({ run_id: w.run_id, execution: "BLOCKED", reason: "stop rule 1: the marker control did not fire on cluster a (foreign_marker_count 0)" })]);
+    expect(blind.calls.some((c) => argsOf(c).includes(`--run-id ${w.run_id}`))).toBe(false);
   });
 
   it("report: stopped.json becomes §11.3 stop bundles, checksummed; per-bundle reports agree with evaluate_ax.py; the set aggregate is written", async () => {
@@ -464,12 +610,103 @@ describe("run-step against the recording fake", () => {
     expect(readJson(join(stopDir, "report.json")).status).toBe("NOT_RUN");
     expect(readJson(join(artifactDir(r.bundles[1]!.run_id), "report.json")).status).toBe("PASS");
     const agg = readJson(join(evidenceRoot, r.plan.set_id, "aggregate.json"));
-    expect(agg.line).toBe("all clusters: NOT_RUN (A NOT_RUN, 2 reports)");
+    expect(agg.line).toBe("all clusters: NOT_RUN (A NOT_RUN, 2 of 2 planned reports)");
     expect(existsSync(join(evidenceRoot, r.bundles[1]!.run_id, "report.json"))).toBe(true);
   });
 });
 
+describe("MT-ISO on the real path (design 7.4, §10)", () => {
+  const isoTasks = (p: MultiPlan) => p.configurations[0]!.tenant_runs.map((t) => t.tasks[0]!);
+  const observed = (id: string) => existsSync(join(artifactDir(id), "observations.json"));
+
+  it("PASS: the planted control fires, each prober waits for its whole probe list beside a running target, and report agrees", async () => {
+    const planFile = isoPlan();
+    const r = await runStep(planFile);
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    expect(r.violations).toEqual([]);
+    expect(r.stopped).toEqual([]);
+    expect(readJson(join(r.setDir, "run-step-a.json")).detector).toEqual({});
+    for (const [i, task] of isoTasks(r.plan).entries()) {
+      const probes = readJson(join(r.setDir, "tenants", r.plan.configurations[0]!.tenant_runs[i]!.tenant_run_id, `probes-${task}.json`));
+      const result = r.calls.find((c) => argsOf(c).includes(`result --task ${task} `))!;
+      expect(result.args[result.args.indexOf("--wait-ms") + 1]).toBe(String(isolationWaitMs(probes.length)));
+      expect(isolationWaitMs(probes.length)).toBeGreaterThan(120_000);
+      expect(readJson(join(r.setDir, `run-facts-${task}.json`))).toMatchObject({ target_ran: true });
+      expect(readJson(join(r.setDir, `disclosure-${task}.json`))).toMatchObject({ tasks_checked: 1, foreign_secret_in_task_count: 0 });
+    }
+    const lines: string[] = [];
+    expect(await main(["report", "--plan", planFile], { exec: fake().exec, runsRoot, evidenceRoot, log: (l) => lines.push(l) }), lines.join("\n")).toBe(0);
+    expect(r.bundles).toHaveLength(4);
+    for (const b of r.bundles) expect(readJson(join(artifactDir(b.run_id), "report.json")).status).toBe("PASS");
+  });
+
+  it("stop rule 3: a cross-tenant upstream in a prober's window observes that bundle, then stops the step", async () => {
+    const planFile = isoPlan();
+    const [t1, t2, t3, t4] = isoTasks(readJson(planFile));
+    const r = await runStep(planFile, { breachOn: t2 });
+    expect(r.code).toBe(1);
+    const ref = (t: string) => r.bundles.find((b) => b.task === t)!.run_id;
+    expect([observed(ref(t1!)), observed(ref(t2!))]).toEqual([true, true]);
+    expect(readJson(join(artifactDir(ref(t2!)), "observations.json")).observations.cross_tenant_upstream_count).toBe(1);
+    expect(r.stopped.map((x: any) => [x.run_id, x.execution, x.reason])).toEqual([t3!, t4!].map((t) => [ref(t), "BLOCKED", `stop rule 3: 1 cross-tenant upstream(s) in ${t2}'s probe window`]));
+    expect(r.calls.some((c) => basename(c.cmd) === "ax" && argsOf(c).includes(`task-${t3}.yaml`))).toBe(false);
+    expect(r.calls.at(-1)!.cmd).toBe("bash");
+  });
+
+  it("a failed ax get task leaves foreign_secret_in_task_count out with the reason; a dead target is recorded as target_ran false", async () => {
+    const planFile = isoPlan(), p: MultiPlan = readJson(planFile);
+    const [t1, t2] = isoTasks(p);
+    const r = await runStep(planFile, { getTaskFails: t1, resumeFails: p.configurations[0]!.tenant_runs[1]!.tasks[1]! }); // t1's target is t2's tgt
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    const d = readJson(join(r.setDir, `disclosure-${t1}.json`));
+    expect(d).toMatchObject({ tasks_checked: 0, absent: "ax get task failed: Unavailable" });
+    expect(d).not.toHaveProperty("foreign_secret_in_task_count");
+    expect(readJson(join(r.setDir, `run-facts-${t1}.json`))).toMatchObject({ target_ran: false });
+    expect(readJson(join(r.setDir, `run-facts-${t2}.json`))).toMatchObject({ target_ran: true });
+    expect(readJson(join(r.setDir, `disclosure-${t2}.json`))).toMatchObject({ foreign_secret_in_task_count: 0 });
+  });
+});
+
+describe("infra a (§4.1)", () => {
+  const infraA = async (dir: string) => {
+    const f = fake(), lines: string[] = [];
+    const code = await main(["infra", "a", "--infra", dir], { exec: f.exec, runsRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid });
+    return { code, lines, calls: f.calls, violations: f.violations };
+  };
+
+  it("records the pool's replicas before patching it to 3, and refuses to delete a collector Pod A's run dir does not list", async () => {
+    const dir = makeInfra("a", "infra-a-collector", { kubernetes: [{ kind: "Namespace", name: "apl-ax-6882d106" }, { kind: "Pod", namespace: "apl-ax-6882d106", name: "apl-collector" }] });
+    const r = await infraA(dir);
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    expect(r.violations).toEqual([]);
+    expect(readJson(join(dir, "owned-resources.json")).scaled).toEqual([{ kind: "WorkerPool", namespace: "apl-ax-6882d106", name: "apl-ax-pool", replicas_before: 1 }]);
+    const i = (frag: string) => r.calls.findIndex((c) => argsOf(c).includes(frag));
+    expect(i("get workerpool apl-ax-pool -o json")).toBeGreaterThan(-1);
+    expect(i("get workerpool apl-ax-pool -o json")).toBeLessThan(i("patch workerpool apl-ax-pool"));
+    expect(i("delete pod apl-collector")).toBeGreaterThan(-1);
+    expect((await infraA(dir)).code).toBe(0); // a second run keeps the first replicas_before
+    expect(readJson(join(dir, "owned-resources.json")).scaled).toHaveLength(1);
+    const u = await infraA(makeInfra("a", "infra-a-no-pod"));
+    expect(u.code).toBe(1);
+    expect(u.lines.join("\n")).toMatch(/Pod apl-ax-6882d106\/apl-collector is not listed in A's run dir/);
+    expect(u.calls.some((c) => argsOf(c).includes("delete pod"))).toBe(false);
+  });
+});
+
 describe("--dry-run", () => {
+  it("plan and report refuse it, so neither makes its real reads and writes", async () => {
+    const f = fake(), lines: string[] = [];
+    const deps = { exec: f.exec, runsRoot, evidenceRoot, sleep: async () => {}, log: (l: string) => lines.push(l), uuid };
+    const setId = uuid();
+    expect(await main(["plan", "--step", "1", "--set-id", setId, "--infra-a", infra.a, "--dry-run"], deps)).toBe(1);
+    expect(existsSync(join(runsRoot, "sets", setId))).toBe(false);
+    const planFile = smallPlan("probe", 1, 2);
+    expect(await main(["report", "--plan", planFile, "--dry-run"], deps)).toBe(1);
+    expect(existsSync(join(evidenceRoot, (readJson(planFile) as MultiPlan).set_id))).toBe(false);
+    expect(lines.join("\n")).toMatch(/plan has no --dry-run[\s\S]*report has no --dry-run/);
+    expect(f.calls).toEqual([]);
+  });
+
   it("prints every planned call of a step 1 plan, makes none, and asserts the resolved context", async () => {
     const setId = uuid();
     const f = fake(), lines: string[] = [];

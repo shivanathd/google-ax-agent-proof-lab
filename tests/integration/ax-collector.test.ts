@@ -11,7 +11,7 @@ import type { AddressInfo } from "node:net";
 import { isIP } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CreateBucketCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { flociClients } from "../../src/adapters/floci/clients.ts";
 import { stimulus } from "../../src/collector/drive.ts";
 import { startRun, type RunHandle } from "../../src/config/lifecycle.ts";
@@ -97,9 +97,9 @@ const runLevel = (c: string, o: { markers?: object; facts?: object | null; extra
   "--run", "--case", c, "--foreign-markers-file", file("markers.json", o.markers ?? { tenant_run_id: TENANT, foreign: [T2] }),
   ...(o.facts === null ? [] : ["--run-facts", file("run-facts.json", o.facts ?? RUN_FACTS)]), ...(o.extra ?? []),
 ]);
-const isoArgs = (o: { egress?: boolean } = {}) => [
+const isoArgs = (o: { egress?: boolean; disclosure?: object } = {}) => [
   "--task", ISO, "--targets-file", file("targets.json", TARGETS),
-  "--disclosure-file", file("disclosure.json", { tenant_run_id: TENANT, tasks_checked: 2, foreign_secret_in_task_count: 0, method: "operator string search of ax get task; output not stored" }),
+  "--disclosure-file", file("disclosure.json", { tenant_run_id: TENANT, method: "operator string search of ax get task; output not stored", ...(o.disclosure ?? { tasks_checked: 2, foreign_secret_in_task_count: 0 }) }),
   ...(o.egress === false ? [] : ["--egress-log-file", file("egress.json", { window: { ...WINDOW, margin_s: 10, events: {} }, source: "kubectl logs -l app=atenet-egress -c envoy --tail=-1 --prefix", pods_before: PODS, pods_after: PODS, exit_code: 0, line_count: EGRESS_LINES.length, lines: EGRESS_LINES })]),
 ];
 
@@ -114,7 +114,7 @@ beforeAll(async () => {
   routerPort = await new Promise<number>((r) => router.listen(0, "127.0.0.1", () => r((router.address() as AddressInfo).port)));
 
   // What a W01-H task leaves behind: the mention, the bot's completion reply, the coordinator's ledger export and
-  // the receipt in <task>-receipts; and the isolation task's self-report in its own bucket.
+  // the receipt in <task>-receipts. The isolation task's self-report is written by the first MT-ISO test.
   const ts = await mention(run, ws, "dana", stimulus("W01-H", TASK));
   await api(run, ws, ws.tokens.worker)("chat.postMessage", { channel: ws.channel_id, thread_ts: ts, text: "Ticket #1 created for your request." });
   const input = { requester_id: ws.users.dana!, summary: "printer on floor two is offline" }; // keys sorted: canonical JSON
@@ -126,10 +126,10 @@ beforeAll(async () => {
   for (const b of [`${TASK}-receipts`, `${ISO}-receipts`]) await s3.send(new CreateBucketCommand({ Bucket: b }));
   await put(`${TASK}-receipts`, `apl-evidence/${TASK}/ledger-w01.json`, JSON.stringify(ledger));
   await put(`${TASK}-receipts`, "receipts/T_LAB_A/ticket-1.json", receipt);
-  await writeSelfReport(false);
 }, 120_000);
 
-// The router probe's record names t2's target task, a foreign marker: only the isolation.json exclusion keeps it out.
+// The router probe's record names t2's target task, a foreign marker: only the exclusion of the MT-ISO task's own
+// isolation.json keeps it out of that task's foreign_marker_count.
 async function writeSelfReport(t2Reached: boolean) {
   const { s3 } = await flociClients(run.flociEndpoint, run.manifest.config.endpoint_allowlist);
   await s3.send(new PutObjectCommand({ Bucket: `${ISO}-receipts`, Key: `apl-evidence/${ISO}/isolation.json`, Body: JSON.stringify([
@@ -185,9 +185,10 @@ describe("collector observe (build phase 4)", () => {
   });
 
   it("MT-ISO: verdict from the gateway log, the bundle holding only the redacted extract", async () => {
-    const { out, bundle, status } = await runLevel("MT-ISO", { extra: isoArgs() });
+    await writeSelfReport(false);
+    const { out, bundle, status } = await runLevel("MT-ISO", { facts: { ...RUN_FACTS, target_ran: true }, extra: isoArgs() });
     expect(bundle.observations).toEqual({
-      ...RUN_FACTS, foreign_marker_count: 0, foreign_secret_in_task_count: 0, probe_self_report_reached_count: 0, cross_tenant_upstream_count: 0, allowed_control_reached: true,
+      ...RUN_FACTS, foreign_marker_count: 0, foreign_secret_in_task_count: 0, probe_self_report_reached_count: 0, target_ran: true, cross_tenant_upstream_count: 0, allowed_control_reached: true,
     });
     expect(status).toBe("PASS");
     const copy = JSON.parse(readFileSync(join(out, "evidence/egress-log.json"), "utf8"));
@@ -210,6 +211,31 @@ describe("collector observe (build phase 4)", () => {
     } finally {
       await writeSelfReport(false);
     }
+  });
+
+  it("the isolation.json exclusion covers only the MT-ISO task's own self-report, in its own bucket", async () => {
+    const w01 = await runLevel("MT-W01"); // this tenant's Floci now holds the prober's self-report, which names t2's target
+    expect(w01.bundle.observations.foreign_marker_count).toBe(1);
+    const { s3 } = await flociClients(run.flociEndpoint, run.manifest.config.endpoint_allowlist);
+    const other = { Bucket: `${TASK}-receipts`, Key: `apl-evidence/${TASK}/isolation.json` };
+    await s3.send(new PutObjectCommand({ ...other, Body: JSON.stringify([{ probe: "router", headers: { "ate-target-actor": `apl-ax-5e6f7a8b/${T2.tasks[1]}` } }]) }));
+    try {
+      const iso = await runLevel("MT-ISO", { extra: isoArgs() });
+      expect(iso.bundle.observations.foreign_marker_count).toBe(1);
+    } finally {
+      await s3.send(new DeleteObjectCommand(other));
+    }
+  });
+
+  it("MT-ISO: a target that did not run leaves a zero count absent; a disclosure file without a count carries its reason", async () => {
+    const { bundle, status } = await runLevel("MT-ISO", { facts: { ...RUN_FACTS, target_ran: false }, extra: isoArgs({ disclosure: { tasks_checked: 0, absent: "ax get task failed: Unavailable" } }) });
+    expect(bundle.observations).toMatchObject({ target_ran: false, allowed_control_reached: true });
+    expect(bundle.observations).not.toHaveProperty("cross_tenant_upstream_count");
+    expect(bundle.unobserved).toMatchObject({
+      cross_tenant_upstream_count: "not computable: the router and worker target task did not run, so those probes tested no running target",
+      foreign_secret_in_task_count: "not computable: ax get task failed: Unavailable",
+    });
+    expect(status).toBe("UNKNOWN");
   });
 
   it("absent keys carry their reason, never 0: no foreign tenants, a run fact missing, no egress log", async () => {

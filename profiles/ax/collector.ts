@@ -167,7 +167,7 @@ if (a.case === "F3-A1") {
 
 if (a.run) {
   // foreign_marker_count (design 6.3): every message in this tenant's own channel and every object in its own
-  // Floci, the probe's isolation.json excluded.
+  // Floci, the MT-ISO task's own isolation.json (in its own bucket) excluded.
   await p.capture("foreign-markers", "--foreign-markers-file: run IDs, task names and token hashes of the other registered tenant runs", () => markers);
   const channel = await p.capture("own-channel", "Slack conversations.list (reader token)", channelId);
   if (channel) p.cfg.slack[0]!.channel_id = channel;
@@ -188,7 +188,7 @@ if (a.run) {
       ...Object.fromEntries((p.data("own-slack") as Record<string, unknown>[]).map((m) => [`slack:${m.ts}`, JSON.stringify(m)])),
       ...Object.fromEntries(Object.entries(p.data("own-floci") as Record<string, string>).map(([k, v]) => [`s3:${k}`, v])),
     };
-    return foreignMarkerCount(items, markers!.foreign, Object.keys(items).filter((k) => /^s3:[^/]+\/apl-evidence\/[^/]+\/isolation\.json$/.test(k)));
+    return foreignMarkerCount(items, markers!.foreign, a.case === "MT-ISO" ? [`s3:${bucket}/apl-evidence/${a.task}/isolation.json`] : []);
   });
   p.fact("foreign_marker_count", ["foreign-markers", "own-slack", "own-floci", "foreign-marker-hits"], () => fromFact(p.data("foreign-marker-hits")));
 
@@ -199,7 +199,11 @@ if (a.run) {
     if (d.tenant_run_id !== env.run_id) throw new Error("disclosure file is for another tenant run");
     return d;
   });
-  p.fact("foreign_secret_in_task_count", ["disclosure"], () => p.data("disclosure").foreign_secret_in_task_count);
+  p.fact("foreign_secret_in_task_count", ["disclosure"], () => {
+    const d = p.data("disclosure");
+    if (d.foreign_secret_in_task_count === undefined) throw new Error(d.absent ?? "no foreign_secret_in_task_count in the disclosure file");
+    return d.foreign_secret_in_task_count;
+  });
 }
 
 if (a.case === "MT-ISO") {
@@ -229,7 +233,18 @@ if (a.case === "MT-ISO") {
   });
   const from = ["targets", "iso-self-report", "egress-log"];
   const verdict = () => crossTenantUpstreams(extract!, { emulate: own(/emulate/), floci: own(/floci/) }, foreignReached());
-  p.fact("cross_tenant_upstream_count", from, () => fromFact(verdict().cross_tenant_upstream_count));
+  // Recorded, not asserted (build §10): whether the next tenant's term-mode target ran beside the prober. If it did
+  // not, the router and worker probes had no running target, so a count of 0 is absent; a count above 0 stands.
+  const targetRan = (() => { try { return p.data("run-facts").target_ran; } catch { return undefined; } })();
+  p.fact("target_ran", ["run-facts"], () => {
+    if (typeof targetRan !== "boolean") throw new Error("no target_ran in the run facts");
+    return targetRan;
+  });
+  p.fact("cross_tenant_upstream_count", from, () => {
+    const n = fromFact(verdict().cross_tenant_upstream_count);
+    if (n === 0 && targetRan === false) throw new Error("the router and worker target task did not run, so those probes tested no running target");
+    return n;
+  });
   p.fact("allowed_control_reached", from, () => fromFact(verdict().allowed_control_reached));
 }
 

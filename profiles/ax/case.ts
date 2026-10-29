@@ -23,6 +23,7 @@ import { openReadOnly, rows } from "../../src/ledger/read.ts";
 import { stimulus } from "../../src/collector/drive.ts";
 import { workerConfig, workerEnv } from "../../src/worker/config.ts";
 import { parseAxAllowlist, toEndpoints, type AxEndpoint } from "./allowlist.ts";
+import { ISOLATION } from "./multi-facts.ts";
 
 export interface AxCaseConfig {
   run_id: string;
@@ -171,7 +172,7 @@ export function parseProbes(raw: string): Probe[] {
 const tcp = (role: string, host: string, port: number) => new Promise<object>((resolve) => {
   const t = Date.now(), target = `${host}:${port}`;
   let bytes = 0;
-  const s = connect({ host, port, timeout: 8000 });
+  const s = connect({ host, port, timeout: ISOLATION.probeMs });
   s.on("connect", () => s.write("GET / HTTP/1.0\r\n\r\n"));
   s.on("data", (d) => (bytes += d.length));
   s.on("timeout", () => (resolve({ probe: role, target, outcome: "timeout", ms: Date.now() - t }), s.destroy()));
@@ -186,7 +187,7 @@ export function probe(p: Probe): Promise<object> {
   const t = Date.now(), target = `${p.address}:${p.port}`, base = { probe: p.role, target, host: p.host, path: p.path };
   return new Promise((resolve) => {
     const req = (p.tls ? https : http).request({
-      host: p.address, port: p.port, path: p.path ?? "/", agent: false, timeout: 8000,
+      host: p.address, port: p.port, path: p.path ?? "/", agent: false, timeout: ISOLATION.probeMs,
       headers: { ...(p.host ? { host: p.host } : {}), ...p.headers },
       // A reachability probe, not a trusted client: the sandbox holds no CA for in-cluster names.
       ...(p.tls ? { servername: p.host, rejectUnauthorized: false } : {}),
@@ -214,18 +215,19 @@ async function isolation(cfg: AxCaseConfig, ax: AxEndpoint[]) {
   const probes = parseProbes(process.env.APL_AX_PROBES ?? "[]");
   const results: object[] = [];
   const record = (r: object) => (log(r), results.push(r));
-  // Run 3's probes; the by-name ones fail DNS and stay in the self-report only.
+  // Run 3's probes (ISOLATION.fixedProbes counts them: multi.ts sizes the result wait from it); the by-name ones
+  // fail DNS and stay in the self-report only.
   const get = async (name: string, url: string, headers: Record<string, string> = {}) => {
     const t = Date.now();
     try {
-      const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+      const r = await fetch(url, { headers, signal: AbortSignal.timeout(ISOLATION.probeMs) });
       record({ probe: name, url, outcome: "http_response", status: r.status, ms: Date.now() - t });
     } catch (e) {
       const cause = (e as { cause?: { code?: string } }).cause;
       record({ probe: name, url, outcome: "error", error: cause?.code ?? (e as Error).name, ms: Date.now() - t });
     }
   };
-  await sleep(15_000); // give the egress policy time to apply, so the allowed control probe is meaningful
+  await sleep(ISOLATION.settleMs); // give the egress policy time to apply, so the allowed control probe is meaningful
   await get("allowed_control_emulate", `${cfg.slack.url}/api/api.test`);
   await get("gce_metadata_ip", "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token", { "Metadata-Flavor": "Google" });
   await get("gce_metadata_name", "http://metadata.google.internal/computeMetadata/v1/", { "Metadata-Flavor": "Google" });

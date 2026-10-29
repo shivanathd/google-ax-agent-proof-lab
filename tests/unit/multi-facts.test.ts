@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, foreignMarkerCount, p50, parseEgressLog, resumeSpread, serverIntervals,
+  agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, foreignMarkerCount, ISOLATION, isolationWaitMs, p50, parseEgressLog, redactAddresses, resumeSpread, serverIntervals,
   type EgressExtract,
 } from "../../profiles/ax/multi-facts.ts";
 
@@ -164,6 +164,23 @@ describe("timing (build §12)", () => {
     expect(p50(shuffled(30))).toBe(15);
     expect(p50(shuffled(32))).toBe(16);
     expect(p50([])).toBeNull();
+  });
+});
+
+describe("redactAddresses() (build §10)", () => {
+  it("redacts an address that ends a sentence or a clause: a full stop after IPv4, a colon after IPv6", () => {
+    const targets = [{ role: "t2-emulate-podip", address: "10.1.2.3" }, { role: "t2-floci-podip", address: "fd00:10::11" }];
+    const r = redactAddresses(`reached 10.1.2.3. Then fd00:10::11: refused; ::ffff:10.9.9.9. Not 1.2.3.4.5 or ${T} or 10:00:30.`, targets);
+    expect(r.text).toBe(`reached <t2-emulate-podip>. Then <t2-floci-podip>: refused; <unlisted-address>. Not 1.2.3.4.5 or ${T} or 10:00:30.`);
+    expect(r.unlisted).toBe(1);
+  });
+});
+
+describe("isolationWaitMs() (build §4.3)", () => {
+  it("covers the settle time, run 3's probes and every listed probe, each at its timeout, plus the margin", () => {
+    expect(isolationWaitMs(24)).toBe(15_000 + 33 * 8_000 + 60_000);
+    // case.ts runs ISOLATION.fixedProbes of run 3's probes before the listed ones; a new one there must change the count.
+    expect(readFileSync(join(import.meta.dirname, "../../profiles/ax/case.ts"), "utf8").match(/await get\(/g)).toHaveLength(ISOLATION.fixedProbes);
   });
 });
 

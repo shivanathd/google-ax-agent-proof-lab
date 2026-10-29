@@ -1,17 +1,19 @@
 // The one cluster driver for the many-tenant and two-cluster AX runs (design rule 9; docs/MULTI_CLUSTER_BUILD.md §1).
-//   multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir>] [--step1-set-id <uuid>]
+//   multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir> --step1-set-id <uuid>]
 //   multi.ts infra     a|b --infra <dir> [--resize 0|2] [--dry-run]
 //   multi.ts run-step  --plan <plan.json> --cluster a|b [--dry-run]
 //   multi.ts report    --plan <plan.json>
+// plan and report refuse --dry-run.
 // Every kubectl, kubectl ate, ax, gcloud and teardown.sh call goes through one injectable Exec, after the context
 // guard of §8.4, with KUBECONFIG=<run-dir>/kubeconfig in its environment. --dry-run prints every call and makes
 // none, except `kubectl config current-context`, which reads only the run dir's kubeconfig (§1.2). Local tooling
 // (orchestrate.ts, evaluate_ax.py, doctor()'s client-version probe) touches no cluster and runs directly.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { ROOT, fixtureSha256 } from "../../src/config/run-config.ts";
@@ -23,7 +25,7 @@ import { type Status, writeChecksums } from "../../src/reports/report.ts";
 import { copyBundle } from "./bundle-copy.ts";
 import { accessLogBlocks, egressPolicy, gatewayConfigDiff } from "./egress.ts";
 import { doctor, render } from "./index.ts";
-import { agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, resumeSpread, serverIntervals, type EgressExtract } from "./multi-facts.ts";
+import { agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, isolationWaitMs, resumeSpread, serverIntervals, type EgressExtract } from "./multi-facts.ts";
 import { manifestObjects, markRemoved, ownedResourcesErrors, recordOwned } from "./run-dir.ts";
 
 const AX = join(ROOT, "profiles/ax");
@@ -52,7 +54,7 @@ type Execution = "BLOCKED" | "NOT_RUN";
 export interface Call { cmd: string; args: string[]; env: Record<string, string>; input?: string; inputLabel?: string; background?: boolean; local?: boolean }
 export interface Result { code: number; stdout: string; stderr: string; alive?: () => boolean; stop?: () => void }
 export type Exec = (call: Call) => Promise<Result>;
-export interface Deps { exec: Exec; sleep?: (ms: number) => Promise<void>; log?: (line: string) => void; runsRoot?: string; evidenceRoot?: string; uuid?: () => string }
+export interface Deps { exec: Exec; sleep?: (ms: number) => Promise<void>; log?: (line: string) => void; runsRoot?: string; evidenceRoot?: string; uuid?: () => string; portFree?: (port: number) => Promise<boolean> }
 type D = Required<Deps>;
 
 interface BundleRef { run_id: string; case: string; task: string | null }
@@ -67,7 +69,8 @@ export interface MultiPlan {
 }
 export interface Stopped { run_id: string; case: string; execution: Execution; reason: string; at: string }
 
-// A stop rule (design section 10). scope "set": nothing more runs anywhere, teardown included (stop rule 2).
+// A stop rule (design section 10). scope "set": no further step runs anywhere until the context is resolved (stop
+// rule 2); this step's teardown.sh, which keeps its own context guard, still runs (§8.4).
 export class Stop extends Error {
   constructor(readonly execution: Execution, reason: string, readonly scope: "step" | "set" = "step") { super(reason); }
 }
@@ -94,6 +97,10 @@ interface Infra { dir: string; owned: any; versions: any; project?: string; loca
 export function readInfra(dir: string): Infra {
   const owned = readJson(join(dir, "owned-resources.json"));
   return { dir, owned, versions: readJsonIf(join(dir, "versions.json")) ?? {}, project: owned.project, location: owned.gke_cluster?.location ?? owned.zone, clusterName: owned.gke_cluster?.name ?? owned.cluster };
+}
+// B's infrastructure run dir created its cluster (gke_cluster); A's did not. A dir named for the other cluster is refused.
+function assertIdentity(id: ClusterId, infra: Infra) {
+  if ((id === "b") !== Boolean(infra.owned.gke_cluster)) throw new Error(`${infra.dir} is not cluster ${id}'s infrastructure run dir (${id === "b" ? "no" : "it has a"} gke_cluster)`);
 }
 function imageRef(infra: Infra, re: RegExp) {
   const i = (infra.owned.images ?? []).find((x: { name: string }) => re.test(x.name));
@@ -172,10 +179,13 @@ export class Cluster {
       this.pfReopened = true;
       this.d.log(`[${this.id}] port-forward died; reopening it once`);
       await this.openPf();
+      if (this.pf?.alive?.() === false) throw new Stop("BLOCKED", "AX API unreachable");
     }
     return this.call({ cmd: this.axCli, args: ["--server", `http://127.0.0.1:${PORTS[this.id]}`, ...args], env: this.env() });
   }
   async openPf() {
+    // A port someone else holds would send ax calls to whatever listens there.
+    if (!this.dry && !(await this.d.portFree(PORTS[this.id]))) throw new Stop("BLOCKED", `AX API unreachable: local port ${PORTS[this.id]} is already in use`);
     this.pf = await this.kubectl(["-n", "ax-system", "port-forward", "svc/ax-server", `${PORTS[this.id]}:8080`], { background: true });
     if (!this.dry) await this.d.sleep(3000);
   }
@@ -225,6 +235,10 @@ export const realExec: Exec = (c) => new Promise((resolve) => {
   p.on("error", (e) => resolve({ code: 127, stdout, stderr: `${stderr}${e.message}` }));
   p.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
   if (c.input !== undefined) p.stdin!.end(c.input);
+});
+const portFree = (port: number) => new Promise<boolean>((resolve) => {
+  const s = createServer().once("error", () => resolve(false)).once("listening", () => s.close(() => resolve(true)));
+  s.listen(port, "127.0.0.1");
 });
 
 // ---- plan (§1.1, design 6.1, §4.6) ----
@@ -319,23 +333,34 @@ async function planCmd(v: Record<string, any>, d: D): Promise<number> {
   const dirs: Partial<Record<ClusterId, string>> = { a: v["infra-a"], ...(step === 2 ? { b: v["infra-b"] } : {}) };
   if (!dirs.a || (step === 2 && !dirs.b)) throw new Error(`step ${step} needs --infra-a${step === 2 ? " and --infra-b" : ""}`);
   const infra = Object.fromEntries(Object.entries(dirs).map(([k, dir]) => [k, readInfra(dir!)])) as Record<ClusterId, Infra>;
+  for (const [k, i] of Object.entries(infra)) assertIdentity(k as ClusterId, i);
+  if (step === 2) {
+    const where = (i: Infra) => `${i.project}/${i.location}/${i.clusterName}`;
+    if (infra.a.owned.kube_context === infra.b.owned.kube_context) throw new Error("--infra-a and --infra-b name the same kube_context");
+    if (where(infra.a) === where(infra.b)) throw new Error("--infra-a and --infra-b name the same project, location and cluster");
+  }
   const clusters = Object.fromEntries(Object.entries(infra).map(([k, i]) => [k, { infra_run_dir: i.dir, context: i.owned.kube_context, step_run_id: d.uuid() }]));
   mkdirSync(setDir, { recursive: true });
   let aReused: string | null = null, differences: string[] = [];
   if (step === 2) {
-    // §4.6: A's half is reused only if A's versions re-read now equal step 1's and both clusters name one lab image.
+    // §4.6: A's half is reused only if A's versions re-read now equal those step 1's run-step snapshotted into its
+    // set dir (not the infrastructure run dir's versions.json, which `infra a` rewrites), and step 1's A and B name
+    // one lab image.
+    const s1 = v["step1-set-id"] ?? "";
+    if (!UUID.test(s1)) throw new Error("step 2 needs --step1-set-id, the UUID of step 1's set");
+    const s1Plan = readJsonIf(join(d.runsRoot, "sets", s1, "plan.json"));
+    if (s1Plan?.step !== 1 || resolve(s1Plan.clusters?.a?.infra_run_dir ?? "") !== resolve(infra.a.dir)) throw new Error(`set ${s1} has no step 1 plan.json whose clusters.a.infra_run_dir is --infra-a`);
+    const step1 = readJsonIf(join(d.runsRoot, "sets", s1, "versions-a.json"));
+    if (!step1) throw new Error(`set ${s1} has no versions-a.json (run-step on A writes it)`);
     const blocked = await preflight(infra.a, infra.a.owned.kube_context);
     if (blocked) throw new Error(`cannot re-read A's versions for the reuse check: ${blocked}`);
     const cl = new Cluster("a", infra.a.owned.kube_context, infra.a.dir, infra.a, d, false);
     await cl.checkContext();
     const now = mergeVersions(infra.a.versions, await queryVersions(cl));
     writeFileSync(join(setDir, "versions-a-step2.json"), `${JSON.stringify(now, null, 2)}\n`);
-    differences = VERSION_FIELDS.filter((f) => at(now, f) === undefined || at(now, f) !== at(infra.a.versions, f));
-    if (!infra.a.versions.lab_image || infra.a.versions.lab_image !== infra.b.versions.lab_image) differences.push("lab_image (A and B)");
-    if (!differences.length) {
-      if (!UUID.test(v["step1-set-id"] ?? "")) throw new Error("A's half is reusable: name step 1's set with --step1-set-id");
-      aReused = v["step1-set-id"];
-    }
+    differences = VERSION_FIELDS.filter((f) => at(now, f) === undefined || at(now, f) !== at(step1, f));
+    if (!step1.lab_image || step1.lab_image !== infra.b.versions.lab_image) differences.push("lab_image (A's step 1 and B)");
+    if (!differences.length) aReused = s1;
   }
   const registry = readJsonIf(join(d.runsRoot, "tenant-runs.json")) ?? [];
   const plan = buildPlan({ step, setId: v["set-id"], clusters, registry, uuid: d.uuid, aReused, differences });
@@ -348,6 +373,7 @@ async function planCmd(v: Record<string, any>, d: D): Promise<number> {
 
 async function infraCmd(id: ClusterId, dir: string, v: Record<string, any>, d: D, dry: boolean): Promise<number> {
   const infra = readInfra(dir);
+  assertIdentity(id, infra); // `infra a` on B's dir would run A's branch on B
   const blocked = await preflight(infra, infra.owned.kube_context);
   if (blocked) {
     d.log(`[${id}] BLOCKED: ${blocked}${dry ? " (dry run continues; a real run makes no call)" : ""}`);
@@ -368,6 +394,7 @@ async function infraCmd(id: ClusterId, dir: string, v: Record<string, any>, d: D
   }).split(/^---$/m).filter((doc) => manifestObjects(doc).length);
   if (!dry && !infra.versions.lab_image) throw new Error("versions.json has no lab_image (build phase 6)");
   if (id === "a") {
+    if (!listed({ kind: "Pod", name: "apl-collector", namespace: COLLECTOR_NS })) throw new Error(`Pod ${COLLECTOR_NS}/apl-collector is not listed in A's run dir; refusing to delete and recreate it`);
     const pools = listItems((await cl.kubectl(["get", "workerpools", "-A", "-o", "json"])).stdout);
     if (!pools) throw new Error("listing WorkerPools failed");
     const other = pools.filter((p) => `${p.metadata?.namespace}/${p.metadata?.name}` !== `${COLLECTOR_NS}/apl-ax-pool`);
@@ -375,6 +402,13 @@ async function infraCmd(id: ClusterId, dir: string, v: Record<string, any>, d: D
     const versions = mergeVersions(infra.versions, await queryVersions(cl));
     d.log(`write versions.json (${VERSION_FIELDS.map((f) => `${f}=${at(versions, f) ?? "absent"}`).join(", ")})`);
     if (!dry) writeFileSync(join(dir, "versions.json"), `${JSON.stringify(versions, null, 2)}\n`);
+    // The pool's replicas before the first patch, recorded once under `scaled`, so teardown can restore them.
+    if (!(infra.owned.scaled ?? []).some((r: any) => r.namespace === COLLECTOR_NS && r.name === "apl-ax-pool")) {
+      const before = parseJson((await cl.kubectl(["-n", COLLECTOR_NS, "get", "workerpool", "apl-ax-pool", "-o", "json"])).stdout)?.spec?.replicas;
+      if (!dry && !Number.isInteger(before)) throw new Error("reading WorkerPool apl-ax-pool's replicas before the patch failed");
+      d.log(`record scaled WorkerPool ${COLLECTOR_NS}/apl-ax-pool replicas_before=${before ?? "<read at run time>"} in the infrastructure run dir`);
+      if (!dry) recordOwned(dir, "scaled", { kind: "WorkerPool", namespace: COLLECTOR_NS, name: "apl-ax-pool", replicas_before: before });
+    }
     await cl.kubectl(["-n", COLLECTOR_NS, "patch", "workerpool", "apl-ax-pool", "--type", "merge", "-p", '{"spec":{"replicas":3}}']);
     await cl.kubectl(["-n", COLLECTOR_NS, "scale", "deployment", "floci", "emulate", "--replicas=0"]);
     const docs = collector();
@@ -404,7 +438,7 @@ async function infraCmd(id: ClusterId, dir: string, v: Record<string, any>, d: D
 
 interface Tenant { tr: TenantRun; dir: string; ns: string; tr8: string; ips: { emulate: { cluster: string; pod: string }; floci: { cluster: string; pod: string } }; targets?: any[] }
 interface Row { run_id: string; cluster: ClusterId; c: number; round: number; task: string; worker?: string; unobserved: Record<string, string>; [k: string]: unknown }
-interface Slot { t: Tenant; task: string; bundle?: BundleRef; waitResult: boolean; policy: string; dead?: boolean; applyAt?: number; resumeAt?: string; resultAt?: string; row: Row }
+interface Slot { t: Tenant; task: string; bundle?: BundleRef; waitResult: boolean; waitMs: number; policy: string; dead?: boolean; applyAt?: number; resumeAt?: string; resultAt?: string; row: Row }
 
 function orchestrate(args: string[], env: Record<string, string> = {}) {
   const r = spawnSync(process.execPath, ["--import", "tsx", join(AX, "orchestrate.ts"), ...args], { cwd: ROOT, encoding: "utf8", env: { PATH: process.env.PATH ?? "", ...env } });
@@ -525,14 +559,27 @@ class StepRunner {
     return p;
   }
 
+  // The registry is shared by every set and cluster: a lock file guards the read-modify-write (held: fail, never
+  // wait), and a rename replaces the file, so a crash leaves the old or the new list.
   private register(cfg: Configuration, tr: TenantRun, dir: string) {
     const sec = readJson(join(dir, "secrets.json"));
-    const reg = readJsonIf(this.registryFile) ?? [];
-    reg.push({
-      tenant_run_id: tr.tenant_run_id, tr8: tr.tr8, kind: tr.kind, cluster: cfg.cluster, set_id: this.plan.set_id, created_at: iso(),
-      run_ids: tr.bundles.map((b) => b.run_id), tasks: tr.tasks, token_sha256: secretValues({ slack: { tokens: sec.slack.tokens } }).map((s) => sha256(s)),
-    });
-    writeFileSync(this.registryFile, `${JSON.stringify(reg, null, 2)}\n`);
+    const lock = `${this.registryFile}.lock`;
+    try {
+      closeSync(openSync(lock, "wx"));
+    } catch {
+      throw new Error(`${lock} exists: another run-step is writing the tenant-run registry (remove the file if none is)`);
+    }
+    try {
+      const reg = readJsonIf(this.registryFile) ?? [];
+      reg.push({
+        tenant_run_id: tr.tenant_run_id, tr8: tr.tr8, kind: tr.kind, cluster: cfg.cluster, set_id: this.plan.set_id, created_at: iso(),
+        run_ids: tr.bundles.map((b) => b.run_id), tasks: tr.tasks, token_sha256: secretValues({ slack: { tokens: sec.slack.tokens } }).map((s) => sha256(s)),
+      });
+      writeFileSync(`${this.registryFile}.tmp`, `${JSON.stringify(reg, null, 2)}\n`);
+      renameSync(`${this.registryFile}.tmp`, this.registryFile);
+    } finally {
+      unlinkSync(lock);
+    }
   }
 
   // §4.2 steps 1 to 5: each object recorded in the step run dir before its create.
@@ -584,9 +631,9 @@ class StepRunner {
   }
 
   // `bundle` is the planned bundle a failure of this task blocks: its F3-A1, or the MT-ISO of a prober.
-  private slot(cfg: Configuration, t: Tenant, task: string, round: number, o: { waitResult?: boolean; policy?: string; bundle?: BundleRef } = {}): Slot {
+  private slot(cfg: Configuration, t: Tenant, task: string, round: number, o: { waitResult?: boolean; waitMs?: number; policy?: string; bundle?: BundleRef } = {}): Slot {
     const bundle = o.bundle ?? t.tr.bundles.find((b) => b.task === task && b.case === "F3-A1");
-    return { t, task, bundle, waitResult: o.waitResult ?? true, policy: o.policy ?? join(t.dir, "egress-policy.json"),
+    return { t, task, bundle, waitResult: o.waitResult ?? true, waitMs: o.waitMs ?? 120_000, policy: o.policy ?? join(t.dir, "egress-policy.json"),
       row: { run_id: bundle?.run_id ?? "", cluster: cfg.cluster, c: cfg.c, round, task, unobserved: {} } };
   }
 
@@ -649,11 +696,11 @@ class StepRunner {
     await this.pod(["true"]);
     const emptyMs = Date.now() - e0;
     await this.parallel(live().filter((s) => s.waitResult), async (s) => {
-      const x = await this.collector(s.t.tr8, ["result", "--task", s.task, "--atespace", s.t.ns, "--wait-ms", "120000"]);
+      const x = await this.collector(s.t.tr8, ["result", "--task", s.task, "--atespace", s.t.ns, "--wait-ms", String(s.waitMs)]);
       s.resultAt = iso();
       this.event(x.code === 0 ? "result_returned" : "result_not_served", s.task);
       if (x.code === 0) s.row.submit_to_result_ms = Date.now() - s.applyAt!;
-      else s.row.unobserved.submit_to_result_ms = "result not served within 120 s";
+      else s.row.unobserved.submit_to_result_ms = `result not served within ${s.waitMs / 1000} s`;
       s.row.empty_exec_ms = emptyMs;
     });
     await listing("result");
@@ -692,7 +739,9 @@ class StepRunner {
     // 6. leftover actors and templates.
     const leftover = await this.leftovers(namespaces);
     if (cfg.kind === "configuration") {
-      const spread = resumeSpread(log, live().map((s) => s.task));
+      // Over every task meant to resume: a round with a dead task did not resume c tasks, so it has no spread.
+      const dead = slots.filter((s) => s.dead).map((s) => s.task);
+      const spread = dead.length ? { absent: `${dead.join(", ")} did not resume` } : resumeSpread(log, slots.map((s) => s.task));
       if ("value" in spread) this.rounds.push({ cluster: cfg.cluster, c: cfg.c, round: r, resume_spread_ms: spread.value, leftover_actors: leftover });
       else this.roundsAbsent.push({ cluster: cfg.cluster, c: cfg.c, round: r, resume_spread_ms: spread.absent, leftover_actors: leftover });
     }
@@ -869,7 +918,11 @@ class StepRunner {
 
   // One prober with, unless it is the planted control, the next tenant's term-mode target running beside it.
   async isoRound(cfg: Configuration, r: number, t: Tenant, task: string, target: Tenant | undefined, ref: BundleRef, plantedPolicy?: string) {
-    const slots = [this.slot(cfg, t, task, r, { policy: plantedPolicy, bundle: plantedPolicy ? undefined : ref }), ...(target ? [this.slot(cfg, target, taskName(target.tr8, "tgt"), r, { waitResult: false })] : [])];
+    // The result wait covers the probes case.ts runs one after another (§4.3 step 3).
+    const waitMs = isolationWaitMs(readJson(join(t.dir, `probes-${task}.json`)).length);
+    const prober = this.slot(cfg, t, task, r, { policy: plantedPolicy, bundle: plantedPolicy ? undefined : ref, waitMs });
+    const tgt = target ? this.slot(cfg, target, taskName(target.tr8, "tgt"), r, { waitResult: false }) : undefined;
+    const slots = tgt ? [tgt, prober] : [prober]; // the target first, so its actor and worker are read before the prober is observed
     let podsBefore: { name: string; restarts: number }[] = [];
     await this.round(cfg, r, slots, {
       beforeResume: async () => {
@@ -892,14 +945,21 @@ class StepRunner {
         };
         const egress = await this.put(`egress-${task}.json`, extract, ref.run_id);
         const targets = await this.put(`targets-${task}.json`, t.targets, ref.run_id);
-        // An operator value (design 6.5): other MT-ISO tenants' secrets searched in this task's `ax get task`; output not stored.
-        const foreign = cfg.tenant_runs.filter((x) => x.tenant_run_id !== t.tr.tenant_run_id)
-          .flatMap((x) => secretValues(readJsonIf(join(this.setDir, "tenants", x.tenant_run_id, "secrets.json")) ?? {}));
-        const shown = (await this.cl.ax(["get", "task", task, "-a", t.ns, "-o", "json"])).stdout;
-        const disclosure = await this.put(`disclosure-${task}.json`, { tenant_run_id: t.tr.tenant_run_id, tasks_checked: 1,
-          foreign_secret_in_task_count: foreign.filter((v) => shown.includes(v)).length, method: "operator string search of ax get task; output not stored" }, ref.run_id);
+        // An operator value (design 6.5): other MT-ISO tenants' secrets searched in this task's `ax get task`; output
+        // not stored. With no task read or no secret to search for, the count is left out with the reason, never 0.
+        const secretFiles = cfg.tenant_runs.filter((x) => x.tenant_run_id !== t.tr.tenant_run_id).map((x) => join(this.setDir, "tenants", x.tenant_run_id, "secrets.json"));
+        const foreign = secretFiles.flatMap((f) => secretValues(readJsonIf(f) ?? {}));
+        const shown = await this.cl.ax(["get", "task", task, "-a", t.ns, "-o", "json"]);
+        const read = parseJson(shown.stdout);
+        const absent = shown.code !== 0 ? `ax get task failed: ${grpcCode(shown)}`
+          : !read || typeof read !== "object" || !Object.keys(read).length ? "ax get task returned no task"
+          : secretFiles.some((f) => !existsSync(f)) || !foreign.length ? "another MT-ISO tenant's secrets.json is missing or holds no secret"
+          : undefined;
+        const disclosure = await this.put(`disclosure-${task}.json`, { tenant_run_id: t.tr.tenant_run_id, tasks_checked: absent ? 0 : 1,
+          ...(absent ? { absent } : { foreign_secret_in_task_count: foreign.filter((v) => shown.stdout.includes(v)).length }), method: "operator string search of ax get task; output not stored" }, ref.run_id);
         const markers = await this.put(`markers-${task}.json`, this.markers(t), ref.run_id);
-        const facts = await this.put(`run-facts-${task}.json`, this.facts(cfg, false), ref.run_id);
+        // Recorded, not asserted (§10): whether the next tenant's router and worker target ran beside this prober.
+        const facts = await this.put(`run-facts-${task}.json`, { ...this.facts(cfg, false), ...(tgt ? { target_ran: !tgt.dead && Boolean(tgt.row.worker) } : {}) }, ref.run_id);
         const own = { emulate: t.targets!.filter((x) => x.own && /emulate/.test(x.role)).map((x) => x.address), floci: t.targets!.filter((x) => x.own && /floci/.test(x.role)).map((x) => x.address) };
         const count = crossTenantUpstreams(extract, own, 0).cross_tenant_upstream_count;
         const args2 = ["--run", "--case", "MT-ISO", "--task", task, "--targets-file", targets, "--egress-log-file", egress, "--disclosure-file", disclosure, "--foreign-markers-file", markers, "--run-facts", facts];
@@ -923,6 +983,7 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
   const c = plan.clusters[id];
   if (!c) throw new Error(`the plan has no cluster ${id}`);
   const infra = readInfra(c.infra_run_dir);
+  assertIdentity(id, infra);
   const root = dry ? mkdtempSync(join(tmpdir(), "apl-multi-dry-")) : d.runsRoot;
   const registryFile = join(root, "tenant-runs.json");
   if (dry) {
@@ -933,6 +994,8 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
   if (existsSync(join(stepDir, "owned-resources.json"))) throw new Error("this step run dir exists; a step is never resumed (design 14, crash recovery)");
   mkdirSync(join(stepDir, "axhome"), { recursive: true });
   mkdirSync(setDir, { recursive: true });
+  // The versions this step ran on, as `plan --step 2` compares them (§4.6); the infra dir's file can be rewritten.
+  writeFileSync(join(setDir, `versions-${id}.json`), `${JSON.stringify(infra.versions, null, 2)}\n`);
   copyFileSync(join(infra.dir, "kubeconfig"), join(stepDir, "kubeconfig"));
   chmodSync(join(stepDir, "kubeconfig"), 0o600);
   const l = infra.owned.local ?? {};
@@ -974,7 +1037,8 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
   // teardown.sh keeps its own guard (schema valid, current context = kube_context), so it runs after every stop.
   if (cl.calls > 0) {
     const td = await cl.call({ cmd: "bash", args: [TEARDOWN, stepDir], env: cl.env() }).catch((e) => ({ code: 1, stdout: "", stderr: String(e) }) as Result);
-    const status = td.code === 0 && !/UNEXPECTED/.test(td.stdout) ? "CLEAN" : "INCOMPLETE";
+    // teardown.sh logs a failed AX or Substrate delete as "failed (continuing)" and goes on to exit 0.
+    const status = td.code === 0 && !/UNEXPECTED|failed \(continuing\)/.test(td.stdout) ? "CLEAN" : "INCOMPLETE";
     writeFileSync(join(stepDir, "teardown.json"), JSON.stringify({ exit_code: td.code, status, at: iso() }, null, 2));
   }
   if (stop?.scope === "set") d.log(`[${id}] stop rule 2 stops the set: no further step runs until the context is resolved`);
@@ -1053,7 +1117,8 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
     }
     const oneRaw = readJsonIf(join(d.runsRoot, "sets", reused.set_id, "timing-raw.json")) ?? { tasks: [], rounds: [] };
     aggPlan = { ...plan, configurations: [cfg, ...plan.configurations] } as unknown as Plan;
-    aggRaw = { tasks: [...oneRaw.tasks.filter((t: any) => t.cluster === "a" && t.c === 1), ...raw.tasks], rounds: [...oneRaw.rounds.filter((r: any) => r.cluster === "a" && r.c === 1), ...raw.rounds] };
+    const aC1 = (x: any) => x.cluster === "a" && x.c === 1;
+    aggRaw = { tasks: [...oneRaw.tasks.filter(aC1), ...raw.tasks], rounds: [...oneRaw.rounds.filter(aC1), ...raw.rounds], rounds_absent: [...(oneRaw.rounds_absent ?? []).filter(aC1), ...(raw.rounds_absent ?? [])] };
   }
   const agg = writeAggregate(aggPlan, reports, aggRaw, { outRoot: d.evidenceRoot });
   d.log(JSON.stringify({ reports: Object.keys(reports).length, exported: exports.filter((x) => x.status === "EXPORTED").length,
@@ -1070,9 +1135,11 @@ export async function main(argv: string[], deps: Deps): Promise<number> {
       infra: { type: "string" }, resize: { type: "string" }, plan: { type: "string" }, cluster: { type: "string" }, "dry-run": { type: "boolean" } },
   });
   const d: D = { sleep: (ms) => new Promise((r) => setTimeout(r, ms)), log: (s) => console.log(s), runsRoot: join(ROOT, "private-runs", "ax"),
-    evidenceRoot: join(ROOT, "docs", "evidence"), uuid: randomUUID, ...deps };
+    evidenceRoot: join(ROOT, "docs", "evidence"), uuid: randomUUID, portFree, ...deps };
   const id = (cmd === "infra" ? which : v.cluster) as ClusterId;
   try {
+    // plan --step 2 reads cluster A and report writes docs/evidence; neither has a dry mode.
+    if ((cmd === "plan" || cmd === "report") && v["dry-run"]) throw new Error(`${cmd} has no --dry-run: it would make its real reads and writes; only infra and run-step take --dry-run`);
     if (cmd === "plan") return await planCmd(v, d);
     if ((cmd === "infra" || cmd === "run-step") && id !== "a" && id !== "b") throw new Error("the cluster must be a or b");
     if (cmd === "infra" && v.infra) return await infraCmd(id, v.infra, v, d, Boolean(v["dry-run"]));

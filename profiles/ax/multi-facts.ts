@@ -3,7 +3,7 @@
 // established is absent with its reason, never 0 or false (design rule 3).
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
-import { SECRET_RULES } from "../../src/reports/export.ts";
+import { IPV4, IPV6, SECRET_RULES } from "../../src/reports/export.ts";
 import type { Status } from "../../src/reports/report.ts";
 
 export type Fact<T> = { value: T } | { absent: string };
@@ -120,11 +120,6 @@ export function crossTenantUpstreams(x: EgressExtract, own: { emulate: string[];
 
 // ---- redaction (build §10, design 6.5) ----
 
-// IPv6 first, so an IPv4-mapped address goes whole; every candidate must parse as an address (a clock time such
-// as 10:00:30 does not). The lookarounds stop a match from starting or ending inside a longer token.
-const V6 = /(?<![\w:])(?:[0-9a-f]{0,4}:){2,7}(?:\d{1,3}(?:\.\d{1,3}){3}|[0-9a-f]{0,4})(?![\w:])/gi;
-const V4 = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?![\d.])/g;
-
 // Replaces every IP address in `text` with `<role>` from the targets file (the first role listed for that
 // address), or `<unlisted-address>`; `unlisted` counts those, so their presence is recorded.
 export function redactAddresses(text: string, targets: { role: string; address: string }[]): { text: string; unlisted: number } {
@@ -137,7 +132,7 @@ export function redactAddresses(text: string, targets: { role: string; address: 
     if (!role) unlisted++;
     return `<${role ?? "unlisted-address"}>`;
   };
-  return { text: text.replace(V6, swap).replace(V4, swap), unlisted };
+  return { text: text.replace(IPV6, swap).replace(IPV4, swap), unlisted };
 }
 
 // ---- timing (build §12) ----
@@ -191,6 +186,14 @@ export function commandDuration(result: { started_at?: string; ended_at?: string
 }
 
 export { p50 } from "../../src/reports/aggregate.ts";
+
+// ---- the isolation task's time budget (case.ts isolation(), build §4.3) ----
+
+// isolation() waits settleMs for the egress policy, then runs run 3's fixedProbes and every APL_AX_PROBES entry one
+// after another, each with a probeMs timeout. shortcut: the raw TCP and HTTP timeouts are idle timeouts, so a peer
+// that trickles bytes can hold a probe longer; marginMs absorbs a few such probes and the process start.
+export const ISOLATION = { settleMs: 15_000, probeMs: 8_000, fixedProbes: 9, marginMs: 60_000 };
+export const isolationWaitMs = (probes: number) => ISOLATION.settleMs + (ISOLATION.fixedProbes + probes) * ISOLATION.probeMs + ISOLATION.marginMs;
 
 // ---- the agreement rule (build §11.2) ----
 
