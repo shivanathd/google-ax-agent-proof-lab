@@ -163,7 +163,7 @@ Scope for every row: AX `4b7bf6f` on one GKE cluster (2 × c3-standard-4, amd64,
 | C-51 | The same W03 rules hold on a Salesforce scratch org. | DESIGNED; lane BLOCKED; parity UNKNOWN | `profiles/salesforce/`, C-09 | No Dev Hub or owner approval | unreviewed |
 | C-52 | An external reviewer (CodeRabbit) reviewed this code. | BLOCKED | `profiles/coderabbit/` | No hosted repository; `illustrative-defects.json` is a fixture, not review output | unreviewed |
 | C-53 | A live model using the same restricted actions passes the same evaluator. | BLOCKED | `profiles/live-model/` | No approved provider, key or budget; no provider client wired | unreviewed |
-| C-55 | The README renders correctly on GitHub. | NOT_RUN | C-34 | Nothing published; local render only | unreviewed |
+| C-55 | The README renders correctly on GitHub. | EXECUTED, PASS | `lab readme verify --github` on `shivanathd/google-ax-agent-proof-lab@main` after publication: [result](evidence/github-render/result.json), [screenshot](evidence/github-render/github-desktop-1440.png) | 15 images loaded, 0 failed, 0 missing alt | Checked once, at 1440 px, logged out; MP4 clips still open as files (inline playback needs a manual upload) | unreviewed |
 | C-56 | Emulate does not support Socket Mode, slash commands or exact rate limiting. | DOCUMENTED | [Emulate Slack docs](https://emulate.dev/docs/slack) @ `v0.12.3` | A product fact, not a lab result | unreviewed |
 | C-57 | AX does not read the agent command's exit status back. | DOCUMENTED, and observed in C-61 | [AX runner](https://github.com/google/ax/blob/main/docs/runner.md) @ `4b7bf6f` | - | unreviewed |
 
