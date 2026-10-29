@@ -1,0 +1,83 @@
+# Shared collector and worker pool of one cluster (docs/MULTI_CLUSTER_BUILD.md section 5), derived from
+# emulators.yaml's collector half and owned by the cluster's infrastructure run dir. On A only the Pod and
+# NetworkPolicy documents are applied. Secret collector-env-tenants is owned by the step run dir and created there;
+# the Pod mounts it whole and optional, so it starts before the Secret exists and sees key changes while running.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+---
+# Capacity for every tenant's AX tasks: one shared pool (AX sets no workerSelector, L-039).
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: apl-ax-pool
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+spec:
+  replicas: ${APL_POOL_REPLICAS}
+  sandboxClasses: [{ name: gvisor }]
+  workerImage: "${APL_WORKER_IMAGE}"
+  template:
+    resources:
+      limits: { cpu: "3", memory: 4Gi }
+      requests: { cpu: "1", memory: 4Gi }
+---
+# Independent collector: a plain Pod outside the sandbox. One process per call, each with one tenant's env file
+# (`node --env-file=/etc/apl/collector-env/<tr8>`), and its own pod certificate for the Substrate router (its
+# SPIFFE ID must be in the router's --ingress-allowed-spiffe-ids).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: apl-collector
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apl-collector
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", app: apl-collector }
+spec:
+  serviceAccountName: apl-collector
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  restartPolicy: Never
+  containers:
+    - name: collector
+      image: "${APL_LAB_IMAGE}"
+      command: ["sleep", "infinity"]
+      resources:
+        limits: { cpu: "500m", memory: "512Mi" }
+      volumeMounts:
+        - { name: collector-env, mountPath: /etc/apl/collector-env, readOnly: true }
+        - { name: podidentity, mountPath: /run/podidentity, readOnly: true }
+        - { name: servicedns-ca, mountPath: /run/servicedns-ca, readOnly: true }
+  volumes:
+    - name: collector-env
+      secret: { secretName: collector-env-tenants, optional: true }
+    - name: podidentity
+      projected:
+        sources:
+          - podCertificate: { signerName: podidentity.podcert.ate.dev/identity, keyType: ECDSAP256, credentialBundlePath: credential-bundle.pem }
+    - name: servicedns-ca
+      projected:
+        sources:
+          - clusterTrustBundle:
+              signerName: servicedns.podcert.ate.dev/identity
+              labelSelector: { matchLabels: { podcert.ate.dev/canarying: live } }
+              path: trust-bundle.pem
+---
+# No ingress reaches the collector; it only dials out (emulators, Floci, the router).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: collector-no-ingress
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}" }
+spec:
+  podSelector: { matchLabels: { app: apl-collector } }
+  policyTypes: [Ingress]

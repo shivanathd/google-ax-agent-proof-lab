@@ -23,7 +23,7 @@ function writerOutput() {
     APL_LAB_IMAGE: "lab.example.invalid/lab@sha256:" + "d".repeat(64), APL_WORKER_IMAGE: "worker.example.invalid/w@sha256:" + "e".repeat(64),
   };
   const tpl = (p: string) => render(readFileSync(join(AX, "manifests", p), "utf8"), vars);
-  return ownedResources({ runId: RUN_ID, kubeContext: CONTEXT, atespace: vars.APL_AX_ATESPACE, k8sYaml: tpl("k8s/emulators.yaml"), axYaml: tpl("ax/task.yaml"), axCli: "/opt/example/ax" });
+  return ownedResources({ runId: RUN_ID, kubeContext: CONTEXT, atespaces: [vars.APL_AX_ATESPACE], k8sYaml: tpl("k8s/emulators.yaml"), axYaml: tpl("ax/task.yaml"), axCli: "/opt/example/ax" });
 }
 
 function fixture(owned: unknown, context = CONTEXT) {

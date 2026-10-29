@@ -153,7 +153,7 @@ fi
 
 # 2. Substrate objects (egress policies go with their actor; listed for the diff). Atespaces last: they must be empty.
 #    local.bin holds a kubectl-ate built at the deployed Substrate's API version (L-030).
-rows "sorted(((r['kind'], r.get('atespace') or '-', r['name']) for r in d['substrate'] if r['kind'] != 'egress-policy'), key=lambda r: r[0] == 'atespace')" |
+rows "sorted(((r['kind'], r.get('atespace') or '-', r['name']) for r in d['substrate'] if r['kind'] != 'egress-policy' and not r.get('removed_at')), key=lambda r: r[0] == 'atespace')" |
   while read -r kind atespace name; do
     if [ "$kind" = atespace ]; then run kubectl ate delete atespace "$name"; else run kubectl ate delete "$kind" "$name" -a "$atespace"; fi ||
       echo "teardown: kubectl ate delete $kind $name failed (continuing)"

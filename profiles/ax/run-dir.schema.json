@@ -26,7 +26,7 @@
       "description": "A whole cluster this run created. Teardown deletes it (everything inside goes with it) and the Compute disks its PersistentVolumes provisioned.",
       "additionalProperties": false,
       "required": ["name", "location"],
-      "properties": { "name": { "$ref": "#/definitions/name" }, "location": { "type": "string", "minLength": 1 }, "note": { "type": "string" } }
+      "properties": { "name": { "$ref": "#/definitions/name" }, "location": { "type": "string", "minLength": 1 }, "node_pool": { "$ref": "#/definitions/name" }, "note": { "type": "string" } }
     },
     "gcs_buckets": {
       "type": "array",
@@ -49,12 +49,13 @@
         "additionalProperties": false,
         "required": ["kind", "name"],
         "properties": {
-          "kind": { "enum": ["atespace", "egress-policy"] },
+          "kind": { "enum": ["atespace", "egress-policy", "actor", "actor-template"] },
           "atespace": { "$ref": "#/definitions/name" },
           "name": { "$ref": "#/definitions/name" },
-          "created_by": { "type": "string" }
+          "created_by": { "type": "string" },
+          "removed_at": { "type": "string", "description": "Set once a second listing no longer shows the object; teardown.sh skips the row." }
         },
-        "if": { "properties": { "kind": { "const": "egress-policy" } } },
+        "if": { "properties": { "kind": { "enum": ["egress-policy", "actor", "actor-template"] } } },
         "then": { "required": ["atespace"] },
         "else": { "not": { "required": ["atespace"] } }
       }

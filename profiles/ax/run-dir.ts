@@ -1,7 +1,8 @@
-// The AX run-dir manifest, owned-resources.json, defined once in run-dir.schema.json. index.ts builds it with
-// ownedResources() and writes it only if it validates; teardown.sh runs this file (`node run-dir.ts <file>`) and
+// The AX run-dir manifest, owned-resources.json, defined once in run-dir.schema.json. The runner builds it with
+// ownedResources() and recordOwned() and writes it only if it validates; teardown.sh runs this file (`node run-dir.ts <file>`) and
 // refuses to act when it does not. Errors name schema paths only, never values (the file holds identifiers).
-import { readFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Ajv } from "ajv";
 
@@ -12,29 +13,35 @@ export function ownedResourcesErrors(value: unknown): string[] {
   return validate(value) ? [] : (validate.errors ?? []).map((e) => `${e.instancePath || "/"} ${e.message ?? "invalid"}`);
 }
 
-type K8sObject = { kind: string; name: string; namespace?: string };
+type K8sObject = { kind: string; name: string; namespace?: string; atespace?: string };
 
-// kind, metadata.name and metadata.namespace of each document in a rendered manifest. The lab templates keep
-// metadata at two-space indent and use no other two-space `name:`/`namespace:` keys (checked by the round-trip test).
+// kind, metadata.name and metadata.namespace (or AX's metadata.atespace) of each document in a rendered manifest.
+// A document is either a lab YAML template, which keeps metadata at two-space indent and uses no other two-space
+// `name:`/`namespace:`/`atespace:` keys (checked by the round-trip test), or a JSON document as orchestrate.ts writes.
 export function manifestObjects(yaml: string): K8sObject[] {
   return yaml.split(/^---$/m).flatMap((doc) => {
-    const kind = /^kind: (\S+)$/m.exec(doc)?.[1];
-    const name = /^ {2}name: (\S+)$/m.exec(doc)?.[1];
+    const json = doc.trim().startsWith("{") ? JSON.parse(doc) : undefined;
+    const field = (k: string): string | undefined => (json ? json.metadata?.[k] : new RegExp(`^ {2}${k}: (\\S+)$`, "m").exec(doc)?.[1]);
+    const kind: string | undefined = json ? json.kind : /^kind: (\S+)$/m.exec(doc)?.[1];
+    const name = field("name");
     if (!kind || !name) return [];
-    const namespace = /^ {2}namespace: (\S+)$/m.exec(doc)?.[1];
-    return [namespace ? { kind, namespace, name } : { kind, name }];
+    const namespace = field("namespace"), atespace = field("atespace");
+    return [{ kind, ...(namespace ? { namespace } : {}), name, ...(atespace ? { atespace } : {}) }];
   });
 }
 
-// What one index.ts run() creates: the rendered Kubernetes objects, the AX Workspace + Task, and the atespace AX
-// creates for them. Nothing is scaled and no cloud resource is created, so those sections stay empty or absent.
-export function ownedResources(o: { runId: string; kubeContext: string; atespace: string; k8sYaml: string; axYaml: string; axCli: string }) {
+// What one run creates: the rendered Kubernetes objects, the AX Workspaces and Tasks, and the atespaces AX creates
+// for them (one per tenant). Nothing is scaled and no cloud resource is created, so those sections stay empty or absent.
+export function ownedResources(o: { runId: string; kubeContext: string; atespaces: string[]; k8sYaml: string; axYaml: string; axCli: string }) {
+  const ax = manifestObjects(o.axYaml).map((x) => ({ kind: x.kind.toLowerCase(), atespace: x.atespace ?? "", name: x.name }));
+  const stray = ax.find((x) => !o.atespaces.includes(x.atespace));
+  if (stray) throw new Error(`AX ${stray.kind} ${stray.name} is not in one of the run's atespaces`);
   const value = {
     run_id: o.runId,
     short_id: o.runId.slice(0, 8),
     kube_context: o.kubeContext,
-    ax: manifestObjects(o.axYaml).map((x) => ({ kind: x.kind.toLowerCase(), atespace: o.atespace, name: x.name })),
-    substrate: [{ kind: "atespace", name: o.atespace, created_by: "ax apply" }],
+    ax,
+    substrate: o.atespaces.map((name) => ({ kind: "atespace", name, created_by: "ax apply" })),
     kubernetes: manifestObjects(o.k8sYaml),
     cluster_scoped: [],
     scaled: [],
@@ -44,6 +51,19 @@ export function ownedResources(o: { runId: string; kubeContext: string; atespace
   const errors = ownedResourcesErrors(value);
   if (errors.length) throw new Error(`owned-resources.json would not match run-dir.schema.json: ${errors.join("; ")}`);
   return value;
+}
+
+// Appends one entry to a section of <runDir>/owned-resources.json before its object is created (build plan §8.2).
+// The whole file must still validate; it is replaced by a rename, so a crash leaves either the old or the new file.
+export function recordOwned(runDir: string, section: string, entry: unknown) {
+  const file = join(runDir, "owned-resources.json");
+  const value = JSON.parse(readFileSync(file, "utf8"));
+  value[section] = [...(value[section] ?? []), entry];
+  const errors = ownedResourcesErrors(value);
+  if (errors.length) throw new Error(`recordOwned: ${section} entry rejected by run-dir.schema.json: ${errors.join("; ")}`);
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(value, null, 2));
+  renameSync(tmp, file);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
