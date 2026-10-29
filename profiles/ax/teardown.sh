@@ -13,6 +13,10 @@
 #                              every node with one privileged Pod per node
 #     --dry-run                print every action and change nothing (makes no cloud or cluster call)
 #   profiles/ax/teardown.sh --snapshot <run-dir> <out.json>   # snapshot only (used for pre-snapshot.json)
+#   profiles/ax/teardown.sh --project-snapshot <run-dir> <out.json>   # project-level only, before the run's cluster exists
+#
+# A run that created a whole cluster (gke_cluster) or bucket (gcs_buckets) gets both deleted in default mode, with
+# exactly the recorded iam-bindings on those buckets and the disks the cluster's PersistentVolumes provisioned.
 #
 # Before acting, owned-resources.json must validate against run-dir.schema.json and the current kube context must
 # equal its kube_context; otherwise nothing runs. Every identifier (context, project, registry, bucket, account)
@@ -47,19 +51,24 @@ load_run_dir() {
   fi
 }
 
-snapshot() { # <out.json>
+snapshot() { # <out.json>; SKIP_KUBE=1: project-level state only (no cluster yet, or it was deleted)
   local out=$1 tmp; tmp=$(mktemp -d)
-  kubectl get ns -o json >"$tmp/ns.json"
-  for n in $(j scaled_namespaces); do
-    kubectl -n "$n" get deploy,workerpool -o json >"$tmp/scaled-$n.json" 2>/dev/null || echo '{"items":[]}' >"$tmp/scaled-$n.json"
-  done
-  kubectl get crd,clusterrole,clusterrolebinding,validatingwebhookconfiguration,mutatingwebhookconfiguration,validatingadmissionpolicy,validatingadmissionpolicybinding,pv -o json >"$tmp/cluster.json"
-  echo '[]' >"$tmp/ar.json"; echo '[]' >"$tmp/disks.json"
+  echo '{"items":[]}' >"$tmp/ns.json"; echo '{"items":[]}' >"$tmp/cluster.json"; echo '{"atespaces":[]}' >"$tmp/atespaces.json"
+  if [ "${SKIP_KUBE:-0}" = 0 ]; then
+    kubectl get ns -o json >"$tmp/ns.json"
+    for n in $(j scaled_namespaces); do
+      kubectl -n "$n" get deploy,workerpool -o json >"$tmp/scaled-$n.json" 2>/dev/null || echo '{"items":[]}' >"$tmp/scaled-$n.json"
+    done
+    kubectl get crd,clusterrole,clusterrolebinding,validatingwebhookconfiguration,mutatingwebhookconfiguration,validatingadmissionpolicy,validatingadmissionpolicybinding,pv -o json >"$tmp/cluster.json"
+    kubectl ate get atespaces -o json >"$tmp/atespaces.json" 2>/dev/null || echo '{"atespaces":[]}' >"$tmp/atespaces.json"
+  fi
+  for f in ar disks clusters buckets; do echo '[]' >"$tmp/$f.json"; done
   if [ -n "$PROJECT" ]; then
     gcloud artifacts repositories list --project "$PROJECT" --format=json >"$tmp/ar.json" 2>/dev/null || echo '[]' >"$tmp/ar.json"
     gcloud compute disks list --project "$PROJECT" --format=json >"$tmp/disks.json" 2>/dev/null || echo '[]' >"$tmp/disks.json"
+    gcloud container clusters list --project "$PROJECT" --format=json >"$tmp/clusters.json" 2>/dev/null || echo '[]' >"$tmp/clusters.json"
+    gcloud storage buckets list --project "$PROJECT" --format=json >"$tmp/buckets.json" 2>/dev/null || echo '[]' >"$tmp/buckets.json"
   fi
-  kubectl ate get atespaces -o json >"$tmp/atespaces.json" 2>/dev/null || echo '{"atespaces":[]}' >"$tmp/atespaces.json"
   python3 - "$tmp" "$out" <<'PY'
 import json, os, sys, glob, datetime
 tmp, out = sys.argv[1], sys.argv[2]
@@ -75,6 +84,8 @@ for v in snap["cluster_scoped"].values(): v.sort()
 snap["artifact_registry_repos"] = sorted(r["name"] for r in load(f"{tmp}/ar.json"))
 snap["compute_disks"] = sorted(r["name"] for r in load(f"{tmp}/disks.json"))
 snap["substrate_atespaces"] = sorted(a["metadata"]["name"] for a in (load(f"{tmp}/atespaces.json").get("atespaces") or []))
+snap["gke_clusters"] = sorted(f'{c["location"]}/{c["name"]}' for c in load(f"{tmp}/clusters.json"))
+snap["gcs_buckets"] = sorted(b["name"] for b in load(f"{tmp}/buckets.json"))
 json.dump(snap, open(out, "w"), indent=2, sort_keys=True)
 print(f"snapshot written: {out}")
 PY
@@ -84,6 +95,14 @@ PY
 if [ "${1:-}" = "--snapshot" ]; then
   [ $# -eq 3 ] || die "usage: $0 --snapshot <run-dir> <out.json>"
   load_run_dir "$2"; snapshot "$3"; exit 0
+fi
+# Project-level state only, before the run's own cluster exists (so there is no kube context to check yet).
+if [ "${1:-}" = "--project-snapshot" ]; then
+  [ $# -eq 3 ] || die "usage: $0 --project-snapshot <run-dir> <out.json>"
+  RUN_DIR=$2; OWNED="$RUN_DIR/owned-resources.json"; [ -f "$OWNED" ] || die "missing $OWNED"
+  node "$HERE/run-dir.ts" "$OWNED" >&2 || die "$OWNED does not match profiles/ax/run-dir.schema.json; refusing to act"
+  PROJECT=$(j project); [ -n "$PROJECT" ] || die "--project-snapshot needs project in $OWNED"
+  SKIP_KUBE=1 snapshot "$3"; exit 0
 fi
 
 [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || die "usage: $0 <run-dir> [--delete-benchmarks] [--remove-substrate-iam] [--restore-substrate-v05 --yes-clear-node-image-cache] [--dry-run]"
@@ -170,19 +189,47 @@ for PREFIX in $(j gcs_snapshot_prefix) $(j gcs_snapshot_prefixes); do
 done
 [ -z "$(j ar.repo)" ] || run gcloud artifacts repositories delete "$(j ar.repo)" --location "$(j ar.location)" --project "$PROJECT"
 
+# 6b. A whole cluster and whole buckets the run created (gke_cluster, gcs_buckets). Each bucket: exactly the recorded
+#     iam-bindings on it, then the bucket with its objects. The cluster: first note the Compute disks its
+#     PersistentVolumes provisioned (deleting a cluster leaves them behind), then delete the cluster (everything in
+#     it goes with it), then those disks. Shared IAM the run reused (e.g. the transfer SA) is never touched here.
+rows "[(r['resource'], r['member'], r['role']) for r in d.get('iam', []) if r['kind'] == 'iam-binding' and r['resource'] in d.get('gcs_buckets', [])]" |
+  while read -r bucket member role; do run gcloud storage buckets remove-iam-policy-binding "$bucket" --member="$member" --role="$role" --project "$PROJECT"; done
+for BUCKET in $(j gcs_buckets); do run gcloud storage rm --recursive "$BUCKET" --project "$PROJECT"; done
+if [ -n "$(j gke_cluster.name)" ]; then
+  DISKS="$RUN_DIR/teardown-cluster-disks.txt"
+  echo "+ kubectl get pv -o json | <gcePersistentDisk / pd.csi.storage.gke.io volume handles> > $DISKS"
+  [ "$DRY" = 1 ] || kubectl get pv -o json | python3 -c "
+import json, sys
+for pv in json.load(sys.stdin)['items']:
+    s = pv['spec']; h = (s.get('csi') or {}).get('volumeHandle', '') if (s.get('csi') or {}).get('driver') == 'pd.csi.storage.gke.io' else ''
+    if h: p = h.split('/'); print(p[p.index('disks') + 1], p[p.index('zones') + 1] if 'zones' in p else '')
+    elif s.get('gcePersistentDisk'): print(s['gcePersistentDisk']['pdName'], '')" >"$DISKS"
+  run gcloud container clusters delete "$(j gke_cluster.name)" --location "$(j gke_cluster.location)" --project "$PROJECT"
+  if [ "$DRY" = 1 ]; then echo "+ gcloud compute disks delete <each disk in $DISKS> --zone <its zone> --project $PROJECT   (only those still present)"
+  else
+    while read -r disk zone; do
+      zone=${zone:-$(j gke_cluster.location)}
+      if gcloud compute disks describe "$disk" --zone "$zone" --project "$PROJECT" >/dev/null 2>&1; then run gcloud compute disks delete "$disk" --zone "$zone" --project "$PROJECT"; fi
+    done <"$DISKS"
+  fi
+fi
+
 # 7. Post-snapshot and diff. Pool replicas are expected to match pre-snapshot again in restore mode. Changes the
 #    Substrate reinstall made (reinstall-delta.json: a before/after diff taken around the reinstall) are expected
 #    unless --restore-substrate-v05 ran, which should undo them.
 diff_against_pre() {
   if [ "$DRY" = 1 ]; then echo "+ snapshot $RUN_DIR/post-snapshot.json; diff against $PRE (expected changes: $RUN_DIR/reinstall-delta.json unless restoring)"; return 0; fi
-  snapshot "$RUN_DIR/post-snapshot.json"
+  # The run's own cluster is gone by now; its pre-snapshot was project-level only (--project-snapshot).
+  if [ -n "$(j gke_cluster.name)" ]; then SKIP_KUBE=1 snapshot "$RUN_DIR/post-snapshot.json"; else snapshot "$RUN_DIR/post-snapshot.json"; fi
   python3 - "$PRE" "$RUN_DIR/post-snapshot.json" "$DELETE_BENCH" "$RUN_DIR/reinstall-delta.json" "$RESTORE" <<'PY'
 import json, os, sys
 pre, post, deleted = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3] == "1"
 delta = set(json.load(open(sys.argv[4]))["lines"]) if os.path.exists(sys.argv[4]) else set()
 restored = sys.argv[5] == "1"
 diff = []
-for key in ("namespaces", "artifact_registry_repos", "compute_disks", "substrate_atespaces"):
+for key in ("namespaces", "artifact_registry_repos", "compute_disks", "substrate_atespaces", "gke_clusters", "gcs_buckets"):
+    if key not in pre: continue  # pre-snapshots older than the key
     a, b = set(pre.get(key, [])), set(post.get(key, []))
     diff += [f"{key}: added {x}" for x in sorted(b - a)] + [f"{key}: removed {x}" for x in sorted(a - b)]
 for kind in sorted(set(pre["cluster_scoped"]) | set(post["cluster_scoped"])):
@@ -204,7 +251,7 @@ PY
 remove_iam() {
   echo "teardown: WARNING: removing the snapshot transfer service account and its grants. Substrate v0.6.0's"
   echo "teardown:          ate-api-server refuses to start without them; snapshots and restarts fail from here on."
-  rows "[(r['resource_type'], r['resource'], r['member'], r['role']) for r in d.get('iam', []) if r['kind'] == 'iam-binding']" |
+  rows "[(r['resource_type'], r['resource'], r['member'], r['role']) for r in d.get('iam', []) if r['kind'] == 'iam-binding' and r['resource'] not in d.get('gcs_buckets', [])]" |
     while read -r type resource member role; do
       case "$type" in
         bucket) run gcloud storage buckets remove-iam-policy-binding "$resource" --member="$member" --role="$role" --project "$PROJECT" ;;

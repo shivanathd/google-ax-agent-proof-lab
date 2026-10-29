@@ -10,7 +10,9 @@
     "ar": ["project"],
     "gcs_snapshot_prefix": ["project"],
     "gcs_snapshot_prefixes": ["project"],
-    "iam": ["project"]
+    "iam": ["project"],
+    "gke_cluster": ["project"],
+    "gcs_buckets": ["project"]
   },
   "properties": {
     "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
@@ -19,6 +21,18 @@
     "project": { "type": "string", "minLength": 1, "description": "Cloud project for the ar, gcs and iam entries." },
     "zone": { "type": "string" },
     "cluster": { "type": "string" },
+    "gke_cluster": {
+      "type": "object",
+      "description": "A whole cluster this run created. Teardown deletes it (everything inside goes with it) and the Compute disks its PersistentVolumes provisioned.",
+      "additionalProperties": false,
+      "required": ["name", "location"],
+      "properties": { "name": { "$ref": "#/definitions/name" }, "location": { "type": "string", "minLength": 1 }, "note": { "type": "string" } }
+    },
+    "gcs_buckets": {
+      "type": "array",
+      "description": "Whole buckets this run created. Teardown removes the recorded iam-bindings on each, then the bucket and its objects.",
+      "items": { "type": "string", "pattern": "^gs://[a-z0-9][-a-z0-9._]*[a-z0-9]$" }
+    },
     "ax": {
       "type": "array",
       "items": {

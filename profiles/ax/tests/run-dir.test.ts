@@ -132,4 +132,31 @@ describe.skipIf(!hasKubectl)("ax teardown.sh on a synthetic run dir", () => {
     expect(r.stdout).not.toContain("node-debugger");
     expect(r.stdout).not.toContain("kubectl debug");
   });
+
+  it("--dry-run deletes an owned cluster and bucket with exactly the bucket's recorded bindings, never reused IAM", () => {
+    const bucket = "gs://example-owned-bucket";
+    const member = "serviceAccount:transfer@example-project.iam.example.invalid";
+    const owned = {
+      run_id: RUN_ID, kube_context: CONTEXT, project: "example-project", ax: [], substrate: [], kubernetes: [],
+      cluster_scoped: [], scaled: [], scaled_namespaces: [],
+      gke_cluster: { name: "example-cluster", location: "zone-a" }, gcs_buckets: [bucket],
+      iam: [
+        { kind: "iam-binding", resource_type: "bucket", resource: bucket, member, role: "roles/storage.objectAdmin" },
+        { kind: "iam-binding", resource_type: "bucket", resource: bucket, member, role: "roles/storage.bucketViewer" },
+      ],
+    };
+    expect(ownedResourcesErrors(owned)).toEqual([]);
+    const { dir, kubeconfig } = fixture(owned);
+    const r = teardown(dir, kubeconfig, "--dry-run");
+    expect(r.status).toBe(0);
+    const lines = r.stdout.split("\n").filter((l) => l.startsWith("+ gcloud"));
+    expect(lines).toEqual([
+      `+ gcloud storage buckets remove-iam-policy-binding ${bucket} --member=${member} --role=roles/storage.objectAdmin --project example-project`,
+      `+ gcloud storage buckets remove-iam-policy-binding ${bucket} --member=${member} --role=roles/storage.bucketViewer --project example-project`,
+      `+ gcloud storage rm --recursive ${bucket} --project example-project`,
+      "+ gcloud container clusters delete example-cluster --location zone-a --project example-project",
+      "+ gcloud compute disks delete <each disk in " + join(dir, "teardown-cluster-disks.txt") + "> --zone <its zone> --project example-project   (only those still present)",
+    ]);
+    expect(r.stdout).not.toContain("service-accounts");
+  });
 });
