@@ -4,7 +4,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { S3Client, GetObjectCommand, ListObjectsV2Command, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, ListBucketsCommand, ListObjectsV2Command, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { SQSClient, GetQueueAttributesCommand } from "@aws-sdk/client-sqs";
 import { guardAwsClient } from "../config/endpoints.ts";
 import type { Endpoint } from "../config/run-config.ts";
@@ -40,6 +40,8 @@ export class Probe {
   private sqs?: SQSClient;
   sinkhole?: { port: number; hits: { method: string; url: string; at: string }[] };
   shims?: { dir: string; log: string };
+  // Applied to every evidence file before it is written (the AX lane replaces IP addresses with roles).
+  redact: (body: string) => string = (b) => b;
 
   constructor(public cfg: CollectorConfig, public evidenceDir: string) {
     mkdirSync(evidenceDir, { recursive: true });
@@ -90,7 +92,7 @@ export class Probe {
   }
 
   private writeEvidence(name: string, source: string, data: unknown) {
-    const body = `${JSON.stringify(data, null, 2)}\n`;
+    const body = this.redact(`${JSON.stringify(data, null, 2)}\n`);
     writeFileSync(join(this.evidenceDir, `${name}.json`), body);
     const path = `evidence/${name}.json`;
     const existing = this.evidence.find((e) => e.path === path);
@@ -129,19 +131,24 @@ export class Probe {
   }
 
   // ---- Floci (collector's own S3/SQS clients) ----
-  async s3Get(key: string): Promise<string | undefined> {
+  async s3Get(key: string, bucket = this.cfg.floci?.bucket): Promise<string | undefined> {
     if (!this.s3 || !this.cfg.floci) throw new Error("no S3 target");
     try {
-      return await (await this.s3.send(new GetObjectCommand({ Bucket: this.cfg.floci.bucket, Key: key }))).Body!.transformToString();
+      return await (await this.s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))).Body!.transformToString();
     } catch (e) {
       if ((e as Error).name === "NoSuchKey") return undefined;
       throw e;
     }
   }
-  async s3Keys(): Promise<string[]> {
+  async s3Keys(bucket = this.cfg.floci?.bucket): Promise<string[]> {
     if (!this.s3 || !this.cfg.floci) throw new Error("no S3 target");
-    const r = await this.s3.send(new ListObjectsV2Command({ Bucket: this.cfg.floci.bucket }));
+    const r = await this.s3.send(new ListObjectsV2Command({ Bucket: bucket }));
+    if (r.IsTruncated) throw new Error("object listing truncated"); // a partial list would read as fewer objects
     return (r.Contents ?? []).map((o) => o.Key!).sort();
+  }
+  async s3Buckets(): Promise<string[]> {
+    if (!this.s3) throw new Error("no S3 target");
+    return ((await this.s3.send(new ListBucketsCommand({}))).Buckets ?? []).map((b) => b.Name!).sort();
   }
   async s3Reachable() {
     if (!this.s3 || !this.cfg.floci) throw new Error("no S3 target");

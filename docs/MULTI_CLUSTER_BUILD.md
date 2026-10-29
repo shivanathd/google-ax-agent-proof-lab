@@ -27,7 +27,8 @@ orchestrate.ts manifests --dir <tenant-run-dir> --task <name> --mode W01-H|isola
                --emulate-ip <ip> --floci-ip <ip> --set-id <uuid> --cluster a|b --tenant-role t1|t2|t3|t4 [--probes <file>]
 collector.ts observe --case F3-A1 --task <task> --atespace <a> --run-id <uuid> --out <dir> --ax-phase-file <f> --run-facts <f>
 collector.ts observe --run --case MT-W01|MT-ISO --atespace <a> --run-id <uuid> --out <dir> --run-facts <f>
-               --foreign-markers-file <f> [--targets-file <f> --egress-log-file <f> --disclosure-file <f>]
+               --foreign-markers-file <f> [--task <task> --targets-file <f> --egress-log-file <f> --disclosure-file <f>]
+               # MT-ISO requires --task: the probing task (`iso`, or `ctl` for the planted control) whose isolation.json it reads
 evaluate_ax.py <case> <bundle-dir>      # unchanged; reads cases.ax.json
 ```
 
