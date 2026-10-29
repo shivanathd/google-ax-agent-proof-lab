@@ -158,7 +158,14 @@ describe("F5-A2: configured but not authorized", () => {
     const before = structuredClone(local);
     const lanes: ProfileAdapter[] = [salesforceAdapter, coderabbitAdapter, liveModelAdapter];
 
-    for (const lane of lanes) expect((await lane.doctor(env)).status).toBe("NOT_RUN"); // configured
+    for (const lane of lanes) {
+      const d = await lane.doctor(env);
+      // The live-model key lives only in the macOS Keychain, so elsewhere that lane stays BLOCKED on exactly that prerequisite.
+      if (lane === liveModelAdapter && process.platform !== "darwin") {
+        expect(d.status).toBe("BLOCKED");
+        expect(d.prerequisites.filter((p) => !p.satisfied).map((p) => p.id)).toEqual(["lm.keychain-item"]);
+      } else expect(d.status).toBe("NOT_RUN"); // configured
+    }
     const ax = await axLane();
     const results = await Promise.all([...lanes, ...(ax ? [ax] : [])].map((l) => l.run("W03-SF", { authorized: false, env })));
 

@@ -179,7 +179,10 @@ function startRunner(taskYaml: string, wsYaml?: string) {
   const dir = mkdtempSync(join(tmpdir(), "apl-ax-ws-"));
   workspaces.push(dir);
   const env = ["-e", `AX_TASK_YAML=${taskYaml}`, ...(wsYaml ? ["-e", `AX_WORKSPACE_YAML=${wsYaml}`] : [])];
-  const id = docker("run", "-d", "--platform", "linux/amd64", "--label", RUN_LABEL, "-p", "127.0.0.1::80", "-v", `${dir}:/workspace`, ...env, IMAGE, "--grace", "2s");
+  // On Linux a root container leaves root-owned files in the bind-mounted workspace; run as the host user (the
+  // runner writes only under /workspace) and let it bind :80 unprivileged. Docker Desktop on macOS maps ownership.
+  const hostUser = process.platform === "linux" ? ["--user", `${process.getuid!()}:${process.getgid!()}`, "--sysctl", "net.ipv4.ip_unprivileged_port_start=0"] : [];
+  const id = docker("run", "-d", "--platform", "linux/amd64", "--label", RUN_LABEL, ...hostUser, "-p", "127.0.0.1::80", "-v", `${dir}:/workspace`, ...env, IMAGE, "--grace", "2s");
   return { id, dir, url: urlOf(id) };
 }
 const urlOf = (id: string) => `http://127.0.0.1:${docker("port", id, "80/tcp").split("\n")[0]!.split(":").pop()}`;
