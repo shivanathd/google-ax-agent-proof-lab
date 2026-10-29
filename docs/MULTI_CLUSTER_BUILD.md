@@ -18,10 +18,10 @@ It makes every cluster call for these runs (design rule 9). It reuses `doctor()`
 | `report` | the bundles, `stopped.json` | stop bundles (§11.3); per bundle `report.json`, `report.md` and export; then the aggregate (§11.4) | `evaluate_ax.py`, `generateReport()`, `agrees()`, `exportRun()`, `aggregate.ts` |
 
 ```
-multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir>] [--step1-set-id <uuid>]   # step 2 names step 1's set when A is reused
+multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir> --step1-set-id <uuid>]   # step 2 names step 1's set (§4.6)
 multi.ts infra     a|b --infra <dir> [--resize 0|2] [--dry-run]                                         # --resize: B's node pool only
 multi.ts run-step  --plan <plan.json> --cluster a|b [--dry-run]
-multi.ts report    --plan <plan.json>
+multi.ts report    --plan <plan.json>                                                                   # plan and report refuse --dry-run
 orchestrate.ts manifests --tenant --dir <tenant-run-dir> --set-id <uuid> --cluster a|b --tenant-role t1|t2|t3|t4
 orchestrate.ts manifests --dir <tenant-run-dir> --task <name> --mode W01-H|isolation|term --image <ref>
                --emulate-ip <ip> --floci-ip <ip> --set-id <uuid> --cluster a|b --tenant-role t1|t2|t3|t4 [--probes <file>]
@@ -49,7 +49,7 @@ A BLOCKED doctor or a missing opt-in leaves that cluster's rows BLOCKED and make
 
 - Every subprocess (`kubectl`, `kubectl ate`, `ax`, `teardown.sh`) gets `KUBECONFIG=<run-dir>/kubeconfig` in its environment, and `kubectl` calls also pass `--kubeconfig`. `kubectl ate` is the plugin build in `local.bin`, reached through kubectl's plugin mechanism, so the environment pins its cluster whether or not kubectl forwards the flag. kubectl refuses flags before a plugin name, so the runner passes `kubectl ate --kubeconfig <file> …`. The dry run prints, per cluster, `kubectl config current-context` run with that environment and fails unless it equals the plan's context.
 - `AX_HOME=<run-dir>/axhome` for every `ax` call, as `teardown.sh` sets it.
-- One port-forward per cluster to `svc/ax-server` port 8080, opened with that kubeconfig; `ax --server http://127.0.0.1:<port>` (L-033). If it dies it is reopened once. A second failure stops the step, and the round's remaining bundles are BLOCKED ("AX API unreachable").
+- One port-forward per cluster to `svc/ax-server` port 8080, opened with that kubeconfig; `ax --server http://127.0.0.1:<port>` (L-033). The local port must be free before it is opened, or the step stops (BLOCKED, "AX API unreachable: local port <port> is already in use"). If it dies it is reopened once, and checked alive before the next call. A second failure stops the step, and the round's remaining bundles are BLOCKED ("AX API unreachable").
 - `kubectl ate` opens its own port-forward per call, as in run 3. Its `--endpoint` flag (`cmd/kubectl-ate/internal/cmd/root.go`) could reuse one forward; this plan does not need that optimisation.
 
 ### 1.3 `versions.json`
@@ -132,7 +132,8 @@ Each phase ends when its gate and the existing `npm test` pass. No cluster call 
 
 ### 4.1 Infrastructure
 
-- **`multi.ts infra a`.** It writes A's `versions.json`, patches WorkerPool `apl-ax-pool` to `replicas: 3`, and scales the infrastructure run's own Floci and Emulate in `apl-ax-6882d106` to 0. It applies the collector NetworkPolicy, then deletes Pod `apl-collector` and recreates it from `collector.yaml`, because a Pod's `envFrom`, volumes and image cannot be patched. The Pod is already listed in A's run dir, so the record does not change. The preflight lists WorkerPools and stops if any other exists.
+- **`multi.ts infra a`.** It writes A's `versions.json`, records WorkerPool `apl-ax-pool`'s current replicas under `scaled` (`replicas_before`, once: a later run keeps the first value), patches it to `replicas: 3`, and scales the infrastructure run's own Floci and Emulate in `apl-ax-6882d106` to 0. It applies the collector NetworkPolicy, then deletes Pod `apl-collector` and recreates it from `collector.yaml`, because a Pod's `envFrom`, volumes and image cannot be patched. The Pod must already be listed in A's run dir, or `infra a` refuses before any change; the record does not change. The preflight lists WorkerPools and stops if any other exists.
+- **Which cluster a run dir is.** B's infrastructure run dir has `gke_cluster` (its run created the cluster); A's does not. `infra`, `run-step` and `plan` refuse a run dir given for the other cluster, and `plan --step 2` refuses A and B that share a kube context or a project, location and cluster name.
 - **`multi.ts infra b`.** It applies `collector.yaml` (Namespace, ServiceAccount, Pod, NetworkPolicy, WorkerPool at 3), recording each object in B's run dir before its create. `gcloud container clusters resize <cluster> --node-pool <pool> --num-nodes 0|2` takes the pool name from `gke_cluster.node_pool` in B's run dir (§8.3).
 - **B's install (done, recorded in B's run dir; moved from design 8.1).** Substrate v0.6.0 was installed with its own `ate-setup` from a config derived from A's install config and the v0.6.0 requirements in L-046: a cluster-wide `--snapshot-location` in B's own bucket, `--ingress-allowed-spiffe-ids` including the collector, `ax-server` as a bootstrap owner, home-built v0.6.0 images. AX `4b7bf6f` was deployed with `AX_SNAPSHOTS_BUCKET` pointed at a B-owned prefix (L-031).
 - **Gateway config.** Before step 1, and before step 2 on B, the deployed `atenet-egress` ConfigMap is read (read-only) and compared with the fixture (§9.3). A difference is stop rule 8.
@@ -153,7 +154,7 @@ Each object is added to the step run dir's `owned-resources.json` before it is c
 
 1. `ax apply` the c tasks.
 2. For each task, poll every 0.5 s, up to 120 s, for its actor, and attach its policy (§9.2) as it appears.
-3. Once all c are attached, issue the c `ax resume` calls in parallel and wait for the c results in parallel (`collector.ts result --wait-ms 120000`).
+3. Once all c are attached, issue the c `ax resume` calls in parallel and wait for the c results in parallel (`collector.ts result --wait-ms 120000`). An MT-ISO prober's wait is derived from its probe list instead, because `isolation()` in `case.ts` runs its probes one after another: `isolationWaitMs()` in `multi-facts.ts`, the 15 s policy settle plus (run 3's 9 probes + the listed probes) × the 8 s per-probe timeout, plus a 60 s margin (339 s for 24 listed probes). `case.ts` takes its settle time and timeouts from the same `ISOLATION` constants.
 4. For each task:
    - keep only the phase from `ax get task` in `phase-<task>.json` (the full output holds tokens in clear, L-034), and copy it into the Pod;
    - read its actor once (`kubectl ate get actor <task> -a <atespace> -o json`, the call of §9.2) and record `status.workerAssignment.worker` as the task row's `worker` in `timing-raw.json`, or absent with a reason if it is empty (recorded, not asserted; design 7.1, 11.3). The attach poll runs before resume and the cleanup listing after delete, so neither shows the running actor's worker;
@@ -176,7 +177,7 @@ A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the t
 | `ResourceExhausted` from any call | stop rule 4 |
 | egress policy attach fails | that task is not resumed; its bundle is BLOCKED ("egress policy not attached"); the round continues |
 | `ax resume` fails | that task's bundle is BLOCKED ("resume failed: <code>"); the round continues |
-| result not served within 120 s | observe anyway: `command_exit_code` is absent, so F3-A1 is UNKNOWN (design rule 3) |
+| result not served within the wait (§4.3 step 3) | observe anyway: `command_exit_code` is absent, so F3-A1 is UNKNOWN (design rule 3) |
 | `observe` exits nonzero or writes no bundle | a `stopped.json` entry, NOT_RUN ("collector exited <code>"); the round continues |
 | `ax apply` fails | that task's bundle is BLOCKED ("ax apply failed: <code>"); the round continues |
 | a tenant's emulators not Available within 180 s (§4.2 step 4) | the step stops; unobserved bundles NOT_RUN, as capacity |
@@ -184,6 +185,7 @@ A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the t
 | task delete fails | recorded in the set dir; the task stays listed, so teardown deletes it; its actor is not treated as a leftover |
 | leftover actor delete fails | the entry keeps no `removed_at`; teardown deletes it |
 | port-forward dies twice | the step stops; remaining bundles are BLOCKED ("AX API unreachable") |
+| an MT-ISO target task fails its apply, attach or resume, or its actor shows no worker | the prober is observed with `target_ran: false` in its run facts; its `cross_tenant_upstream_count` of 0 is absent (§10) |
 | context mismatch | stop rule 2 |
 
 ### 4.5 Actor probe
@@ -192,7 +194,7 @@ One probe tenant run has `apl-<tr8>-p1` in round 1 and `apl-<tr8>-p2` in round 2
 
 ### 4.6 Step 2 and A's half (design 8.3)
 
-- `multi.ts plan --step 2` re-runs the read-only queries of §1.3 on A into the set dir as `versions-a-step2.json` and compares it field by field with A's `versions.json` recorded for step 1. It also checks that A's and B's `versions.json` name the same `lab_image` digest.
+- `run-step` copies the `versions.json` its step ran on into the set dir as `versions-<cluster>.json`. `multi.ts plan --step 2` needs `--step1-set-id`: step 1's set must hold a step 1 `plan.json` whose `clusters.a.infra_run_dir` is this plan's A, and `versions-a.json`, or the plan is refused. It re-runs the read-only queries of §1.3 on A into the set dir as `versions-a-step2.json` and compares them field by field with that snapshot, not with the infrastructure run dir's `versions.json`, which a later `infra a` rewrites. It also checks that the snapshot's `lab_image` digest is B's.
 - If both checks pass, the plan has no A configuration. `plan.json` records `"a": {"reused": {"set_id": "<step 1 set_id>", "c": 1}}`, and the all-clusters view takes A's row from that configuration's reports.
 - If either check fails, the plan lists the differing fields (`"a": {"rerun": {"differences": [...]}}`), and A is planned first exactly as B: one tenant, c = 1, a warm-up round and 30 counted tasks. If A's doctor is BLOCKED, the versions cannot be re-read and `plan --step 2` refuses rather than guess.
 - `ax-multi.test.ts` (phase 5) covers both outcomes of the plan.
@@ -244,7 +246,7 @@ On A, `infra a` applies only its Pod and NetworkPolicy documents. Both clusters 
 | Infrastructure run | `41dc91c3…` (A), `34c8957e…` (B) | long-lived |
 | Step run | `step_run_id` (UUID) | one per step and cluster |
 | Tenant run | `tenant_run_id` (UUID), short `<tr8>` | one per tenant per configuration; names the namespace |
-| Tenant-run registry | `private-runs/ax/tenant-runs.json` | an entry is appended when a tenant run is created |
+| Tenant-run registry | `private-runs/ax/tenant-runs.json` | an entry is appended when a tenant run is created, under `tenant-runs.json.lock` (if the lock is held, the step stops rather than waits), and the file is replaced by a rename |
 | Evidence run | `run_id` (UUID) | one per C4 bundle; keys the bundle, its report and `docs/evidence/<run_id>/` |
 | Namespace and atespace | `apl-ax-<tr8>` | the form `allowlist.ts` requires; the plan refuses `6882d106` and any registered `<tr8>` |
 | Tasks | W01 `apl-<tr8>-<nn>` (`00` is the warm-up); probe `apl-<tr8>-p1`, `-p2`; MT-ISO `apl-<tr8>-iso`, target `apl-<tr8>-tgt`; planted control `apl-<tr8>-ctl`; Workspace `ws-<task>` | unique across the experiment, so a task name is a usable foreign marker |
@@ -260,8 +262,8 @@ On A, `infra a` applies only its Pod and NetworkPolicy documents. Both clusters 
   - `owned-resources.json`, listing every tenant namespace with its objects, the atespace, the egress policy (for the record), AX Task and Workspace, leftover actors and templates, and `collector-env-tenants`. It copies `project`, `zone` or `cluster`, and `local` (`bin`, `ax_cli`, `kubectl`) from the cluster's infrastructure run dir, because `teardown.sh` reads `local.bin` and `local.ax_cli` from the run dir it is given;
   - `kubeconfig` (mode 0600, a copy of the infrastructure run dir's, whose current context the guard checks) and `axhome/`;
   - `pre-snapshot.json`, from `teardown.sh --snapshot` before the step's first apply;
-  - `stopped.json`, and `teardown.json` (teardown's exit code and `CLEAN` or `INCOMPLETE`, the cleanup status `report` passes on).
-- **Set dir** `private-runs/ax/sets/<set_id>/` holds `plan.json`; the tenant run dirs (`secrets.json`, `emulate-seed.json`, rendered manifests), which own nothing; `timing-raw.json`; the ax-server and gateway log extracts; the targets, markers and disclosure files; and the controls' bundles.
+  - `stopped.json`, and `teardown.json` (teardown's exit code and `CLEAN` or `INCOMPLETE`, the cleanup status `report` passes on). It is `INCOMPLETE` if the script exits nonzero or its output has an `UNEXPECTED` diff line or a "failed (continuing)" delete.
+- **Set dir** `private-runs/ax/sets/<set_id>/` holds `plan.json`; `versions-<cluster>.json`, the versions each step ran on (§4.6); the tenant run dirs (`secrets.json`, `emulate-seed.json`, rendered manifests), which own nothing; `timing-raw.json`; the ax-server and gateway log extracts; the targets, markers and disclosure files; and the controls' bundles.
 - New run dirs leave `substrate_install` absent: the schema requires it to carry a `previous` install, and made-up values there would arm `--restore-substrate-v05`.
 
 ### 8.2 Recording one object at a time
@@ -340,6 +342,9 @@ These blocks are vendored, dedented and otherwise unchanged, in `profiles/ax/tes
 | run 3's probes | as in `isolation()` in `case.ts`; by-name ones fail DNS and stay in the self-report | as in `case.ts` |
 
 - **Self-report.** It counts a target as reached when an HTTP probe gets that target's expected 404.
+- **The target.** Each prober's run facts carry `target_ran` (recorded, not asserted): whether the next tenant's term-mode target was applied, attached and resumed and its actor showed a worker. If it did not run, the router and worker probes had no running target, so a `cross_tenant_upstream_count` of 0 is absent with that reason; a count above 0 stands.
+- **Disclosure.** `foreign_secret_in_task_count` is written only when `ax get task -o json` exited 0 with a task and every other MT-ISO tenant's `secrets.json` holds a secret to search for; otherwise the disclosure file carries `absent` with the reason and the collector leaves the key out with it.
+- **Excluded file.** `foreign_marker_count` excludes only the MT-ISO task's own `apl-evidence/<task>/isolation.json` in its own bucket, whose router probe names the target task; every other object counts.
 - **Planted control.** Task `apl-<tr8>-ctl` in tenant t1 runs under the planted policy of §9.1 and sends one probe to t2's Emulate ClusterIP with t2's Host. It runs before the four MT-ISO probes and is observed with `observe --run --case MT-ISO` into the set dir. Its count must be at least 1, and its window is excluded from stop rule 3.
 - **Marker control.** One tenant run is observed again with its own first task added to the markers file. It runs once on each cluster for the whole experiment, before that cluster's first counted MT-W01 is observed (design 6.4).
 
@@ -366,7 +371,7 @@ For each planned bundle, `multi.ts report`:
 2. runs `evaluate_ax.py <case> <dir>`;
 3. calls `generateReport(run_id, { expected, limitations, cleanup_status })`, with the case's expectations from `cases.ax.json` and the cleanup status from teardown;
 4. applies `agrees()`;
-5. calls `exportRun(run_id, { outRoot: join(ROOT, "docs/evidence") })`.
+5. calls `exportRun(run_id, { outRoot: join(ROOT, "docs/evidence") })`. Besides `SECRET_RULES` and the private terms, its scan quarantines any IP address other than 127.0.0.1 (`holdsAddress()` in `export.ts`, the backstop behind `redactAddresses()`; loopback is where the local profile's emulators listen).
 
 The agreement rule:
 
@@ -397,7 +402,7 @@ Each `stopped.json` entry becomes a C4 bundle, checksummed when written:
 
 - **Input:** `plan.json`, every planned bundle's `report.json`, and `timing-raw.json`.
 - **Rows:** one per planned bundle. A planned bundle with no report is NOT_RUN ("planned, no report"), never dropped. Tenant, configuration, cluster and overall rows use `aggregate()` from `report.ts`, and the overall line names each cluster (design 8.4).
-- **Output:** `docs/evidence/<set_id>/aggregate.json`, `aggregate.md`, `timing.json` and `checksums.sha256`. Before writing, each is scanned with `SECRET_RULES` and the private-terms list, and quarantined on a finding, as `exportRun()` does.
+- **Output:** `docs/evidence/<set_id>/aggregate.json`, `aggregate.md`, `timing.json` and `checksums.sha256`. Before writing, each is scanned with `SECRET_RULES`, `holdsAddress()` and the private-terms list, and quarantined on a finding, as `exportRun()` does. Each cluster in the overall line shows the reports present and the planned count ("A PASS, 30 of 31 planned reports").
 - **Gate:** one FAIL among PASS rows gives FAIL; a missing planned row gives NOT_RUN; UNKNOWN outranks BLOCKED; all PASS gives PASS with every cluster named.
 
 ## 12. Timing parsing
@@ -406,8 +411,8 @@ Each `stopped.json` entry becomes a C4 bundle, checksummed when written:
 - **`serverIntervals()`.** For each task, the interval runs from `msg="resuming actor on Substrate worker" actor=<task>` to the next `msg="task successfully reconciled and running"` with the same `actor`, using their `time=` fields (slog text handler; `internal/controller/reconciler.go`, `cmd/ax-server/main.go`). It is absent, with a reason, if either line is missing. It is also absent if the running line has `workspaceReady=false`: the readiness poll (`workspaceReadyPollInterval` 500 ms, `defaultWorkspaceReadyTimeout` 15 s) timed out.
 - **`commandDuration()`.** `ended_at − started_at` from the `result.json` the collector captured into the F3-A1 bundle's evidence (RFC 3339 with nanoseconds, `stamp()` in `runner/main.go`). Absent if that file is absent.
 - **Operator intervals.** `egress_attach_ms` runs from the start of `ax apply` to the attach returning. `submit_to_result_ms` runs from the start of `ax apply` to the collector's `result` exec returning HTTP 200. An empty exec is timed each round and reported beside it, not subtracted.
-- **`resumeSpread()`.** Per round, the latest minus the earliest "resuming actor" line of its tasks (0 at c = 1). A round with a task's line missing goes to `rounds_absent` in `timing-raw.json` with the reason, not into `rounds`.
-- **Summary.** Per configuration (cluster, step, c) and per headline, n is the number of counted tasks with that headline present. Each headline reports p50 by nearest rank (the ⌈n/2⌉-th value: the 15th at n = 30, the 16th at n = 32), max, and `n_below_planned: true` when n < 30. `tasks_timed` in the run facts is the number of counted tasks with both headlines present. Per-tenant breakdowns show p50 and max only, and warm-up rounds are listed separately.
+- **`resumeSpread()`.** Per round, the latest minus the earliest "resuming actor" line of all its tasks (0 at c = 1). A round in which a task was not resumed (its apply, attach or resume failed), or a task's line is missing, goes to `rounds_absent` in `timing-raw.json` with the reason, not into `rounds`.
+- **Summary.** Per configuration (cluster, step, c) and per headline, n is the number of counted tasks with that headline present. Each headline reports p50 by nearest rank (the ⌈n/2⌉-th value: the 15th at n = 30, the 16th at n = 32), max, and `n_below_planned: true` when n is below the configuration's planned counted tasks (30 at c = 1 and 2, 32 at c = 4). `command_duration_ms` carries `source`: it is sandbox-written (the runner's `result.json`), not a collector measurement. `resume_spread_ms` carries `rounds_absent`, the count of that configuration's rounds without a spread. `tasks_timed` in the run facts is the number of counted tasks with both headlines present. Per-tenant breakdowns show p50 and max only, and warm-up rounds are listed separately.
 
 ## 13. Teardown mechanics
 
@@ -440,12 +445,12 @@ One compact example per file. Values are illustrative, and private values are pl
 | `tenant-runs.json` | `private-runs/ax/` | `[{"tenant_run_id": "<uuid>", "tr8": "1a2b3c4d", "kind": "configuration", "cluster": "a", "set_id": "<uuid>", "created_at": "<iso>", "run_ids": ["<uuid>"], "tasks": ["apl-1a2b3c4d-01"], "token_sha256": ["<hex>"]}]` |
 | `--foreign-markers-file` | set dir | `{"tenant_run_id": "<uuid>", "foreign": [<every other tenant-runs.json entry>]}` |
 | `--targets-file` | set dir | `[{"role": "t2-emulate-clusterip", "address": "<ip>", "port": 8080, "host": "emulate.apl-ax-5e6f7a8b.svc.cluster.local", "path": "/_apl/missing", "own": false}, {"role": "worker-1-80", "address": "<pod-ip>", "port": 80, "tcp": true, "own": false}, {"role": "t1-emulate-clusterip", "address": "<ip>", "port": 8080, "host": "emulate.apl-ax-1a2b3c4d.svc.cluster.local", "path": "/_apl/missing", "own": true}]` |
-| `--disclosure-file` | set dir | `{"tenant_run_id": "<uuid>", "tasks_checked": 8, "foreign_secret_in_task_count": 0, "method": "operator string search of ax get task; output not stored"}` |
+| `--disclosure-file` | set dir | `{"tenant_run_id": "<uuid>", "tasks_checked": 1, "foreign_secret_in_task_count": 0, "method": "operator string search of ax get task; output not stored"}`, or with `"tasks_checked": 0, "absent": "<reason>"` and no count |
 | `--egress-log-file` | set dir, `egress-<task>.json` per probing task | `{"window": {"from": "<iso>", "to": "<iso>", "margin_s": 10, "events": {"resume_issued": "<iso>", "result_returned": "<iso>"}}, "source": "kubectl logs -l app=atenet-egress -c envoy --tail=-1 --prefix --max-log-requests=<n>, ate-system", "pods_before": [{"name": "<pod>", "restarts": 0}], "pods_after": [{"name": "<pod>", "restarts": 0}], "exit_code": 0, "line_count": 42, "lines": ["<access-log line, verbatim>"]}` |
-| `--run-facts` | set dir | `{"step": 1, "concurrency": 2, "tasks_planned": 15, "tasks_timed": 15}` |
+| `--run-facts` | set dir | `{"step": 1, "concurrency": 2, "tasks_planned": 15, "tasks_timed": 15}`; an MT-ISO prober's also has `"target_ran": true` |
 | `stopped.json` | step run dir | `[{"run_id": "<uuid>", "case": "F3-A1", "execution": "NOT_RUN", "reason": "stop rule 4: ResourceExhausted at c = 4, round 3", "at": "<iso>"}]` |
 | `timing-raw.json` | set dir | `{"tasks": [{"run_id": "<uuid>", "cluster": "a", "c": 2, "round": 3, "task": "apl-1a2b3c4d-03", "server_resume_to_running_ms": 2100, "command_duration_ms": 8400, "egress_attach_ms": 9000, "submit_to_result_ms": 19700, "empty_exec_ms": 600, "worker": "<worker-pod>", "unobserved": {}}], "rounds": [{"cluster": "a", "c": 2, "round": 3, "resume_spread_ms": 180, "leftover_actors": 0}]}` |
-| `timing.json` | `docs/evidence/<set_id>/` | `{"set_id": "<uuid>", "configurations": [{"cluster": "a", "step": 1, "case": "F3-A1", "c": 2, "server_resume_to_running_ms": {"n": 30, "p50": 2100, "max": 2600}, "command_duration_ms": {"n": 30, "p50": 8400, "max": 9100}, "resume_spread_ms": {"p50": 180, "max": 400}, "operator": {"submit_to_result_ms": {"p50": 19700, "max": 21000}}, "warmup": [{"task": "apl-1a2b3c4d-00", "server_resume_to_running_ms": 2900}]}], "raw": <timing-raw.json rows>}` |
+| `timing.json` | `docs/evidence/<set_id>/` | `{"set_id": "<uuid>", "configurations": [{"cluster": "a", "step": 1, "case": "F3-A1", "c": 2, "server_resume_to_running_ms": {"n": 30, "p50": 2100, "max": 2600}, "command_duration_ms": {"n": 30, "p50": 8400, "max": 9100, "source": "sandbox-written: …"}, "resume_spread_ms": {"p50": 180, "max": 400, "rounds_absent": 0}, "operator": {"submit_to_result_ms": {"p50": 19700, "max": 21000}}, "warmup": [{"task": "apl-1a2b3c4d-00", "server_resume_to_running_ms": 2900}]}], "raw": <timing-raw.json rows>}` |
 
 ## Appendix B. The proto read for MV-PORT (moved from design 9.1)
 
