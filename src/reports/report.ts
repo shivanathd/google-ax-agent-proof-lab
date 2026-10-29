@@ -57,8 +57,9 @@ export function counts(assertions: Assertion[]) {
 }
 
 // Optional lanes: unselected → SKIPPED and excluded; selected → the doctor's status, never upgraded here.
-export function lanesFrom(local: Status, optional: Record<string, DoctorResult & { parity?: Status }>): Record<string, Lane> {
-  const lanes: Record<string, Lane> = { local: { status: local, selected: true, reason: "local core: required assertions only" } };
+// An AX bundle keeps the key `local` for its required assertions, worded as the AX lane (MULTI_CLUSTER_BUILD §11.1).
+export function lanesFrom(local: Status, optional: Record<string, DoctorResult & { parity?: Status }>, profile?: string): Record<string, Lane> {
+  const lanes: Record<string, Lane> = { local: { status: local, selected: true, reason: `${profile === "ax" ? "AX lane" : "local core"}: required assertions only` } };
   for (const [name, d] of Object.entries(optional)) {
     const selected = d.status !== "SKIPPED";
     lanes[name] = { status: d.status, selected, reason: d.reason, ...(name === "salesforce" && selected ? { parity: d.parity ?? "UNKNOWN" } : {}), ...(selected ? { prerequisites: d.prerequisites } : {}) };
@@ -78,21 +79,25 @@ export function buildReport(o: {
   const b = o.bundle;
   const assertions = assess(b, o.expected);
   const status = aggregate(assertions.filter((a) => a.required).map((a) => a.status));
-  const lanes = lanesFrom(status, o.optional ?? {});
+  const lanes = lanesFrom(status, o.optional ?? {}, b.profile);
   const all_lanes_status = aggregate(Object.values(lanes).filter((l) => l.selected).map((l) => l.status));
   const green = status === "PASS" && all_lanes_status === "PASS" && b.mode !== "fixture-replay" && (b.mutation ?? "none") === "none";
+  const ax = b.profile === "ax";
+  const modeLabel = ax && b.mode === "scripted" ? "AX task (scripted driver)" : MODE_LABEL[b.mode] ?? b.mode;
   const optionalText = Object.entries(lanes).filter(([n, l]) => n !== "local" && l.selected).map(([n, l]) => `${n} ${l.status}`).join(", ");
   const text = green
-    ? `PASS: all ${assertions.length} required assertions passed with evidence (${MODE_LABEL[b.mode] ?? b.mode})`
-    : `NOT A SUCCESS: local core ${status}${optionalText ? `; optional lanes ${optionalText}` : ""}${(b.mutation ?? "none") !== "none" ? `; mutation ${b.mutation} enabled` : ""}`;
+    ? `PASS: all ${assertions.length} required assertions passed with evidence (${modeLabel})`
+    : `NOT A SUCCESS: ${ax ? "AX lane" : "local core"} ${status}${optionalText ? `; optional lanes ${optionalText}` : ""}${(b.mutation ?? "none") !== "none" ? `; mutation ${b.mutation} enabled` : ""}`;
   const limitations = [
-    `Mode: ${MODE_LABEL[b.mode] ?? b.mode}.`,
+    `Mode: ${modeLabel}.`,
     ...(b.simulated_faults?.length ? [`Simulated faults injected by the test coordinator: ${b.simulated_faults.join("; ")}.`] : []),
     ...(b.dirty ? ["Dirty candidate: bound to patch_sha256; no clean-revision claim is allowed."] : []),
     "Public challenge cases are visible to builders; they are not secret holdouts.",
     "Hashes bind artifacts; they do not prove an honest collector.",
     "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
-    "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them.",
+    ax
+      ? "Ledger facts come from an export the in-sandbox coordinator wrote to the task's bucket; the collector reads it with its own credentials but cannot open the sandbox's ledger."
+      : "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them.",
     "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces.",
     ...(o.limitations ?? []),
   ];
@@ -127,7 +132,7 @@ export function reportMarkdown(r: ReturnType<typeof buildReport>) {
     `- Run: \`${r.run_id}\` · profile \`${r.profile}\` · mode \`${r.mode}\` · execution ${r.execution}`,
     `- Tree \`${r.tree_sha}\` · commit \`${r.candidate_revision}\` · dirty ${r.dirty}${r.patch_sha256 ? ` · patch \`${r.patch_sha256}\`` : ""} · mutation \`${r.mutation}\``,
     ...("floci_image" in r || "seed" in r ? [`- Seed \`${r.seed ?? "—"}\` · Floci image \`${r.floci_image ?? "not used"}\``] : []),
-    `- Local core: **${r.status}** · all selected lanes: **${r.all_lanes_status}** · cleanup ${r.cleanup_status}`,
+    `- ${r.profile === "ax" ? "AX lane" : "Local core"}: **${r.status}** · all selected lanes: **${r.all_lanes_status}** · cleanup ${r.cleanup_status}`,
     `- Counts: required ${c.required}, passed ${c.passed}, failed ${c.failed}, blocked ${c.blocked}, skipped ${c.skipped}, not run ${c.not_run}, unknown ${c.unknown}`, "",
     "| Assertion | Required | Expected | Observed | Status | Evidence | Reason |", "|---|---|---|---|---|---|---|", ...rows, "",
     "| Lane | Selected | Status | Parity | Reason |", "|---|---|---|---|---|", ...lanes, "",
