@@ -173,7 +173,10 @@ describe("F5-A2: configured but not authorized", () => {
       expect(r.status).toBe("BLOCKED"); // authorization_rejected
       expect(r.external_calls).toBe(0);
     }
-    for (const r of results.slice(0, 3)) expect(r.reason).toMatch(/authorization required/i);
+    results.slice(0, 3).forEach((r, i) =>
+      // Off macOS the live-model lane is refused earlier, on its missing Keychain prerequisite; still BLOCKED, still 0 calls.
+      expect(r.reason).toMatch(lanes[i] === liveModelAdapter && process.platform !== "darwin" ? /missing prerequisites: lm\.keychain-item/i : /authorization required/i),
+    );
     expect(fetchCalls).toBe(0); // external_call_count 0
     expect(providerSpawns()).toEqual([]);
     expect(secretReads()).toEqual([]);
