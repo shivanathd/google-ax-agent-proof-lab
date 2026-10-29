@@ -12,6 +12,7 @@ Five sets of runs back this ledger. Each row says which one it uses. All dates a
 |---|---|---|---|
 | **H** (harness) | `bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh` 18:42-18:48 and `npm run mutate` 18:52, on merged `main` | tree `fb59f8f6e2653db1eb16701124a259ca0951a990`, commit `f67cab3`, `dirty: false` | `artifacts/runs/<run_id>/` (local, gitignored); mutation record committed |
 | **H2** (final harness) | `bash docs/spec/active/2026-10-28-agent-proof-lab/evals/run-all.sh` 20:19-20:25 and `npm run mutate` 20:26 (UTC, 2026-10-28) on clean `main` | tree `b907eba5df58a8be277f70fd766421f2881038c2`, commit `1ba3c29`, `dirty: false` | verdict **`LOCAL_CORE_READY`** ([convergence report](evidence/harness-H2/convergence-report.json)); one sanitized export per case in `docs/evidence/<run_id>/`; mutation record `artifacts/mutations/2026-10-28T20-26-48-358Z.json` (4 caught, 0 uncaught, 0 invalid) |
+| **H3** (publication candidate) | `run-all.sh` 09:04-09:12 and `npm run mutate` 09:13 (UTC, 2026-10-29) on clean `main` after the README publication notice and review 7 | tree `4ef26f094383b4c318734b88f6b8256a47f59d8d`, `dirty: false` | verdict **`LOCAL_CORE_READY`** ([convergence report](evidence/harness-H3/convergence-report.json)); one sanitized export per case in `docs/evidence/<run_id>/`; mutation record `artifacts/mutations/2026-10-29T09-13-57-708Z.json` (4 caught, 0 uncaught, 0 invalid) |
 | **M** (media) | `lab media capture` runs behind every README screenshot, GIF and clip | `application_revision` `f97acc7`, `application_tree_sha256` `5828dcd6ccc770d2957d575adcacfd3bd8dc454aa14117530ae19bf771aefd24`, git tree `263c819579a194bdf00805a6d87cd6212f6d917a`, `capture_dirty: false`, capture session `2026-10-28T20-03-17-470Z` | `docs/assets/media-manifest.json`; sanitized exports `docs/evidence/<run_id>/` (committed) |
 | **B** (bench) | `npm run bench`, 14:26-14:34 | tree `721110b062ecde0e2941943b6fb685114b07a9a6`, commit `4935584` | `artifacts/bench/2026-10-28T14-26-41-782Z.json` (committed) |
 | **X** (AX run 3) | AX tasks on one GKE cluster running Agent Substrate v0.6.0 (`d3f2363`), gVisor sandboxes, one worker | AX `4b7bf6f`; lab image from commit `d10d3e6`; run `6882d106-…` | `profiles/ax/RESULTS.md` run 3 (committed). Raw evidence names the cluster and stays in gitignored `private-runs/ax/` |
@@ -73,13 +74,40 @@ Every required gate PASS on one clean tree: tasks 1.1 to 6.1, acceptance F1 to F
 | S3 | `9007d568-09bf-4ea6-afbc-c103cd4d0582` | [report](evidence/9007d568-09bf-4ea6-afbc-c103cd4d0582/report.json) |
 | S4 | `8dadad88-4858-468e-9e1b-870df869f999` | [report](evidence/8dadad88-4858-468e-9e1b-870df869f999/report.json) |
 
+## Publication-candidate harness (set H3)
+
+Same 20 cases, all PASS, on the tree published as the first public release. Run IDs:
+
+| Case | Run |
+|---|---|
+| F1-A1 | [`dcd9529a-08a8-4f08-b072-807bfc626c64`](evidence/dcd9529a-08a8-4f08-b072-807bfc626c64/report.json) |
+| F1-A2 | [`a3b2677e-faba-4cc6-be37-3ccda3f88830`](evidence/a3b2677e-faba-4cc6-be37-3ccda3f88830/report.json) |
+| F2-A1 | [`568a5d84-b38c-4746-8dc7-46653cd5da40`](evidence/568a5d84-b38c-4746-8dc7-46653cd5da40/report.json) |
+| F2-A2 | [`034d7e1c-4700-4994-a03d-507ab33fefd4`](evidence/034d7e1c-4700-4994-a03d-507ab33fefd4/report.json) |
+| F3-A1 | [`63b8c4fe-1e24-4ff3-aabd-6c43a0c7f97a`](evidence/63b8c4fe-1e24-4ff3-aabd-6c43a0c7f97a/report.json) |
+| F3-A2 | [`c3949d2a-6851-4fc8-bec0-373894682574`](evidence/c3949d2a-6851-4fc8-bec0-373894682574/report.json) |
+| F3-A3 | [`31de02db-7cc7-4524-aba8-26718f10e534`](evidence/31de02db-7cc7-4524-aba8-26718f10e534/report.json) |
+| F4-A1 | [`c5c88c48-aca5-4488-8ad1-3559f1bd02e8`](evidence/c5c88c48-aca5-4488-8ad1-3559f1bd02e8/report.json) |
+| F4-A2 | [`a1564408-845c-423d-bcf0-0179a1423171`](evidence/a1564408-845c-423d-bcf0-0179a1423171/report.json) |
+| F5-A1 | [`f24f9b6e-1b9b-420d-8c62-e9486b605722`](evidence/f24f9b6e-1b9b-420d-8c62-e9486b605722/report.json) |
+| F5-A2 | [`6a6ed9ea-a162-4b93-8bd8-aa4855ee7040`](evidence/6a6ed9ea-a162-4b93-8bd8-aa4855ee7040/report.json) |
+| F6-A1 | [`9b3da209-60a0-4e90-8056-596294dc1a0c`](evidence/9b3da209-60a0-4e90-8056-596294dc1a0c/report.json) |
+| F6-A2 | [`b87aa011-368b-4e65-b5d5-f85d9aa9f787`](evidence/b87aa011-368b-4e65-b5d5-f85d9aa9f787/report.json) |
+| F6-A3 | [`57509110-455a-4865-a689-23b493ec7a1d`](evidence/57509110-455a-4865-a689-23b493ec7a1d/report.json) |
+| F6-A4 | [`8f0da7e1-2a04-4aa6-ab52-7522c483488c`](evidence/8f0da7e1-2a04-4aa6-ab52-7522c483488c/report.json) |
+| F6-A5 | [`1da9bca8-a403-4841-bc3a-566a92bbfa40`](evidence/1da9bca8-a403-4841-bc3a-566a92bbfa40/report.json) |
+| S1 | [`a4c16bcb-9866-4989-8cb3-2b233d2da253`](evidence/a4c16bcb-9866-4989-8cb3-2b233d2da253/report.json) |
+| S2 | [`76bc8ce7-5ad5-4a33-898d-1ef279dfb1b8`](evidence/76bc8ce7-5ad5-4a33-898d-1ef279dfb1b8/report.json) |
+| S3 | [`b2e2971b-bba3-4d8c-97b1-c53ef222ec95`](evidence/b2e2971b-bba3-4d8c-97b1-c53ef222ec95/report.json) |
+| S4 | [`d78de6ca-f27d-419e-99fe-bd679493e34d`](evidence/d78de6ca-f27d-419e-99fe-bd679493e34d/report.json) |
+
 ## Console and README evidence (set H for gates, set M for media)
 
 | claim_id | Wording that may be used | Label | Run ID / source | Scope | Limitations | Reviewer |
 |---|---|---|---|---|---|---|
 | C-30 | When a required assertion fails, the console shows the failure and no overall success badge. | EXECUTED | F6-A1 `9c8273cc-4382-4236-b0bc-2433fc37ddc2` | `failure_visible: true`, `overall_success_banner: false` (browser assertion) | Local console in Playwright Chromium | unreviewed |
 | C-31 | A recording export shows revision, run ID and a synthetic-data notice, with valid evidence references and no secrets or forbidden identities. | EXECUTED | F6-A2 `8c2e12f7-3b9c-4deb-95c9-5217354c4ccc` | `revision_visible`, `run_id_visible`, `synthetic_notice_visible`, `secret_count: 0`, `forbidden_identity_count: 0`, `evidence_refs_valid` | Pattern and private-terms scan; not proof that nothing sensitive could exist | unreviewed |
-| C-32 | The README has five screenshots, three animated GIFs and three posters that decode, with valid provenance, alt text, captions, static fallbacks and a size within budget. | EXECUTED, **review PASS** | `docs/assets/render-review.json` (independent-review-agent-7, desktop_ok and narrow_ok true, hashes bound to the current README and media manifest); F6-A3 PASS in harness set H2, run `b78d2dd9-0025-42b2-9b47-d58a86f4c4a9` ([report](evidence/b78d2dd9-0025-42b2-9b47-d58a86f4c4a9/report.json)) | Every F6-A3 fact, including `local_render_review_passed`, is judged by the supplied evaluator in set H2 | The review was performed by an agent that built none of the media, not by a person. It rendered with `marked` in Chromium, not GitHub's renderer (GitHub render NOT_RUN). Six earlier reviews are kept outside the repo: four failed, review 5 passed on a capture a later fix made stale (L-056), and review 6 passed before the publication notice changed the README. Any README or manifest change makes this record stale, and `scripts/check-claim-ledger.py` then requires this row to say review pending | unreviewed |
+| C-32 | The README has five screenshots, three animated GIFs and three posters that decode, with valid provenance, alt text, captions, static fallbacks and a size within budget. | EXECUTED, **review PASS** | `docs/assets/render-review.json` (independent-review-agent-7, desktop_ok and narrow_ok true, hashes bound to the current README and media manifest); F6-A3 PASS in harness sets H2 and H3, run `b78d2dd9-0025-42b2-9b47-d58a86f4c4a9` ([report](evidence/b78d2dd9-0025-42b2-9b47-d58a86f4c4a9/report.json)) | Every F6-A3 fact, including `local_render_review_passed`, is judged by the supplied evaluator in set H2 | The review was performed by an agent that built none of the media, not by a person. It rendered with `marked` in Chromium, not GitHub's renderer (GitHub render NOT_RUN). Six earlier reviews are kept outside the repo: four failed, review 5 passed on a capture a later fix made stale (L-056), and review 6 passed before the publication notice changed the README. Any README or manifest change makes this record stale, and `scripts/check-claim-ledger.py` then requires this row to say review pending | unreviewed |
 | C-33 | A missing screenshot, a single-frame GIF, a stale capture and a broken embed are each detected, with no false media success. | EXECUTED | F6-A4 `54853a36-2c09-4eda-a552-62d1290b93c1` | Four detections, `false_media_success_count: 0` | Injected media defects in a scratch copy | unreviewed |
 | C-34 | Local media status is PASS while GitHub rendering stays NOT_RUN, and nothing was created or pushed. | EXECUTED | F6-A5 `c7371292-2e57-47a1-afce-694573ff5d04` | `local_media_status: PASS`, `github_render_status: NOT_RUN`, 0 repository creates, 0 pushes | GitHub rendering unchecked until a repository is authorized | unreviewed |
 | C-35 | The console never shows a false green, matches the report, shows optional lanes BLOCKED, and rejects a tampered artifact. | EXECUTED | S4 `456c120c-75af-40be-bb46-b488588f5a7d` | `false_green_count: 0`, `optional_profile_status: BLOCKED`, `tampered_artifact_rejected: true`, `console_matches_report: true` | Public challenge | unreviewed |

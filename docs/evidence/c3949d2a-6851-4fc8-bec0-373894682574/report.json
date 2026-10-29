@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "case_id": "F3-A2",
+  "run_id": "c3949d2a-6851-4fc8-bec0-373894682574",
+  "profile": "local",
+  "mode": "scripted",
+  "candidate_revision": "2a34c7e03e1f21450852301832a6ba6a3cecc2cb",
+  "tree_sha": "4ef26f094383b4c318734b88f6b8256a47f59d8d",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "floci_image": "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
+  "collector": "apl-collector pid=38333 (separate process; reader token, own S3/SQS client, read-only SQLite)",
+  "observed_at": "2026-10-29T09:07:08.604Z",
+  "execution": "EXECUTED",
+  "mutation": "none",
+  "simulated_faults": [],
+  "status": "PASS",
+  "lanes": {
+    "local": {
+      "status": "PASS",
+      "selected": true,
+      "reason": "local core: required assertions only"
+    },
+    "salesforce": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "coderabbit": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "ax": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "live-model": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    }
+  },
+  "all_lanes_status": "PASS",
+  "banner": {
+    "green": true,
+    "text": "PASS: all 3 required assertions passed with evidence (local integration run (scripted driver))"
+  },
+  "assertions": [
+    {
+      "id": "approval_status",
+      "required": true,
+      "expected": "awaiting_approval",
+      "observed": "awaiting_approval",
+      "evidence_refs": [
+        "evidence/approval-ledger.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "unauthorized_write_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/approval-ledger.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "approval_receipt_count",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/approval-s3.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    }
+  ],
+  "counts": {
+    "required": 3,
+    "passed": 3,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_run": 0,
+    "unknown": 0
+  },
+  "limitations": [
+    "Mode: local integration run (scripted driver).",
+    "Public challenge cases are visible to builders; they are not secret holdouts.",
+    "Hashes bind artifacts; they do not prove an honest collector.",
+    "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
+    "Grants live in the worker-written ledger; the collector reads them read-only but cannot prove the worker did not alter them.",
+    "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces."
+  ],
+  "cleanup_status": "CLEAN",
+  "started_at": "2026-10-29T09:07:05.374Z",
+  "ended_at": "2026-10-29T09:07:09.423Z",
+  "durations": {
+    "wall_clock_seconds": {
+      "value": 4.049,
+      "reason": null
+    }
+  }
+}

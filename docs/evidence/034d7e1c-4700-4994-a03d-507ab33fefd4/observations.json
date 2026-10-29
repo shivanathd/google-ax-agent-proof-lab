@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "case_id": "F2-A2",
+  "run_id": "034d7e1c-4700-4994-a03d-507ab33fefd4",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "2a34c7e03e1f21450852301832a6ba6a3cecc2cb",
+  "tree_sha": "4ef26f094383b4c318734b88f6b8256a47f59d8d",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "floci_image": "floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9",
+  "mutation": "none",
+  "collector_methods": [
+    "S3 ListObjectsV2 (collector client, own credentials)",
+    "Slack conversations.replies (reader token)",
+    "read-only SQLite query (inbox, tickets, actions, outbox, approval_requests)"
+  ],
+  "observed_at": "2026-10-29T09:06:20.393Z",
+  "simulated_faults": [],
+  "observations": {
+    "additional_business_records": 0,
+    "additional_completion_replies": 0,
+    "same_request_identity": true
+  },
+  "unobserved": {}
+}

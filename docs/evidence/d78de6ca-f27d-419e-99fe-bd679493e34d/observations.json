@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "case_id": "S4",
+  "run_id": "d78de6ca-f27d-419e-99fe-bd679493e34d",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "2a34c7e03e1f21450852301832a6ba6a3cecc2cb",
+  "tree_sha": "4ef26f094383b4c318734b88f6b8256a47f59d8d",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "`lab verify --run-id` on an intact and a tampered copy of one run's artifacts (child processes)",
+    "browser assertion: console DOM per run + profile view (collector's own Chromium)",
+    "profile doctor run by the collector (local configuration only, zero external calls)",
+    "report.json for each console run, read from its artifact directory"
+  ],
+  "observed_at": "2026-10-29T09:10:18.975Z",
+  "simulated_faults": [],
+  "observations": {
+    "false_green_count": 0,
+    "optional_profile_status": "BLOCKED",
+    "tampered_artifact_rejected": true,
+    "console_matches_report": true
+  },
+  "unobserved": {}
+}

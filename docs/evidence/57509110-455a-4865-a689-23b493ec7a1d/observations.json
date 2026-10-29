@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "case_id": "F6-A3",
+  "run_id": "57509110-455a-4865-a689-23b493ec7a1d",
+  "profile": "local",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "2a34c7e03e1f21450852301832a6ba6a3cecc2cb",
+  "tree_sha": "4ef26f094383b4c318734b88f6b8256a47f59d8d",
+  "dirty": false,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "media verify: ffprobe/ffmpeg decode, manifest hashes, committed evidence, budget",
+    "readme verify --local: parsed embeds + marked render in Chromium at 1440 and 400 px",
+    "reviewer record docs/assets/render-review.json vs current README/manifest hashes"
+  ],
+  "observed_at": "2026-10-29T09:11:37.947Z",
+  "simulated_faults": [],
+  "observations": {
+    "valid_required_screenshot_count": 5,
+    "valid_required_animated_gif_count": 3,
+    "valid_required_static_poster_count": 3,
+    "all_required_media_provenance_valid": true,
+    "media_budget_passed": true,
+    "broken_readme_media_path_count": 0,
+    "missing_alt_text_count": 0,
+    "missing_caption_count": 0,
+    "static_fallbacks_valid": true,
+    "local_render_review_passed": true
+  },
+  "unobserved": {}
+}
