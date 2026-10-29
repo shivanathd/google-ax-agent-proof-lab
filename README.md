@@ -1,5 +1,7 @@
 # Agent Proof Lab
 
+> Independent personal project. It is not affiliated with or endorsed by Google, Slack, Salesforce, CodeRabbit, Vercel or the Floci project. Google AX (Agent Executor) and Agent Substrate are used only by an optional lane, and that lane's results are reported per assertion, failures included.
+
 A local-first lab for testing Slack-led agent workflows against emulated Slack, local S3/SQS and a small ledger. It keeps four layers apart that a single green checkmark tends to blur: where the work runs (execution), what it talks to (emulation), what it is allowed to do (authorization) and what an independent collector can prove happened (evidence). A fifth question sits on top: what can honestly be claimed from that evidence.
 
 Everything below runs on one laptop with fictional workspaces, people and records. No Slack workspace, cloud account, CRM org or model key is needed for the local core.
@@ -55,6 +57,8 @@ The longer explanation is in [the mental model](docs/MENTAL_MODEL.md).
 Tested on macOS 27 (arm64) with Node.js 24.22, npm 11.19 and Docker Desktop 29.9; other platforms are untested ([environment](docs/ENVIRONMENT.md)). You need Node.js 24 and Docker. FFmpeg 6 and Playwright's Chromium (`npx playwright install chromium`) are needed only for the console and media cases and for media capture. Export, media capture and F6-A2 also need a private-terms list you create yourself; without it they refuse to run (F6-A2 reports NOT_RUN). [Reproducing](docs/REPRODUCING.md#prerequisites) explains the list, the render review record and the optional pre-commit hook.
 
 ```bash
+git clone https://github.com/shivanathd/google-ax-agent-proof-lab.git
+cd google-ax-agent-proof-lab
 npm ci                                   # also applies the pinned Emulate patch
 docker pull floci/floci:2.3.0@sha256:e0b292df4dc9559b7b1bf4f51bdda4bb8e269276236438cd03cae661260ea8a9
 npm run lab -- doctor                    # local prerequisites; optional lanes show SKIPPED (BLOCKED only if selected)
