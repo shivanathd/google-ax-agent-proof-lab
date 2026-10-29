@@ -24,6 +24,13 @@ jobs:
         with:
           python-version: "3.13"
       - run: npm ci --no-audit --no-fund
+      - name: Media and browser prerequisites (FFmpeg, Playwright Chromium)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+          npx playwright install --with-deps chromium
+      - name: CI private-terms list (export fails closed without one; this term appears nowhere in the repo)
+        run: mkdir -p private-runs && echo "ci-placeholder-forbidden-term-7f3a" > private-runs/private-terms.txt
       - run: docker pull "$FLOCI_IMAGE"
       - run: npm run typecheck
       - run: npm run test:unit
