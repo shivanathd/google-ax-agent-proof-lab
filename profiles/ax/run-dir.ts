@@ -56,11 +56,26 @@ export function ownedResources(o: { runId: string; kubeContext: string; atespace
 // Appends one entry to a section of <runDir>/owned-resources.json before its object is created (build plan §8.2).
 // The whole file must still validate; it is replaced by a rename, so a crash leaves either the old or the new file.
 export function recordOwned(runDir: string, section: string, entry: unknown) {
+  updateOwned(runDir, `recordOwned: ${section} entry`, (value) => {
+    value[section] = [...(value[section] ?? []), entry];
+  });
+}
+
+// Sets removed_at on the open substrate row for one object, once a second listing no longer shows it (§4.3 step 6).
+export function markRemoved(runDir: string, o: { kind: string; atespace: string; name: string }, at = new Date().toISOString()) {
+  updateOwned(runDir, "markRemoved", (value) => {
+    const row = (value.substrate ?? []).find((r: Record<string, string>) => r.kind === o.kind && r.atespace === o.atespace && r.name === o.name && !r.removed_at);
+    if (!row) throw new Error(`markRemoved: no open substrate row for ${o.kind} ${o.name}`);
+    row.removed_at = at;
+  });
+}
+
+function updateOwned(runDir: string, what: string, change: (value: Record<string, any>) => void) {
   const file = join(runDir, "owned-resources.json");
   const value = JSON.parse(readFileSync(file, "utf8"));
-  value[section] = [...(value[section] ?? []), entry];
+  change(value);
   const errors = ownedResourcesErrors(value);
-  if (errors.length) throw new Error(`recordOwned: ${section} entry rejected by run-dir.schema.json: ${errors.join("; ")}`);
+  if (errors.length) throw new Error(`${what} rejected by run-dir.schema.json: ${errors.join("; ")}`);
   const tmp = `${file}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(value, null, 2));
   renameSync(tmp, file);

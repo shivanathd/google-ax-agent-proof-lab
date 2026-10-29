@@ -12,14 +12,14 @@ It makes every cluster call for these runs (design rule 9). It reuses `doctor()`
 
 | Subcommand | Input | Output | Calls |
 |---|---|---|---|
-| `plan` | set ID, the two infrastructure run dirs, the tenant-run registry | `private-runs/ax/sets/<set_id>/plan.json`: clusters, configurations, tenant runs by kind (design 6.1), evidence run IDs, tasks per round | none |
+| `plan` | set ID, the two infrastructure run dirs, the tenant-run registry | `private-runs/ax/sets/<set_id>/plan.json`: clusters, configurations, tenant runs by kind (design 6.1), evidence run IDs, tasks per round, controls | none at step 1; at step 2 the read-only queries of §1.3 on A (§4.6) |
 | `infra` | one cluster's infrastructure run dir | §4.1 | `kubectl apply`, `scale`, `patch`, `delete`; `gcloud container clusters resize`; the read-only queries of §1.3 |
 | `run-step` | `plan.json`, that cluster's infrastructure run dir | the step run dir, tenant run dirs, rendered manifests, `artifacts/runs/<run_id>/` per bundle with its `checksums.sha256`, `timing-raw.json`, log extracts, `stopped.json` | `doctor()`, `teardown.sh --snapshot`, §4.2 to §4.5, then `teardown.sh <step-run-dir>` |
 | `report` | the bundles, `stopped.json` | stop bundles (§11.3); per bundle `report.json`, `report.md` and export; then the aggregate (§11.4) | `evaluate_ax.py`, `generateReport()`, `agrees()`, `exportRun()`, `aggregate.ts` |
 
 ```
-multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir>]
-multi.ts infra     a|b --infra <dir> [--dry-run]
+multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir>] [--step1-set-id <uuid>]   # step 2 names step 1's set when A is reused
+multi.ts infra     a|b --infra <dir> [--resize 0|2] [--dry-run]                                         # --resize: B's node pool only
 multi.ts run-step  --plan <plan.json> --cluster a|b [--dry-run]
 multi.ts report    --plan <plan.json>
 orchestrate.ts manifests --tenant --dir <tenant-run-dir> --set-id <uuid> --cluster a|b --tenant-role t1|t2|t3|t4
@@ -45,9 +45,9 @@ Every value comes from that cluster's infrastructure run dir. Nothing is read fr
 | `APL_AX_SUBSTRATE_API` | `api.ate-system.svc.cluster.local:443`, the upstream default named in `index.ts` |
 | `APL_AX_AUTHORIZED` | `1`, set by the operator for the session after the owner's go-ahead; never written to a file |
 
-A BLOCKED doctor or a missing opt-in leaves that cluster's rows BLOCKED and makes no call there.
+A BLOCKED doctor or a missing opt-in leaves that cluster's rows BLOCKED and makes no call there. A dry run reports a BLOCKED doctor and goes on printing the planned calls, since it makes none.
 
-- Every subprocess (`kubectl`, `kubectl ate`, `ax`, `teardown.sh`) gets `KUBECONFIG=<run-dir>/kubeconfig` in its environment, and `kubectl` calls also pass `--kubeconfig`. `kubectl ate` is the plugin build in `local.bin`, reached through kubectl's plugin mechanism, so the environment pins its cluster whether or not kubectl forwards the flag. The dry run prints, per cluster, `kubectl config current-context` run with that environment and fails unless it equals the plan's context.
+- Every subprocess (`kubectl`, `kubectl ate`, `ax`, `teardown.sh`) gets `KUBECONFIG=<run-dir>/kubeconfig` in its environment, and `kubectl` calls also pass `--kubeconfig`. `kubectl ate` is the plugin build in `local.bin`, reached through kubectl's plugin mechanism, so the environment pins its cluster whether or not kubectl forwards the flag. kubectl refuses flags before a plugin name, so the runner passes `kubectl ate --kubeconfig <file> …`. The dry run prints, per cluster, `kubectl config current-context` run with that environment and fails unless it equals the plan's context.
 - `AX_HOME=<run-dir>/axhome` for every `ax` call, as `teardown.sh` sets it.
 - One port-forward per cluster to `svc/ax-server` port 8080, opened with that kubeconfig; `ax --server http://127.0.0.1:<port>` (L-033). If it dies it is reopened once. A second failure stops the step, and the round's remaining bundles are BLOCKED ("AX API unreachable").
 - `kubectl ate` opens its own port-forward per call, as in run 3. Its `--endpoint` flag (`cmd/kubectl-ate/internal/cmd/root.go`) could reuse one forward; this plan does not need that optimisation.
@@ -65,6 +65,9 @@ Written by `multi.ts infra` from read-only queries. B's exists; A's is written t
 | `ax.commit`, `ax.ax_server` | the `ax-server` image digest (`kubectl -n ax-system get deployment ax-server -o json`), looked up in `images` |
 | `ax.client_pins_substrate` | the Substrate module version in AX's `go.mod` at `4b7bf6f` |
 | `lab_image` | the digest pushed in phase 6 |
+| `lab_commit` | the commit that image was built from (`printenv APL_CANDIDATE_REVISION` in phase 6's gate); `run-step` compares the first bundle's `candidate_revision` with it, and stop bundles carry it |
+
+`client_pins_substrate`, `lab_image` and `lab_commit` are not cluster queries; `multi.ts` carries them from the recorded file (`client_pins_substrate` is fixed by `ax.commit`, which is re-read).
 
 A digest missing from `images` is an error: the identity check of the all-clusters view (design 8.4) must not guess.
 
@@ -175,20 +178,23 @@ A run-level bundle (MT-W01, MT-ISO) is observed with `observe --run` after the t
 | `ax resume` fails | that task's bundle is BLOCKED ("resume failed: <code>"); the round continues |
 | result not served within 120 s | observe anyway: `command_exit_code` is absent, so F3-A1 is UNKNOWN (design rule 3) |
 | `observe` exits nonzero or writes no bundle | a `stopped.json` entry, NOT_RUN ("collector exited <code>"); the round continues |
-| task delete fails | recorded in the set dir; the task stays listed, so teardown deletes it |
+| `ax apply` fails | that task's bundle is BLOCKED ("ax apply failed: <code>"); the round continues |
+| a tenant's emulators not Available within 180 s (§4.2 step 4) | the step stops; unobserved bundles NOT_RUN, as capacity |
+| a tenant's collector env file not in the Pod within 120 s (§4.2 step 7) | the step stops; unobserved bundles BLOCKED |
+| task delete fails | recorded in the set dir; the task stays listed, so teardown deletes it; its actor is not treated as a leftover |
 | leftover actor delete fails | the entry keeps no `removed_at`; teardown deletes it |
 | port-forward dies twice | the step stops; remaining bundles are BLOCKED ("AX API unreachable") |
 | context mismatch | stop rule 2 |
 
 ### 4.5 Actor probe
 
-One probe tenant run has `apl-<tr8>-p1` in round 1 and `apl-<tr8>-p2` in round 2. Both are rendered as W01-H tasks and run through §4.3, with `kubectl ate get actors -a <atespace> -o json` saved after each apply, result and delete. From these listings the runner records G, L, and whether a leftover holds a worker slot (a non-empty `status.workerAssignment.worker`), before step 6 of §4.3 removes it.
+One probe tenant run has `apl-<tr8>-p1` in round 1 and `apl-<tr8>-p2` in round 2. Both are rendered as W01-H tasks and run through §4.3, with `kubectl ate get actors -a <atespace> -o json` saved after each apply, result and delete. From these listings the runner records G (the after-result count minus the task's own actor), L (the after-delete count), and whether a leftover holds a worker slot (a non-empty `status.workerAssignment.worker`), before step 6 of §4.3 removes it, under `actor_probe` in the set dir's `run-step-<cluster>.json`.
 
 ### 4.6 Step 2 and A's half (design 8.3)
 
 - `multi.ts plan --step 2` re-runs the read-only queries of §1.3 on A into the set dir as `versions-a-step2.json` and compares it field by field with A's `versions.json` recorded for step 1. It also checks that A's and B's `versions.json` name the same `lab_image` digest.
 - If both checks pass, the plan has no A configuration. `plan.json` records `"a": {"reused": {"set_id": "<step 1 set_id>", "c": 1}}`, and the all-clusters view takes A's row from that configuration's reports.
-- If either check fails, the plan lists the differing fields, and A is planned first exactly as B: one tenant, c = 1, a warm-up round and 30 counted tasks.
+- If either check fails, the plan lists the differing fields (`"a": {"rerun": {"differences": [...]}}`), and A is planned first exactly as B: one tenant, c = 1, a warm-up round and 30 counted tasks. If A's doctor is BLOCKED, the versions cannot be re-read and `plan --step 2` refuses rather than guess.
 - `ax-multi.test.ts` (phase 5) covers both outcomes of the plan.
 
 ## 5. Templates and placeholders
@@ -250,11 +256,11 @@ On A, `infra a` applies only its Pod and NetworkPolicy documents. Both clusters 
 ### 8.1 Contents
 
 - **Infrastructure run dirs**, as in design section 3. Before step 2, B's gains the collector namespace, ServiceAccount, Pod, NetworkPolicy and WorkerPool.
-- **Step run dir** `private-runs/ax/<step_run_id>/` holds:
+- **Step run dir** `private-runs/ax/<step_run_id>/` holds (a step run dir that exists is never reused: a crashed step is replanned):
   - `owned-resources.json`, listing every tenant namespace with its objects, the atespace, the egress policy (for the record), AX Task and Workspace, leftover actors and templates, and `collector-env-tenants`. It copies `project`, `zone` or `cluster`, and `local` (`bin`, `ax_cli`, `kubectl`) from the cluster's infrastructure run dir, because `teardown.sh` reads `local.bin` and `local.ax_cli` from the run dir it is given;
-  - `kubeconfig` (single context, mode 0600, written as `index.ts` writes it) and `axhome/`;
+  - `kubeconfig` (mode 0600, a copy of the infrastructure run dir's, whose current context the guard checks) and `axhome/`;
   - `pre-snapshot.json`, from `teardown.sh --snapshot` before the step's first apply;
-  - `stopped.json`.
+  - `stopped.json`, and `teardown.json` (teardown's exit code and `CLEAN` or `INCOMPLETE`, the cleanup status `report` passes on).
 - **Set dir** `private-runs/ax/sets/<set_id>/` holds `plan.json`; the tenant run dirs (`secrets.json`, `emulate-seed.json`, rendered manifests), which own nothing; `timing-raw.json`; the ax-server and gateway log extracts; the targets, markers and disclosure files; and the controls' bundles.
 - New run dirs leave `substrate_install` absent: the schema requires it to carry a `previous` install, and made-up values there would arm `--restore-substrate-v05`.
 
@@ -275,7 +281,7 @@ On A, `infra a` applies only its Pod and NetworkPolicy documents. Both clusters 
 - **`ax`.** Every call goes to the port-forward opened with that kubeconfig. A call whose port belongs to the other cluster is refused.
 - **`gcloud`.** Every call passes `--project`, `--location` and the cluster name from that cluster's infrastructure run dir (`project`, `zone`, `gke_cluster` or `cluster`). A call naming another cluster is refused.
 
-The ambient kube context and gcloud configuration are never read. A mismatch stops the set (stop rule 2). `teardown.sh` keeps its own guard: the schema must be valid and the current context must equal `kube_context`.
+The ambient kube context and gcloud configuration are never read. A mismatch stops the set (stop rule 2). `teardown.sh` keeps its own guard: the schema must be valid and the current context must equal `kube_context`; so `run-step` still runs it after a guard refusal whenever it has made a cluster call.
 
 ## 9. Egress policies and the gateway log (`egress.ts`)
 
@@ -400,7 +406,7 @@ Each `stopped.json` entry becomes a C4 bundle, checksummed when written:
 - **`serverIntervals()`.** For each task, the interval runs from `msg="resuming actor on Substrate worker" actor=<task>` to the next `msg="task successfully reconciled and running"` with the same `actor`, using their `time=` fields (slog text handler; `internal/controller/reconciler.go`, `cmd/ax-server/main.go`). It is absent, with a reason, if either line is missing. It is also absent if the running line has `workspaceReady=false`: the readiness poll (`workspaceReadyPollInterval` 500 ms, `defaultWorkspaceReadyTimeout` 15 s) timed out.
 - **`commandDuration()`.** `ended_at − started_at` from the `result.json` the collector captured into the F3-A1 bundle's evidence (RFC 3339 with nanoseconds, `stamp()` in `runner/main.go`). Absent if that file is absent.
 - **Operator intervals.** `egress_attach_ms` runs from the start of `ax apply` to the attach returning. `submit_to_result_ms` runs from the start of `ax apply` to the collector's `result` exec returning HTTP 200. An empty exec is timed each round and reported beside it, not subtracted.
-- **`resumeSpread()`.** Per round, the latest minus the earliest "resuming actor" line of its tasks (0 at c = 1).
+- **`resumeSpread()`.** Per round, the latest minus the earliest "resuming actor" line of its tasks (0 at c = 1). A round with a task's line missing goes to `rounds_absent` in `timing-raw.json` with the reason, not into `rounds`.
 - **Summary.** Per configuration (cluster, step, c) and per headline, n is the number of counted tasks with that headline present. Each headline reports p50 by nearest rank (the ⌈n/2⌉-th value: the 15th at n = 30, the 16th at n = 32), max, and `n_below_planned: true` when n < 30. `tasks_timed` in the run facts is the number of counted tasks with both headlines present. Per-tenant breakdowns show p50 and max only, and warm-up rounds are listed separately.
 
 ## 13. Teardown mechanics

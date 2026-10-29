@@ -170,6 +170,19 @@ export function serverIntervals(log: string, tasks: string[]): Record<string, Fa
   }));
 }
 
+// resume_spread_ms per round: the latest minus the earliest "resuming actor" line of the round's tasks, on the
+// ax-server clock (0 at c = 1). Absent if any task of the round has no such line.
+export function resumeSpread(log: string, tasks: string[]): Fact<number> {
+  const lines = log.split("\n").map(slogFields);
+  const times: number[] = [];
+  for (const task of tasks) {
+    const t = Date.parse(lines.find((l) => l.msg === "resuming actor on Substrate worker" && l.actor === task)?.time ?? "");
+    if (!Number.isFinite(t)) return { absent: `no valid "resuming actor on Substrate worker" line for ${task}` };
+    times.push(t);
+  }
+  return times.length ? { value: Math.max(...times) - Math.min(...times) } : { absent: "no tasks in the round" };
+}
+
 // command_duration_ms from the runner's result.json (RFC 3339 with nanoseconds; millisecond resolution here).
 export function commandDuration(result: { started_at?: string; ended_at?: string } | undefined): Fact<number> {
   if (!result) return { absent: "result.json absent" };

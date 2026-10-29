@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, foreignMarkerCount, p50, parseEgressLog, serverIntervals,
+  agrees, commandDuration, crossTenantUpstreams, egressExtractArgs, foreignMarkerCount, p50, parseEgressLog, resumeSpread, serverIntervals,
   type EgressExtract,
 } from "../../profiles/ax/multi-facts.ts";
 
@@ -142,6 +142,13 @@ describe("timing (build §12)", () => {
       "apl-1a2b3c4d-03": { absent: 'no "task successfully reconciled and running" line after the resume' },
       "apl-1a2b3c4d-04": { absent: 'no "resuming actor on Substrate worker" line' },
     });
+  });
+
+  it("resumeSpread() is the latest minus the earliest resume line of the round, 0 at c = 1, absent on a missing line", () => {
+    const log = [resume("2026-10-29T10:00:00.000Z", "apl-1a2b3c4d-01"), resume("2026-10-29T10:00:00.180Z", "apl-5e6f7a8b-01")].join("\n");
+    expect(resumeSpread(log, ["apl-1a2b3c4d-01", "apl-5e6f7a8b-01"])).toEqual({ value: 180 });
+    expect(resumeSpread(log, ["apl-1a2b3c4d-01"])).toEqual({ value: 0 });
+    expect(resumeSpread(log, ["apl-1a2b3c4d-01", "apl-9c0d1e2f-01"])).toEqual({ absent: 'no valid "resuming actor on Substrate worker" line for apl-9c0d1e2f-01' });
   });
 
   it("commandDuration() reads ended_at - started_at from a result.json", () => {
