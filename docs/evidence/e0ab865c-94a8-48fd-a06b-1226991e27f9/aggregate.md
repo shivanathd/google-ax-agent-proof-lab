@@ -52,7 +52,7 @@
 | 9c539b87-cac4-48d4-be44-906814568515 | F3-A1 | apl-8576fe92-28 | a | t1 | PASS |  |
 | dbf60ec2-dbbb-4a45-8aff-fe44e2db8d73 | F3-A1 | apl-8576fe92-29 | a | t1 | PASS |  |
 | 6493ff68-d97e-44a1-923c-d3d8829a3498 | F3-A1 | apl-8576fe92-30 | a | t1 | PASS |  |
-| f8d9b253-8679-4e89-ae8e-ef8aa3d7c014 | MT-W01 | — | a | t1 | PASS |  |
+| f8d9b253-8679-4e89-ae8e-ef8aa3d7c014 | MT-W01 | - | a | t1 | PASS |  |
 | b06e19f7-f5ea-4ddc-962a-c7e8eb2fa63b | F3-A1 | apl-6f7767d0-00 (warm-up, not counted) | a | t1 | PASS |  |
 | 0a8798d5-8d64-4754-ba6d-972e0d7c1499 | F3-A1 | apl-6f7767d0-01 | a | t1 | PASS |  |
 | e7ca70cf-decc-4c8a-90f9-eaafb33606af | F3-A1 | apl-6f7767d0-02 | a | t1 | PASS |  |
@@ -69,7 +69,7 @@
 | 8b93b2a8-cd73-4f06-a296-c5f3c6be19b0 | F3-A1 | apl-6f7767d0-13 | a | t1 | PASS |  |
 | 4f27a033-9bb8-4f1b-90ae-1951765260b9 | F3-A1 | apl-6f7767d0-14 | a | t1 | PASS |  |
 | 82e4edef-c5cf-48ef-a49e-2fd3b0d4ac69 | F3-A1 | apl-6f7767d0-15 | a | t1 | PASS |  |
-| 1f5aa885-d567-49ae-94ba-59efd63d5868 | MT-W01 | — | a | t1 | PASS |  |
+| 1f5aa885-d567-49ae-94ba-59efd63d5868 | MT-W01 | - | a | t1 | PASS |  |
 | 340b73b4-5b42-49ed-8233-dfd374a655f4 | F3-A1 | apl-ed0f8502-00 (warm-up, not counted) | a | t2 | PASS |  |
 | 431f0b45-4b2e-4017-b94b-ca4c8c12a1d9 | F3-A1 | apl-ed0f8502-01 | a | t2 | PASS |  |
 | 9a4ceb0c-7103-4d64-8b23-1d691aecb8a0 | F3-A1 | apl-ed0f8502-02 | a | t2 | PASS |  |
@@ -86,7 +86,7 @@
 | 5a78a409-13cf-451a-87c2-7e4e963135cd | F3-A1 | apl-ed0f8502-13 | a | t2 | PASS |  |
 | f3098aa5-bba6-4693-bec2-c5bfa7bd3676 | F3-A1 | apl-ed0f8502-14 | a | t2 | PASS |  |
 | 3ee15a0a-e857-447b-9bbb-e4fa5ae84f38 | F3-A1 | apl-ed0f8502-15 | a | t2 | PASS |  |
-| cb3c9431-a6bd-47e9-a47f-f5cfe9212ecd | MT-W01 | — | a | t2 | PASS |  |
+| cb3c9431-a6bd-47e9-a47f-f5cfe9212ecd | MT-W01 | - | a | t2 | PASS |  |
 | 2ee4f6ed-4720-4848-b666-bb654d603572 | F3-A1 | apl-0ca83375-00 (warm-up, not counted) | a | t1 | PASS |  |
 | 7d4f8e7f-c315-496a-b61d-ab633a456c1f | F3-A1 | apl-0ca83375-01 | a | t1 | PASS |  |
 | 9bcf7529-5c83-4ec1-8569-b39ffa2518ba | F3-A1 | apl-0ca83375-02 | a | t1 | PASS |  |
@@ -96,7 +96,7 @@
 | 0f95ff00-198c-4e91-86bf-6733b28a0041 | F3-A1 | apl-0ca83375-06 | a | t1 | PASS |  |
 | f7a3aba3-1f61-4de7-9aab-ff6f5b242d53 | F3-A1 | apl-0ca83375-07 | a | t1 | PASS |  |
 | 44f5bd56-43d5-491e-ba2a-b19f88b8eb59 | F3-A1 | apl-0ca83375-08 | a | t1 | PASS |  |
-| 934116f4-aa61-42e7-8f4e-f3f265a84757 | MT-W01 | — | a | t1 | PASS |  |
+| 934116f4-aa61-42e7-8f4e-f3f265a84757 | MT-W01 | - | a | t1 | PASS |  |
 | c46a4bb1-c34a-4066-8a67-9c8aefc22eb6 | F3-A1 | apl-a24c0870-00 (warm-up, not counted) | a | t2 | PASS |  |
 | 727ec235-0827-4116-be9e-b74f1c191c3e | F3-A1 | apl-a24c0870-01 | a | t2 | PASS |  |
 | 3d57a23f-3347-46bd-8041-6ce237afb872 | F3-A1 | apl-a24c0870-02 | a | t2 | PASS |  |
@@ -106,7 +106,7 @@
 | d9269990-233c-4bba-8347-8c87156c4faf | F3-A1 | apl-a24c0870-06 | a | t2 | PASS |  |
 | 09a30eba-0158-4b71-a043-5549fe7dc1b2 | F3-A1 | apl-a24c0870-07 | a | t2 | PASS |  |
 | 38ff8ff3-80da-4f68-91cf-bcfed017affa | F3-A1 | apl-a24c0870-08 | a | t2 | PASS |  |
-| 457b5f26-3ed9-409c-9b42-d4730b6f96ee | MT-W01 | — | a | t2 | PASS |  |
+| 457b5f26-3ed9-409c-9b42-d4730b6f96ee | MT-W01 | - | a | t2 | PASS |  |
 | fe70f7a7-7d4d-4e91-ae70-c5e2a2f07ea7 | F3-A1 | apl-45c7ce35-00 (warm-up, not counted) | a | t3 | PASS |  |
 | 444eb3ae-62d8-496f-ba7a-d24fcbe27854 | F3-A1 | apl-45c7ce35-01 | a | t3 | PASS |  |
 | ebf5bb17-11c1-4502-9e76-cd4d743d4960 | F3-A1 | apl-45c7ce35-02 | a | t3 | PASS |  |
@@ -116,7 +116,7 @@
 | 4e8af772-6463-4078-a6cf-12b20cbbeb30 | F3-A1 | apl-45c7ce35-06 | a | t3 | PASS |  |
 | cfeea3a2-a6bf-41fb-8d5f-eb4ab2088960 | F3-A1 | apl-45c7ce35-07 | a | t3 | PASS |  |
 | f0b93a97-3562-45c7-b273-41639d58bf51 | F3-A1 | apl-45c7ce35-08 | a | t3 | PASS |  |
-| 1ec7a14b-5d89-47e0-9035-635f6a9dca55 | MT-W01 | — | a | t3 | PASS |  |
+| 1ec7a14b-5d89-47e0-9035-635f6a9dca55 | MT-W01 | - | a | t3 | PASS |  |
 | 39f007c6-abe2-4564-b154-0d5f27539327 | F3-A1 | apl-e0db3d52-00 (warm-up, not counted) | a | t4 | PASS |  |
 | a33082b0-ce3f-4cd1-9eab-6d1eb3df231b | F3-A1 | apl-e0db3d52-01 | a | t4 | PASS |  |
 | a8199234-7abd-401f-8739-e5db775989ae | F3-A1 | apl-e0db3d52-02 | a | t4 | PASS |  |
@@ -126,7 +126,7 @@
 | c680e436-45f0-494f-9996-677f22d40c93 | F3-A1 | apl-e0db3d52-06 | a | t4 | PASS |  |
 | feb40d0c-00c3-4a6c-a388-5afbbac14dd5 | F3-A1 | apl-e0db3d52-07 | a | t4 | PASS |  |
 | 55446e08-db27-4cf1-b173-2a75803ffb27 | F3-A1 | apl-e0db3d52-08 | a | t4 | PASS |  |
-| 2d13d13d-f623-4a7e-8e47-132b48085fdd | MT-W01 | — | a | t4 | PASS |  |
+| 2d13d13d-f623-4a7e-8e47-132b48085fdd | MT-W01 | - | a | t4 | PASS |  |
 | 115784b4-7afe-4f56-b0d8-34c51a64a5dc | MT-ISO | apl-be9f498f-iso | a | t1 | PASS |  |
 | 6c5258f7-7eaf-41ed-b163-a72625ea72af | MT-ISO | apl-235d9843-iso | a | t2 | PASS |  |
 | 36c29ef7-6c92-4489-b3b7-08ced85fc007 | MT-ISO | apl-5ffacfb7-iso | a | t3 | PASS |  |

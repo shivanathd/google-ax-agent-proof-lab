@@ -63,6 +63,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-00",
       "warmup": true,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -77,6 +78,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-01",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -91,6 +93,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-02",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -105,6 +108,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-03",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -119,6 +123,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-04",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -133,6 +138,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-05",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -147,6 +153,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-06",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -161,6 +168,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-07",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -175,6 +183,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-08",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -189,6 +198,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-09",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -203,6 +213,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-10",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -217,6 +228,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-11",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -231,6 +243,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-12",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -245,6 +258,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-13",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -259,6 +273,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-14",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -273,6 +288,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-15",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -287,6 +303,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-16",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -301,6 +318,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-17",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -315,6 +333,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-18",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -329,6 +348,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-19",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -343,6 +363,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-20",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -357,6 +378,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-21",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -371,6 +393,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-22",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -385,6 +408,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-23",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -399,6 +423,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-24",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -413,6 +438,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-25",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -427,6 +453,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-26",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -441,6 +468,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-27",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -455,6 +483,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-28",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -469,6 +498,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-29",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -483,6 +513,7 @@
       "case": "F3-A1",
       "task": "apl-2216d671-30",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -497,6 +528,7 @@
       "case": "MT-W01",
       "task": null,
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -511,6 +543,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-00",
       "warmup": true,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -525,6 +558,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-01",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -539,6 +573,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-02",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -553,6 +588,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-03",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -567,6 +603,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-04",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -581,6 +618,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-05",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -595,8 +633,9 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-06",
       "warmup": false,
+      "reported": true,
       "status": "BLOCKED",
-      "reason": null
+      "reason": "egress policy not attached"
     },
     {
       "cluster": "b",
@@ -609,6 +648,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-07",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -623,6 +663,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-08",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -637,6 +678,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-09",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -651,6 +693,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-10",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -665,6 +708,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-11",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -679,6 +723,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-12",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -693,6 +738,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-13",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -707,6 +753,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-14",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -721,6 +768,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-15",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -735,6 +783,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-16",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -749,6 +798,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-17",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -763,6 +813,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-18",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -777,6 +828,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-19",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -791,6 +843,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-20",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -805,6 +858,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-21",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -819,6 +873,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-22",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -833,6 +888,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-23",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -847,6 +903,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-24",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -861,6 +918,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-25",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -875,6 +933,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-26",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -889,6 +948,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-27",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -903,6 +963,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-28",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -917,6 +978,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-29",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -931,6 +993,7 @@
       "case": "F3-A1",
       "task": "apl-a64f9fba-30",
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     },
@@ -945,6 +1008,7 @@
       "case": "MT-W01",
       "task": null,
       "warmup": false,
+      "reported": true,
       "status": "PASS",
       "reason": null
     }

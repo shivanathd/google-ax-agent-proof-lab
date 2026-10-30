@@ -40,14 +40,14 @@
 | 78bbf777-683f-49de-be3c-8b7adcaa630e | F3-A1 | apl-2216d671-28 | a | t1 | PASS |  |
 | 81d75a06-f3c1-49e0-9028-0e54f3655692 | F3-A1 | apl-2216d671-29 | a | t1 | PASS |  |
 | 4e8c64d0-1dfe-4d56-9121-4a0badc389d6 | F3-A1 | apl-2216d671-30 | a | t1 | PASS |  |
-| 212fe94a-8cb5-4952-b1cb-a5d625e90073 | MT-W01 | — | a | t1 | PASS |  |
+| 212fe94a-8cb5-4952-b1cb-a5d625e90073 | MT-W01 | - | a | t1 | PASS |  |
 | 5644ecbc-1506-462c-b4a6-4a97065fbafc | F3-A1 | apl-a64f9fba-00 (warm-up, not counted) | b | t1 | PASS |  |
 | d0d37db2-fbc0-4851-94b9-9b2804fbebef | F3-A1 | apl-a64f9fba-01 | b | t1 | PASS |  |
 | d41d8534-5d22-4dd7-a76d-0329615924ee | F3-A1 | apl-a64f9fba-02 | b | t1 | PASS |  |
 | c8389e1e-88e6-4e36-8324-fbd6023aa06d | F3-A1 | apl-a64f9fba-03 | b | t1 | PASS |  |
 | e021f84d-0544-4a64-8fa0-296fcd2df34e | F3-A1 | apl-a64f9fba-04 | b | t1 | PASS |  |
 | b8026fd4-a115-4dd0-8ae6-e76e493922c4 | F3-A1 | apl-a64f9fba-05 | b | t1 | PASS |  |
-| 6648320f-7097-43bb-aaec-668dc0ea2fdf | F3-A1 | apl-a64f9fba-06 | b | t1 | BLOCKED |  |
+| 6648320f-7097-43bb-aaec-668dc0ea2fdf | F3-A1 | apl-a64f9fba-06 | b | t1 | BLOCKED | egress policy not attached |
 | afea63e2-5e09-4ffe-ae5e-03a79f20dda8 | F3-A1 | apl-a64f9fba-07 | b | t1 | PASS |  |
 | 2b96bcfa-db95-430f-8c20-6aeb3a3f8df0 | F3-A1 | apl-a64f9fba-08 | b | t1 | PASS |  |
 | ee138a17-11be-49fc-b3df-aa9d4862ae6c | F3-A1 | apl-a64f9fba-09 | b | t1 | PASS |  |
@@ -72,4 +72,4 @@
 | 15ea415a-b002-4337-b4de-330decc14b15 | F3-A1 | apl-a64f9fba-28 | b | t1 | PASS |  |
 | 97b4cdd8-c796-4d21-8311-39623537600f | F3-A1 | apl-a64f9fba-29 | b | t1 | PASS |  |
 | acceb1a5-d4d7-4ef0-a7d0-c86d1e5c2fd8 | F3-A1 | apl-a64f9fba-30 | b | t1 | PASS |  |
-| bf81c662-60da-40da-8ed0-231f96a87535 | MT-W01 | — | b | t1 | PASS |  |
+| bf81c662-60da-40da-8ed0-231f96a87535 | MT-W01 | - | b | t1 | PASS |  |
