@@ -83,6 +83,8 @@ The supplied harness's verdict is recorded per tree in the [claim ledger](docs/C
 
 Salesforce, CodeRabbit and live-model lanes are optional and stay BLOCKED until their prerequisites and the owner's approval exist ([profiles](docs/PROFILES.md)). The AX lane was authorized and run on a GKE cluster under gVisor ([AX results](profiles/ax/RESULTS.md) §3.3, claims C-60 to C-69). Passed: W01-H as an AX task with independent collector evidence, a failing command's exit code 3 recorded while AX still showed `Running`, SIGTERM on worker eviction (from logs), resume after `ax suspend` keeping the workspace, sandbox isolation and router identity. Three assertions failed: `ax suspend` delivers no SIGTERM (C-62), `ax delete task` delivers none (C-63), and after a worker eviction followed by suspend and resume the result is lost (C-66).
 
+A fourth run put up to four tenants on one cluster and the same case on a second cluster ([AX results](profiles/ax/RESULTS.md) run 4, claims C-80 to C-90). On the first cluster every counted task, evidence-separation check and one-tenant-at-a-time egress probe passed at up to four tenants. On the second, 29 of 30 tasks passed and one was BLOCKED when the lab's attach of its egress policy failed (the error was not captured), so the two-cluster result is BLOCKED, not PASS. Moving a suspended task to another cluster has no documented path at the pinned versions (C-80): that was read from the protos, not run.
+
 ## Watch the boundaries hold
 
 Two challenges, each checked by the collector rather than by the worker's own reply. The duplicate case covers one bounded idempotency case (a signed retry of the same event), not "exactly once everywhere".
@@ -123,7 +125,7 @@ The evidence report is the C5 report.json shown as written: expected and observe
 Optional lanes as their doctors report them on this machine: blocked lanes are not failures of the local demo and are not evidence of provider parity. AX reads BLOCKED here because no cluster is configured locally; its authorized cluster runs are reported in profiles/ax/RESULTS.md. Run `1326a187` (W01-H, local profile, scripted mode, revision `f97acc7`): local core PASS, 4 of 4 required assertions passed; observed ticket_count 1, receipt_count 1, receipt_matches_request true, completion_reply_count 1. Synthetic data.
 <!-- END LAB MEDIA: profiles -->
 
-A local CRM double cannot show Salesforce behaviour, and a passing local run is not evidence of real Slack transport, cloud IAM or an unexecuted code review. Those lanes report BLOCKED with their missing prerequisites, and Salesforce parity stays UNKNOWN. The GitHub-rendered view of this README has not been checked (NOT_RUN) because nothing has been published.
+A local CRM double cannot show Salesforce behaviour, and a passing local run is not evidence of real Slack transport, cloud IAM or an unexecuted code review. Those lanes report BLOCKED with their missing prerequisites, and Salesforce parity stays UNKNOWN. The GitHub-rendered view of this README has not been checked (NOT_RUN) because nothing has been published. On the AX lane, eviction mid-run has no design yet, and tenant isolation was probed one tenant at a time, not under concurrent load.
 
 ## Short clips
 

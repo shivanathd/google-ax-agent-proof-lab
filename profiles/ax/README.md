@@ -21,7 +21,21 @@ This lane runs one existing lab case inside an AX task on Agent Substrate, then 
 | `teardown.sh`, default mode, for real | EXECUTED 2026-10-29 with owner approval, then checked independently with read-only queries (lab namespace, `ax-system`, registry, disk and snapshot prefixes gone; Substrate v0.6.0 and the transfer SA + grants left in place on purpose). `--remove-substrate-iam` and `--restore-substrate-v05` NOT RUN (dry-run only) | `RESULTS.md`, "Teardown" |
 | microVM sandbox class | NOT RUN | - |
 
-Three authorized cluster runs happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox; only run 3's cluster results say anything about gVisor. On Substrate v0.6.0 the collector reads `/apl/result` through the router over mTLS with its own pod certificate (L-045).
+Four authorized cluster runs happened (`RESULTS.md`). The local tests still run plain Docker containers, not a Substrate sandbox; only the cluster results of runs 3 and 4 say anything about gVisor. On Substrate v0.6.0 the collector reads `/apl/result` through the router over mTLS with its own pod certificate (L-045).
+
+## Many tenants and two clusters (`multi.ts`, run 4)
+
+Run 4 (`RESULTS.md` run 4, design `docs/MULTI_CLUSTER.md`) was driven by `profiles/ax/multi.ts`, the only cluster driver for these runs; `index.ts run()` returns BLOCKED and points to it (ADR-13). The build plan, `docs/MULTI_CLUSTER_BUILD.md`, defines every subcommand's inputs and outputs (§1.1), the run flow (§4) and the reports (§11). In order:
+
+```bash
+node --import tsx profiles/ax/multi.ts infra a --infra <A-run-dir>                 # versions.json, pool at R = 3, collector; --dry-run prints only
+node --import tsx profiles/ax/multi.ts plan --step 1 --set-id <uuid> --infra-a <A-run-dir>
+node --import tsx profiles/ax/multi.ts run-step --plan private-runs/ax/sets/<set_id>/plan.json --cluster a
+node --import tsx profiles/ax/multi.ts run-step --plan <plan.json> --cluster a --only mt-iso   # re-run only the named kinds (§4.7)
+node --import tsx profiles/ax/multi.ts report --plan <plan.json>                   # per-bundle reports, exports, aggregate
+```
+
+Step 2 adds `infra b --infra <B-run-dir> [--resize 0|2]` and `plan --step 2 --set-id <uuid> --infra-a <A-run-dir> --infra-b <B-run-dir> --step1-set-id <uuid>`, which re-reads A's versions and refuses to reuse step 1's half if they differ (§4.6). `run-step` tears down its own step run dir at the end; `--only` (kinds `probe`, `configuration`, `mt-iso`) writes a fresh step run dir, and `report` takes its observed bundles over the earlier stop bundles, listing those in the set's `superseded.json`. Everything `multi.ts` writes goes to the gitignored `private-runs/ax/`; `report` exports sanitized bundles to `docs/evidence/`. Node-pool sizes other than 0 or 2, such as run 4's 3, are outside `multi.ts`.
 
 ## Upstream revisions
 

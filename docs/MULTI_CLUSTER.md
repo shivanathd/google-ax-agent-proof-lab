@@ -1,4 +1,4 @@
-Status: accepted at EGM cap after round 5 (owner, 2026-10-29); build in progress.
+Status: accepted at EGM cap after round 5 (owner, 2026-10-29); executed 2026-10-30 (sets e0ab865c, 7d9ea2cc); results in [`profiles/ax/RESULTS.md`](../profiles/ax/RESULTS.md) run 4.
 
 # Multi-tenant and two-cluster test design (AX lane, steps 1 and 2)
 
@@ -7,6 +7,10 @@ This is a test design, not a result. Nothing in it has run. It extends the optio
 This file says what is tested, what is asserted and what may be claimed. How it is built, run, parsed and torn down is in the build plan, [`MULTI_CLUSTER_BUILD.md`](MULTI_CLUSTER_BUILD.md) ("build §n" below), which is verified by its phase gates and dry run, not by document review.
 
 Sources: [`profiles/ax/README.md`](../profiles/ax/README.md), [`profiles/ax/RESULTS.md`](../profiles/ax/RESULTS.md), the AX lane code under `profiles/ax/`, `src/reports/`, `src/config/endpoints.ts`, the supplied evaluator in `docs/spec/active/2026-10-28-agent-proof-lab/evals/`, [`LEARNINGS.md`](LEARNINGS.md) L-006 to L-012, L-019 and L-030 to L-057, [`CLAIM_LEDGER.md`](CLAIM_LEDGER.md) C-60 to C-70, [`CONTRACTS.md`](spec/active/2026-10-28-agent-proof-lab/contracts/CONTRACTS.md) C4 and C5, and the two infrastructure run dirs (section 3). Upstream files are cited by repo-relative path at the pinned AX `4b7bf6f` and Substrate v0.6.0 `d3f2363`.
+
+## Outcome (2026-10-30)
+
+The design below is kept as reviewed; this section only points to what happened. Step 1 on A: PASS, 105 of 105 planned reports (F3-A1 at c = 1, 2 and 4, MT-W01, MT-ISO for four tenants; both controls fired). Step 2: BLOCKED. A's half was re-run because the reuse check refused step 1's (L-064), and passed; on B 29 of 30 counted tasks passed and one was BLOCKED when its egress policy was not attached (L-067). MV-PORT stays DOCUMENTED. Missed expectations: actor probe G = 0 (expected 1), A's reuse, and step 2's all-PASS. Deviations: A ran on 3 nodes instead of 2 (L-059) and B on 3 instead of 2. Results, stops and reruns: [`RESULTS.md`](../profiles/ax/RESULTS.md) run 4; claims C-80 to C-90 in [`CLAIM_LEDGER.md`](CLAIM_LEDGER.md); learnings L-058 to L-067; ADR-13.
 
 ## 1. Problem statement
 
