@@ -1,8 +1,9 @@
-// Sanitized export (F4 technical spec, G-EXPORT). Order: tamper check → allowlisted projection → secret scan
-// → private-terms scan. Any finding quarantines the candidate export under private-runs/quarantine/ and
+// Sanitized export (F4 technical spec, G-EXPORT). Order: tamper check → allowlisted projection → secret and
+// IP-address scan → private-terms scan. Any finding quarantines the candidate export under private-runs/quarantine/ and
 // publishes nothing. Findings name the file and rule, never the matched value.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { dirname, join, relative } from "node:path";
 import { ROOT } from "../config/run-config.ts";
 import { artifactDir } from "./artifacts.ts";
@@ -19,6 +20,17 @@ export const SECRET_RULES: [string, RegExp][] = [
   ["bearer", /\bBearer\s+[A-Za-z0-9._-]{12,}/],
   ["absolute-home-path", /\/(Users|home)\/[^/\s"]+/],
 ];
+
+// IP addresses (design 6.5). IPv6 first, so an IPv4-mapped address goes whole; a candidate counts only if it parses
+// as an address (a clock time such as 10:00:30 does not). The lookarounds stop a match from starting or ending
+// inside a longer token, while an address followed by a full stop or a colon ending a sentence still matches (an
+// IPv6 match ends in a hex digit or "::", never in one colon).
+export const IPV6 = /(?<![\w:])(?:[0-9a-f]{0,4}:){2,7}(?:\d{1,3}(?:\.\d{1,3}){3}|[0-9a-f]{0,4})(?<=[0-9a-f]|::)(?!\w|:[\w:]|\.\d)/gi;
+export const IPV4 = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?!\d|\.\d)/g;
+// Loopback, where the local profile's emulators listen; committed evidence already names it (docs/evidence/blind-holdouts).
+const ALLOWED_ADDRESSES = new Set(["127.0.0.1"]);
+// The backstop behind redactAddresses() (profiles/ax/multi-facts.ts): any other address in an export is a finding.
+export const holdsAddress = (text: string) => [IPV6, IPV4].some((re) => [...text.matchAll(re)].some((m) => isIP(m[0]) && !ALLOWED_ADDRESSES.has(m[0])));
 
 // The private-terms list lives only in the main checkout's gitignored private-runs/ (shared by worktrees).
 // APL_PRIVATE_TERMS points elsewhere (tests use it to simulate a missing list).
@@ -53,6 +65,7 @@ export function exportRun(runId: string, o: { termsPath?: string; outRoot?: stri
     const text = readFileSync(f, "utf8");
     const rel = relative(src, f);
     for (const [rule, re] of SECRET_RULES) if (re.test(text)) findings.push({ file: rel, rule });
+    if (holdsAddress(text)) findings.push({ file: rel, rule: "ip-address" });
     if (terms.some((t) => text.toLowerCase().includes(t))) findings.push({ file: rel, rule: "private-term" });
   }
   const report = JSON.parse(readFileSync(join(src, "report.json"), "utf8"));

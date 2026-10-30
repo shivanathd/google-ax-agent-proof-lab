@@ -299,11 +299,12 @@ describe("F4 through the real stack", () => {
       expect(exportRun(runId, { termsPath: join(tmp, "absent.txt"), outRoot: join(tmp, "exports2") })).toMatchObject({ status: "REJECTED", findings: [{ rule: "private-terms-list-missing" }] });
 
       const canary = `xoxb-${"c4a7".repeat(6)}`;
-      writeFileSync(join(root, runId, "evidence", "w01-thread.json"), JSON.stringify([{ text: `leaked ${canary}` }]));
+      writeFileSync(join(root, runId, "evidence", "w01-thread.json"), JSON.stringify([{ text: `leaked ${canary} from 10.4.1.7.` }]));
       writeChecksums(join(root, runId)); // re-bind, so only the secret scan (not the tamper check) can stop it
       const q = exportRun(runId, { termsPath: terms, outRoot: join(tmp, "exports3"), quarantineRoot: join(tmp, "quarantine") });
       expect(q).toMatchObject({ status: "QUARANTINED", output: null });
       expect(q.findings).toContainEqual({ file: "evidence/w01-thread.json", rule: "slack-token" });
+      expect(q.findings).toContainEqual({ file: "evidence/w01-thread.json", rule: "ip-address" }); // the backstop behind redactAddresses()
       expect(existsSync(join(tmp, "exports3"))).toBe(false);
       const quarantined = readdirSync(join(tmp, "quarantine"));
       expect(quarantined).toHaveLength(1);

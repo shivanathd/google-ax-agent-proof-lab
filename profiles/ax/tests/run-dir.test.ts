@@ -23,7 +23,7 @@ function writerOutput() {
     APL_LAB_IMAGE: "lab.example.invalid/lab@sha256:" + "d".repeat(64), APL_WORKER_IMAGE: "worker.example.invalid/w@sha256:" + "e".repeat(64),
   };
   const tpl = (p: string) => render(readFileSync(join(AX, "manifests", p), "utf8"), vars);
-  return ownedResources({ runId: RUN_ID, kubeContext: CONTEXT, atespace: vars.APL_AX_ATESPACE, k8sYaml: tpl("k8s/emulators.yaml"), axYaml: tpl("ax/task.yaml"), axCli: "/opt/example/ax" });
+  return ownedResources({ runId: RUN_ID, kubeContext: CONTEXT, atespaces: [vars.APL_AX_ATESPACE], k8sYaml: tpl("k8s/emulators.yaml"), axYaml: tpl("ax/task.yaml"), axCli: "/opt/example/ax" });
 }
 
 function fixture(owned: unknown, context = CONTEXT) {
@@ -131,5 +131,32 @@ describe.skipIf(!hasKubectl)("ax teardown.sh on a synthetic run dir", () => {
     expect(r.stdout).toContain(`+ kubectl -n default delete pod -l ${sel} --wait=false`);
     expect(r.stdout).not.toContain("node-debugger");
     expect(r.stdout).not.toContain("kubectl debug");
+  });
+
+  it("--dry-run deletes an owned cluster and bucket with exactly the bucket's recorded bindings, never reused IAM", () => {
+    const bucket = "gs://example-owned-bucket";
+    const member = "serviceAccount:transfer@example-project.iam.example.invalid";
+    const owned = {
+      run_id: RUN_ID, kube_context: CONTEXT, project: "example-project", ax: [], substrate: [], kubernetes: [],
+      cluster_scoped: [], scaled: [], scaled_namespaces: [],
+      gke_cluster: { name: "example-cluster", location: "zone-a" }, gcs_buckets: [bucket],
+      iam: [
+        { kind: "iam-binding", resource_type: "bucket", resource: bucket, member, role: "roles/storage.objectAdmin" },
+        { kind: "iam-binding", resource_type: "bucket", resource: bucket, member, role: "roles/storage.bucketViewer" },
+      ],
+    };
+    expect(ownedResourcesErrors(owned)).toEqual([]);
+    const { dir, kubeconfig } = fixture(owned);
+    const r = teardown(dir, kubeconfig, "--dry-run");
+    expect(r.status).toBe(0);
+    const lines = r.stdout.split("\n").filter((l) => l.startsWith("+ gcloud"));
+    expect(lines).toEqual([
+      `+ gcloud storage buckets remove-iam-policy-binding ${bucket} --member=${member} --role=roles/storage.objectAdmin --project example-project`,
+      `+ gcloud storage buckets remove-iam-policy-binding ${bucket} --member=${member} --role=roles/storage.bucketViewer --project example-project`,
+      `+ gcloud storage rm --recursive ${bucket} --project example-project`,
+      "+ gcloud container clusters delete example-cluster --location zone-a --project example-project",
+      "+ gcloud compute disks delete <each disk in " + join(dir, "teardown-cluster-disks.txt") + "> --zone <its zone> --project example-project   (only those still present)",
+    ]);
+    expect(r.stdout).not.toContain("service-accounts");
   });
 });

@@ -1,0 +1,2245 @@
+{
+  "set_id": "e0ab865c-94a8-48fd-a06b-1226991e27f9",
+  "configurations": [
+    {
+      "cluster": "a",
+      "step": 1,
+      "case": "F3-A1",
+      "c": 1,
+      "server_resume_to_running_ms": {
+        "n": 30,
+        "p50": 2114,
+        "max": 2174
+      },
+      "command_duration_ms": {
+        "n": 30,
+        "p50": 3812,
+        "max": 4066,
+        "source": "sandbox-written: the runner's result.json started_at and ended_at"
+      },
+      "resume_spread_ms": {
+        "p50": 0,
+        "max": 0,
+        "rounds_absent": 0
+      },
+      "operator": {
+        "egress_attach_ms": {
+          "p50": 8717,
+          "max": 8898
+        },
+        "submit_to_result_ms": {
+          "p50": 16213,
+          "max": 16707
+        },
+        "empty_exec_ms": {
+          "p50": 1565,
+          "max": 2020
+        }
+      },
+      "tenants": {
+        "t1": {
+          "server_resume_to_running_ms": {
+            "p50": 2114,
+            "max": 2174
+          },
+          "command_duration_ms": {
+            "p50": 3812,
+            "max": 4066
+          }
+        }
+      },
+      "warmup": [
+        {
+          "task": "apl-8576fe92-00",
+          "server_resume_to_running_ms": 2124,
+          "command_duration_ms": 3950
+        }
+      ]
+    },
+    {
+      "cluster": "a",
+      "step": 1,
+      "case": "F3-A1",
+      "c": 2,
+      "server_resume_to_running_ms": {
+        "n": 30,
+        "p50": 2131,
+        "max": 2165
+      },
+      "command_duration_ms": {
+        "n": 30,
+        "p50": 3930,
+        "max": 4410,
+        "source": "sandbox-written: the runner's result.json started_at and ended_at"
+      },
+      "resume_spread_ms": {
+        "p50": 0,
+        "max": 4,
+        "rounds_absent": 0
+      },
+      "operator": {
+        "egress_attach_ms": {
+          "p50": 9456,
+          "max": 10687
+        },
+        "submit_to_result_ms": {
+          "p50": 19050,
+          "max": 21351
+        },
+        "empty_exec_ms": {
+          "p50": 1565,
+          "max": 3391
+        }
+      },
+      "tenants": {
+        "t1": {
+          "server_resume_to_running_ms": {
+            "p50": 2131,
+            "max": 2165
+          },
+          "command_duration_ms": {
+            "p50": 3930,
+            "max": 4410
+          }
+        },
+        "t2": {
+          "server_resume_to_running_ms": {
+            "p50": 2129,
+            "max": 2155
+          },
+          "command_duration_ms": {
+            "p50": 3980,
+            "max": 4353
+          }
+        }
+      },
+      "warmup": [
+        {
+          "task": "apl-6f7767d0-00",
+          "server_resume_to_running_ms": 2154,
+          "command_duration_ms": 4026
+        },
+        {
+          "task": "apl-ed0f8502-00",
+          "server_resume_to_running_ms": 2132,
+          "command_duration_ms": 3748
+        }
+      ]
+    },
+    {
+      "cluster": "a",
+      "step": 1,
+      "case": "F3-A1",
+      "c": 4,
+      "server_resume_to_running_ms": {
+        "n": 32,
+        "p50": 2177,
+        "max": 2226
+      },
+      "command_duration_ms": {
+        "n": 32,
+        "p50": 4250,
+        "max": 4925,
+        "source": "sandbox-written: the runner's result.json started_at and ended_at"
+      },
+      "resume_spread_ms": {
+        "p50": 5,
+        "max": 23,
+        "rounds_absent": 0
+      },
+      "operator": {
+        "egress_attach_ms": {
+          "p50": 10284,
+          "max": 13038
+        },
+        "submit_to_result_ms": {
+          "p50": 23551,
+          "max": 26131
+        },
+        "empty_exec_ms": {
+          "p50": 1558,
+          "max": 1615
+        }
+      },
+      "tenants": {
+        "t1": {
+          "server_resume_to_running_ms": {
+            "p50": 2164,
+            "max": 2225
+          },
+          "command_duration_ms": {
+            "p50": 4250,
+            "max": 4925
+          }
+        },
+        "t2": {
+          "server_resume_to_running_ms": {
+            "p50": 2179,
+            "max": 2215
+          },
+          "command_duration_ms": {
+            "p50": 4259,
+            "max": 4829
+          }
+        },
+        "t3": {
+          "server_resume_to_running_ms": {
+            "p50": 2177,
+            "max": 2218
+          },
+          "command_duration_ms": {
+            "p50": 4047,
+            "max": 4672
+          }
+        },
+        "t4": {
+          "server_resume_to_running_ms": {
+            "p50": 2167,
+            "max": 2226
+          },
+          "command_duration_ms": {
+            "p50": 4011,
+            "max": 4530
+          }
+        }
+      },
+      "warmup": [
+        {
+          "task": "apl-0ca83375-00",
+          "server_resume_to_running_ms": 2171,
+          "command_duration_ms": 4340
+        },
+        {
+          "task": "apl-a24c0870-00",
+          "server_resume_to_running_ms": 2148,
+          "command_duration_ms": 4296
+        },
+        {
+          "task": "apl-45c7ce35-00",
+          "server_resume_to_running_ms": 2161,
+          "command_duration_ms": 4214
+        },
+        {
+          "task": "apl-e0db3d52-00",
+          "server_resume_to_running_ms": 2142,
+          "command_duration_ms": 4131
+        }
+      ]
+    }
+  ],
+  "raw": {
+    "tasks": [
+      {
+        "run_id": "668124b0-15fa-463b-b0aa-72359c83b1fa",
+        "cluster": "a",
+        "c": 1,
+        "round": 0,
+        "task": "apl-a2de0159-p1",
+        "unobserved": {},
+        "egress_attach_ms": 12844,
+        "submit_to_result_ms": 22087,
+        "empty_exec_ms": 2603,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3870,
+        "server_resume_to_running_ms": 2136
+      },
+      {
+        "run_id": "a0ab5901-0a41-474d-ab89-d52004317c91",
+        "cluster": "a",
+        "c": 1,
+        "round": 1,
+        "task": "apl-a2de0159-p2",
+        "unobserved": {},
+        "egress_attach_ms": 12475,
+        "submit_to_result_ms": 20022,
+        "empty_exec_ms": 1536,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3914,
+        "server_resume_to_running_ms": 2130
+      },
+      {
+        "run_id": "742e7313-e633-4cf5-ac17-2f3204210acb",
+        "cluster": "a",
+        "c": 1,
+        "round": 0,
+        "task": "apl-8576fe92-00",
+        "unobserved": {},
+        "egress_attach_ms": 8790,
+        "submit_to_result_ms": 16254,
+        "empty_exec_ms": 1560,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3950,
+        "server_resume_to_running_ms": 2124
+      },
+      {
+        "run_id": "6d4476c6-419d-418f-a297-8a70b3bec17f",
+        "cluster": "a",
+        "c": 1,
+        "round": 1,
+        "task": "apl-8576fe92-01",
+        "unobserved": {},
+        "egress_attach_ms": 8694,
+        "submit_to_result_ms": 16213,
+        "empty_exec_ms": 1618,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3916,
+        "server_resume_to_running_ms": 2111
+      },
+      {
+        "run_id": "9e772c07-d0fc-4958-8f58-afe79eb03936",
+        "cluster": "a",
+        "c": 1,
+        "round": 2,
+        "task": "apl-8576fe92-02",
+        "unobserved": {},
+        "egress_attach_ms": 8605,
+        "submit_to_result_ms": 16122,
+        "empty_exec_ms": 1547,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3740,
+        "server_resume_to_running_ms": 2126
+      },
+      {
+        "run_id": "ccfc0a97-c252-40ce-9632-2325ed9f469a",
+        "cluster": "a",
+        "c": 1,
+        "round": 3,
+        "task": "apl-8576fe92-03",
+        "unobserved": {},
+        "egress_attach_ms": 8640,
+        "submit_to_result_ms": 16139,
+        "empty_exec_ms": 1595,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4066,
+        "server_resume_to_running_ms": 2100
+      },
+      {
+        "run_id": "391ef364-4b94-49ef-be68-a3330313edc9",
+        "cluster": "a",
+        "c": 1,
+        "round": 4,
+        "task": "apl-8576fe92-04",
+        "unobserved": {},
+        "egress_attach_ms": 8879,
+        "submit_to_result_ms": 16380,
+        "empty_exec_ms": 1584,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3682,
+        "server_resume_to_running_ms": 2111
+      },
+      {
+        "run_id": "b4247da6-fc0f-496a-b1fd-d2041784d2f5",
+        "cluster": "a",
+        "c": 1,
+        "round": 5,
+        "task": "apl-8576fe92-05",
+        "unobserved": {},
+        "egress_attach_ms": 8665,
+        "submit_to_result_ms": 16707,
+        "empty_exec_ms": 2020,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3705,
+        "server_resume_to_running_ms": 2122
+      },
+      {
+        "run_id": "012fcf3b-97a4-4c07-bfd4-2d6b42ebe323",
+        "cluster": "a",
+        "c": 1,
+        "round": 6,
+        "task": "apl-8576fe92-06",
+        "unobserved": {},
+        "egress_attach_ms": 8716,
+        "submit_to_result_ms": 16206,
+        "empty_exec_ms": 1574,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3793,
+        "server_resume_to_running_ms": 2113
+      },
+      {
+        "run_id": "c7151c8a-6a72-464b-93ab-6e4a5b62be48",
+        "cluster": "a",
+        "c": 1,
+        "round": 7,
+        "task": "apl-8576fe92-07",
+        "unobserved": {},
+        "egress_attach_ms": 8898,
+        "submit_to_result_ms": 16420,
+        "empty_exec_ms": 1582,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3745,
+        "server_resume_to_running_ms": 2135
+      },
+      {
+        "run_id": "9e509c6e-8de1-4b61-a0d2-745f30d45bdb",
+        "cluster": "a",
+        "c": 1,
+        "round": 8,
+        "task": "apl-8576fe92-08",
+        "unobserved": {},
+        "egress_attach_ms": 8803,
+        "submit_to_result_ms": 16307,
+        "empty_exec_ms": 1548,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3868,
+        "server_resume_to_running_ms": 2122
+      },
+      {
+        "run_id": "1f72fceb-7817-4eb2-9e98-765e7bb1f01d",
+        "cluster": "a",
+        "c": 1,
+        "round": 9,
+        "task": "apl-8576fe92-09",
+        "unobserved": {},
+        "egress_attach_ms": 8746,
+        "submit_to_result_ms": 16233,
+        "empty_exec_ms": 1560,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3917,
+        "server_resume_to_running_ms": 2174
+      },
+      {
+        "run_id": "e202baee-5eb5-42ad-91e4-5c84d1b3797f",
+        "cluster": "a",
+        "c": 1,
+        "round": 10,
+        "task": "apl-8576fe92-10",
+        "unobserved": {},
+        "egress_attach_ms": 8729,
+        "submit_to_result_ms": 16175,
+        "empty_exec_ms": 1597,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4033,
+        "server_resume_to_running_ms": 2110
+      },
+      {
+        "run_id": "c4628473-f3d5-44d6-8ca5-1327d8842d7d",
+        "cluster": "a",
+        "c": 1,
+        "round": 11,
+        "task": "apl-8576fe92-11",
+        "unobserved": {},
+        "egress_attach_ms": 8645,
+        "submit_to_result_ms": 16085,
+        "empty_exec_ms": 1549,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3913,
+        "server_resume_to_running_ms": 2123
+      },
+      {
+        "run_id": "c2b36706-1e3a-41e5-b612-ebe70a22e80c",
+        "cluster": "a",
+        "c": 1,
+        "round": 12,
+        "task": "apl-8576fe92-12",
+        "unobserved": {},
+        "egress_attach_ms": 8642,
+        "submit_to_result_ms": 16164,
+        "empty_exec_ms": 1545,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3852,
+        "server_resume_to_running_ms": 2142
+      },
+      {
+        "run_id": "3b7e5a93-d0f8-4732-b9fe-bbbaebba77a1",
+        "cluster": "a",
+        "c": 1,
+        "round": 13,
+        "task": "apl-8576fe92-13",
+        "unobserved": {},
+        "egress_attach_ms": 8623,
+        "submit_to_result_ms": 16043,
+        "empty_exec_ms": 1563,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3752,
+        "server_resume_to_running_ms": 2114
+      },
+      {
+        "run_id": "babe1db4-190b-4471-92b0-1d1e120e432d",
+        "cluster": "a",
+        "c": 1,
+        "round": 14,
+        "task": "apl-8576fe92-14",
+        "unobserved": {},
+        "egress_attach_ms": 8840,
+        "submit_to_result_ms": 16334,
+        "empty_exec_ms": 1543,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3812,
+        "server_resume_to_running_ms": 2118
+      },
+      {
+        "run_id": "e193952c-a1da-4474-b60b-c100ba4cdf6b",
+        "cluster": "a",
+        "c": 1,
+        "round": 15,
+        "task": "apl-8576fe92-15",
+        "unobserved": {},
+        "egress_attach_ms": 8798,
+        "submit_to_result_ms": 16276,
+        "empty_exec_ms": 1559,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3875,
+        "server_resume_to_running_ms": 2156
+      },
+      {
+        "run_id": "7e10562b-25bc-4391-b343-b6c5f4a9de8e",
+        "cluster": "a",
+        "c": 1,
+        "round": 16,
+        "task": "apl-8576fe92-16",
+        "unobserved": {},
+        "egress_attach_ms": 8626,
+        "submit_to_result_ms": 16021,
+        "empty_exec_ms": 1538,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3924,
+        "server_resume_to_running_ms": 2100
+      },
+      {
+        "run_id": "1f9b6eb5-9d19-4259-b50b-ecaf27049835",
+        "cluster": "a",
+        "c": 1,
+        "round": 17,
+        "task": "apl-8576fe92-17",
+        "unobserved": {},
+        "egress_attach_ms": 8803,
+        "submit_to_result_ms": 16237,
+        "empty_exec_ms": 1527,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3684,
+        "server_resume_to_running_ms": 2162
+      },
+      {
+        "run_id": "c403def0-52c0-44da-991f-2f0843c155c1",
+        "cluster": "a",
+        "c": 1,
+        "round": 18,
+        "task": "apl-8576fe92-18",
+        "unobserved": {},
+        "egress_attach_ms": 8595,
+        "submit_to_result_ms": 16075,
+        "empty_exec_ms": 1547,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3677,
+        "server_resume_to_running_ms": 2127
+      },
+      {
+        "run_id": "b61faf74-026c-49b2-a38d-64271aaf0d85",
+        "cluster": "a",
+        "c": 1,
+        "round": 19,
+        "task": "apl-8576fe92-19",
+        "unobserved": {},
+        "egress_attach_ms": 8660,
+        "submit_to_result_ms": 16128,
+        "empty_exec_ms": 1559,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3914,
+        "server_resume_to_running_ms": 2102
+      },
+      {
+        "run_id": "6df32f7d-89fa-4e82-92b8-40847e385d7b",
+        "cluster": "a",
+        "c": 1,
+        "round": 20,
+        "task": "apl-8576fe92-20",
+        "unobserved": {},
+        "egress_attach_ms": 8748,
+        "submit_to_result_ms": 16213,
+        "empty_exec_ms": 1611,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3785,
+        "server_resume_to_running_ms": 2097
+      },
+      {
+        "run_id": "5633a50e-dbd0-4ca3-973a-5cf05648558b",
+        "cluster": "a",
+        "c": 1,
+        "round": 21,
+        "task": "apl-8576fe92-21",
+        "unobserved": {},
+        "egress_attach_ms": 8652,
+        "submit_to_result_ms": 16261,
+        "empty_exec_ms": 1671,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3970,
+        "server_resume_to_running_ms": 2154
+      },
+      {
+        "run_id": "d693771a-f07a-4e11-b0d2-a267b47de719",
+        "cluster": "a",
+        "c": 1,
+        "round": 22,
+        "task": "apl-8576fe92-22",
+        "unobserved": {},
+        "egress_attach_ms": 8815,
+        "submit_to_result_ms": 16325,
+        "empty_exec_ms": 1578,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3735,
+        "server_resume_to_running_ms": 2104
+      },
+      {
+        "run_id": "914ea88a-ab92-4f44-a643-fc84092b8743",
+        "cluster": "a",
+        "c": 1,
+        "round": 23,
+        "task": "apl-8576fe92-23",
+        "unobserved": {},
+        "egress_attach_ms": 8870,
+        "submit_to_result_ms": 16342,
+        "empty_exec_ms": 1596,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3703,
+        "server_resume_to_running_ms": 2102
+      },
+      {
+        "run_id": "48c7ff1d-e31a-40b3-9475-15a16f237568",
+        "cluster": "a",
+        "c": 1,
+        "round": 24,
+        "task": "apl-8576fe92-24",
+        "unobserved": {},
+        "egress_attach_ms": 8669,
+        "submit_to_result_ms": 16209,
+        "empty_exec_ms": 1680,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3832,
+        "server_resume_to_running_ms": 2122
+      },
+      {
+        "run_id": "a32ee6a1-eb6c-4736-ae37-93ac5b6e6d12",
+        "cluster": "a",
+        "c": 1,
+        "round": 25,
+        "task": "apl-8576fe92-25",
+        "unobserved": {},
+        "egress_attach_ms": 8811,
+        "submit_to_result_ms": 16281,
+        "empty_exec_ms": 1571,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3852,
+        "server_resume_to_running_ms": 2115
+      },
+      {
+        "run_id": "0fcedbed-e1db-4873-b8fb-1c5d2cefd129",
+        "cluster": "a",
+        "c": 1,
+        "round": 26,
+        "task": "apl-8576fe92-26",
+        "unobserved": {},
+        "egress_attach_ms": 8861,
+        "submit_to_result_ms": 16383,
+        "empty_exec_ms": 1614,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3530,
+        "server_resume_to_running_ms": 2130
+      },
+      {
+        "run_id": "6106c99a-c15e-4576-845d-73b4f01ca36e",
+        "cluster": "a",
+        "c": 1,
+        "round": 27,
+        "task": "apl-8576fe92-27",
+        "unobserved": {},
+        "egress_attach_ms": 8741,
+        "submit_to_result_ms": 16158,
+        "empty_exec_ms": 1565,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3703,
+        "server_resume_to_running_ms": 2099
+      },
+      {
+        "run_id": "9c539b87-cac4-48d4-be44-906814568515",
+        "cluster": "a",
+        "c": 1,
+        "round": 28,
+        "task": "apl-8576fe92-28",
+        "unobserved": {},
+        "egress_attach_ms": 8717,
+        "submit_to_result_ms": 16301,
+        "empty_exec_ms": 1565,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3799,
+        "server_resume_to_running_ms": 2092
+      },
+      {
+        "run_id": "dbf60ec2-dbbb-4a45-8aff-fe44e2db8d73",
+        "cluster": "a",
+        "c": 1,
+        "round": 29,
+        "task": "apl-8576fe92-29",
+        "unobserved": {},
+        "egress_attach_ms": 8804,
+        "submit_to_result_ms": 16209,
+        "empty_exec_ms": 1601,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3840,
+        "server_resume_to_running_ms": 2098
+      },
+      {
+        "run_id": "6493ff68-d97e-44a1-923c-d3d8829a3498",
+        "cluster": "a",
+        "c": 1,
+        "round": 30,
+        "task": "apl-8576fe92-30",
+        "unobserved": {},
+        "egress_attach_ms": 8702,
+        "submit_to_result_ms": 16186,
+        "empty_exec_ms": 1557,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3976,
+        "server_resume_to_running_ms": 2102
+      },
+      {
+        "run_id": "b06e19f7-f5ea-4ddc-962a-c7e8eb2fa63b",
+        "cluster": "a",
+        "c": 2,
+        "round": 0,
+        "task": "apl-6f7767d0-00",
+        "unobserved": {},
+        "egress_attach_ms": 10400,
+        "submit_to_result_ms": 19766,
+        "empty_exec_ms": 1567,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4026,
+        "server_resume_to_running_ms": 2154
+      },
+      {
+        "run_id": "340b73b4-5b42-49ed-8233-dfd374a655f4",
+        "cluster": "a",
+        "c": 2,
+        "round": 0,
+        "task": "apl-ed0f8502-00",
+        "unobserved": {},
+        "egress_attach_ms": 8837,
+        "submit_to_result_ms": 18399,
+        "empty_exec_ms": 1567,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3748,
+        "server_resume_to_running_ms": 2132
+      },
+      {
+        "run_id": "0a8798d5-8d64-4754-ba6d-972e0d7c1499",
+        "cluster": "a",
+        "c": 2,
+        "round": 1,
+        "task": "apl-6f7767d0-01",
+        "unobserved": {},
+        "egress_attach_ms": 10206,
+        "submit_to_result_ms": 21351,
+        "empty_exec_ms": 3391,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3914,
+        "server_resume_to_running_ms": 2121
+      },
+      {
+        "run_id": "431f0b45-4b2e-4017-b94b-ca4c8c12a1d9",
+        "cluster": "a",
+        "c": 2,
+        "round": 1,
+        "task": "apl-ed0f8502-01",
+        "unobserved": {},
+        "egress_attach_ms": 8838,
+        "submit_to_result_ms": 20069,
+        "empty_exec_ms": 3391,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3763,
+        "server_resume_to_running_ms": 2136
+      },
+      {
+        "run_id": "e7ca70cf-decc-4c8a-90f9-eaafb33606af",
+        "cluster": "a",
+        "c": 2,
+        "round": 2,
+        "task": "apl-6f7767d0-02",
+        "unobserved": {},
+        "egress_attach_ms": 9963,
+        "submit_to_result_ms": 19251,
+        "empty_exec_ms": 1555,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3777,
+        "server_resume_to_running_ms": 2132
+      },
+      {
+        "run_id": "9a4ceb0c-7103-4d64-8b23-1d691aecb8a0",
+        "cluster": "a",
+        "c": 2,
+        "round": 2,
+        "task": "apl-ed0f8502-02",
+        "unobserved": {},
+        "egress_attach_ms": 8546,
+        "submit_to_result_ms": 17956,
+        "empty_exec_ms": 1555,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3912,
+        "server_resume_to_running_ms": 2119
+      },
+      {
+        "run_id": "e80a89b4-7657-445d-9de4-58183d063120",
+        "cluster": "a",
+        "c": 2,
+        "round": 3,
+        "task": "apl-6f7767d0-03",
+        "unobserved": {},
+        "egress_attach_ms": 10264,
+        "submit_to_result_ms": 19552,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4007,
+        "server_resume_to_running_ms": 2165
+      },
+      {
+        "run_id": "c57ecc80-134b-4a07-b2ea-47f12d4ab8c3",
+        "cluster": "a",
+        "c": 2,
+        "round": 3,
+        "task": "apl-ed0f8502-03",
+        "unobserved": {},
+        "egress_attach_ms": 8849,
+        "submit_to_result_ms": 18333,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4128,
+        "server_resume_to_running_ms": 2139
+      },
+      {
+        "run_id": "db2a7bcf-c1f3-4041-b20f-6c16c24ec48e",
+        "cluster": "a",
+        "c": 2,
+        "round": 4,
+        "task": "apl-6f7767d0-04",
+        "unobserved": {},
+        "egress_attach_ms": 10255,
+        "submit_to_result_ms": 19519,
+        "empty_exec_ms": 1540,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4181,
+        "server_resume_to_running_ms": 2131
+      },
+      {
+        "run_id": "77e6774a-4077-48c1-9d76-abd495bcca7a",
+        "cluster": "a",
+        "c": 2,
+        "round": 4,
+        "task": "apl-ed0f8502-04",
+        "unobserved": {},
+        "egress_attach_ms": 8897,
+        "submit_to_result_ms": 18149,
+        "empty_exec_ms": 1540,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4193,
+        "server_resume_to_running_ms": 2124
+      },
+      {
+        "run_id": "f7574841-ac4a-47b1-968e-2ba013f2fb96",
+        "cluster": "a",
+        "c": 2,
+        "round": 5,
+        "task": "apl-6f7767d0-05",
+        "unobserved": {},
+        "egress_attach_ms": 9883,
+        "submit_to_result_ms": 19260,
+        "empty_exec_ms": 1579,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4310,
+        "server_resume_to_running_ms": 2139
+      },
+      {
+        "run_id": "7fe06f32-802f-4ee8-adab-bd3b14442781",
+        "cluster": "a",
+        "c": 2,
+        "round": 5,
+        "task": "apl-ed0f8502-05",
+        "unobserved": {},
+        "egress_attach_ms": 8684,
+        "submit_to_result_ms": 17973,
+        "empty_exec_ms": 1579,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4220,
+        "server_resume_to_running_ms": 2133
+      },
+      {
+        "run_id": "97bb36bf-9033-4d79-9e40-883a30295826",
+        "cluster": "a",
+        "c": 2,
+        "round": 6,
+        "task": "apl-6f7767d0-06",
+        "unobserved": {},
+        "egress_attach_ms": 10004,
+        "submit_to_result_ms": 19349,
+        "empty_exec_ms": 1572,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3793,
+        "server_resume_to_running_ms": 2132
+      },
+      {
+        "run_id": "c4bcf756-9505-416a-8ad5-0947b9ff5701",
+        "cluster": "a",
+        "c": 2,
+        "round": 6,
+        "task": "apl-ed0f8502-06",
+        "unobserved": {},
+        "egress_attach_ms": 8605,
+        "submit_to_result_ms": 18082,
+        "empty_exec_ms": 1572,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3703,
+        "server_resume_to_running_ms": 2119
+      },
+      {
+        "run_id": "741a4ff9-7e80-4589-9a8e-b56218b616da",
+        "cluster": "a",
+        "c": 2,
+        "round": 7,
+        "task": "apl-6f7767d0-07",
+        "unobserved": {},
+        "egress_attach_ms": 9963,
+        "submit_to_result_ms": 19050,
+        "empty_exec_ms": 1565,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3930,
+        "server_resume_to_running_ms": 2099
+      },
+      {
+        "run_id": "4b3f02c0-5f2e-413e-aa52-7083772c08e5",
+        "cluster": "a",
+        "c": 2,
+        "round": 7,
+        "task": "apl-ed0f8502-07",
+        "unobserved": {},
+        "egress_attach_ms": 8530,
+        "submit_to_result_ms": 17887,
+        "empty_exec_ms": 1565,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3758,
+        "server_resume_to_running_ms": 2105
+      },
+      {
+        "run_id": "73fb14b6-27e9-4d7c-ad83-38113b5ecd79",
+        "cluster": "a",
+        "c": 2,
+        "round": 8,
+        "task": "apl-6f7767d0-08",
+        "unobserved": {},
+        "egress_attach_ms": 9948,
+        "submit_to_result_ms": 19308,
+        "empty_exec_ms": 1554,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3705,
+        "server_resume_to_running_ms": 2121
+      },
+      {
+        "run_id": "0bc4c210-a633-410d-9c63-a97cf62492d8",
+        "cluster": "a",
+        "c": 2,
+        "round": 8,
+        "task": "apl-ed0f8502-08",
+        "unobserved": {},
+        "egress_attach_ms": 8802,
+        "submit_to_result_ms": 17918,
+        "empty_exec_ms": 1554,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3980,
+        "server_resume_to_running_ms": 2147
+      },
+      {
+        "run_id": "2ef23cc8-4857-44da-9a1c-ff2be68de7ca",
+        "cluster": "a",
+        "c": 2,
+        "round": 9,
+        "task": "apl-6f7767d0-09",
+        "unobserved": {},
+        "egress_attach_ms": 9908,
+        "submit_to_result_ms": 19297,
+        "empty_exec_ms": 1614,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4282,
+        "server_resume_to_running_ms": 2121
+      },
+      {
+        "run_id": "15127ea9-fd64-45bd-8e64-275cf34a9675",
+        "cluster": "a",
+        "c": 2,
+        "round": 9,
+        "task": "apl-ed0f8502-09",
+        "unobserved": {},
+        "egress_attach_ms": 8769,
+        "submit_to_result_ms": 17973,
+        "empty_exec_ms": 1614,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4296,
+        "server_resume_to_running_ms": 2129
+      },
+      {
+        "run_id": "99d69952-7159-4980-8611-30bc62ddf2f1",
+        "cluster": "a",
+        "c": 2,
+        "round": 10,
+        "task": "apl-6f7767d0-10",
+        "unobserved": {},
+        "egress_attach_ms": 9893,
+        "submit_to_result_ms": 19125,
+        "empty_exec_ms": 1524,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3895,
+        "server_resume_to_running_ms": 2097
+      },
+      {
+        "run_id": "274a56ac-790e-48e8-9e11-54b406f5658b",
+        "cluster": "a",
+        "c": 2,
+        "round": 10,
+        "task": "apl-ed0f8502-10",
+        "unobserved": {},
+        "egress_attach_ms": 8692,
+        "submit_to_result_ms": 17634,
+        "empty_exec_ms": 1524,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3772,
+        "server_resume_to_running_ms": 2115
+      },
+      {
+        "run_id": "c59ef03a-63c9-4f13-8cbc-5b53068ca8ac",
+        "cluster": "a",
+        "c": 2,
+        "round": 11,
+        "task": "apl-6f7767d0-11",
+        "unobserved": {},
+        "egress_attach_ms": 10107,
+        "submit_to_result_ms": 19362,
+        "empty_exec_ms": 1562,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 3881,
+        "server_resume_to_running_ms": 2144
+      },
+      {
+        "run_id": "5e654625-9827-4500-8d00-23304978765b",
+        "cluster": "a",
+        "c": 2,
+        "round": 11,
+        "task": "apl-ed0f8502-11",
+        "unobserved": {},
+        "egress_attach_ms": 8783,
+        "submit_to_result_ms": 18074,
+        "empty_exec_ms": 1562,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3721,
+        "server_resume_to_running_ms": 2122
+      },
+      {
+        "run_id": "6c823450-7c60-421b-973e-31001e401e91",
+        "cluster": "a",
+        "c": 2,
+        "round": 12,
+        "task": "apl-6f7767d0-12",
+        "unobserved": {},
+        "egress_attach_ms": 10298,
+        "submit_to_result_ms": 19562,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4410,
+        "server_resume_to_running_ms": 2136
+      },
+      {
+        "run_id": "9a9c1e79-7cc9-4d80-a2a6-ae7499f51941",
+        "cluster": "a",
+        "c": 2,
+        "round": 12,
+        "task": "apl-ed0f8502-12",
+        "unobserved": {},
+        "egress_attach_ms": 8631,
+        "submit_to_result_ms": 18268,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4275,
+        "server_resume_to_running_ms": 2143
+      },
+      {
+        "run_id": "8b93b2a8-cd73-4f06-a296-c5f3c6be19b0",
+        "cluster": "a",
+        "c": 2,
+        "round": 13,
+        "task": "apl-6f7767d0-13",
+        "unobserved": {},
+        "egress_attach_ms": 10524,
+        "submit_to_result_ms": 20077,
+        "empty_exec_ms": 1619,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4354,
+        "server_resume_to_running_ms": 2132
+      },
+      {
+        "run_id": "5a78a409-13cf-451a-87c2-7e4e963135cd",
+        "cluster": "a",
+        "c": 2,
+        "round": 13,
+        "task": "apl-ed0f8502-13",
+        "unobserved": {},
+        "egress_attach_ms": 9366,
+        "submit_to_result_ms": 18652,
+        "empty_exec_ms": 1619,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4353,
+        "server_resume_to_running_ms": 2153
+      },
+      {
+        "run_id": "4f27a033-9bb8-4f1b-90ae-1951765260b9",
+        "cluster": "a",
+        "c": 2,
+        "round": 14,
+        "task": "apl-6f7767d0-14",
+        "unobserved": {},
+        "egress_attach_ms": 10475,
+        "submit_to_result_ms": 19856,
+        "empty_exec_ms": 1535,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4135,
+        "server_resume_to_running_ms": 2131
+      },
+      {
+        "run_id": "f3098aa5-bba6-4693-bec2-c5bfa7bd3676",
+        "cluster": "a",
+        "c": 2,
+        "round": 14,
+        "task": "apl-ed0f8502-14",
+        "unobserved": {},
+        "egress_attach_ms": 9047,
+        "submit_to_result_ms": 18550,
+        "empty_exec_ms": 1535,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4131,
+        "server_resume_to_running_ms": 2155
+      },
+      {
+        "run_id": "82e4edef-c5cf-48ef-a49e-2fd3b0d4ac69",
+        "cluster": "a",
+        "c": 2,
+        "round": 15,
+        "task": "apl-6f7767d0-15",
+        "unobserved": {},
+        "egress_attach_ms": 10687,
+        "submit_to_result_ms": 19937,
+        "empty_exec_ms": 1595,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3805,
+        "server_resume_to_running_ms": 2118
+      },
+      {
+        "run_id": "3ee15a0a-e857-447b-9bbb-e4fa5ae84f38",
+        "cluster": "a",
+        "c": 2,
+        "round": 15,
+        "task": "apl-ed0f8502-15",
+        "unobserved": {},
+        "egress_attach_ms": 9456,
+        "submit_to_result_ms": 18739,
+        "empty_exec_ms": 1595,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3866,
+        "server_resume_to_running_ms": 2112
+      },
+      {
+        "run_id": "2ee4f6ed-4720-4848-b666-bb654d603572",
+        "cluster": "a",
+        "c": 4,
+        "round": 0,
+        "task": "apl-0ca83375-00",
+        "unobserved": {},
+        "egress_attach_ms": 12902,
+        "submit_to_result_ms": 26081,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4340,
+        "server_resume_to_running_ms": 2171
+      },
+      {
+        "run_id": "c46a4bb1-c34a-4066-8a67-9c8aefc22eb6",
+        "cluster": "a",
+        "c": 4,
+        "round": 0,
+        "task": "apl-a24c0870-00",
+        "unobserved": {},
+        "egress_attach_ms": 11499,
+        "submit_to_result_ms": 24920,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4296,
+        "server_resume_to_running_ms": 2148
+      },
+      {
+        "run_id": "fe70f7a7-7d4d-4e91-ae70-c5e2a2f07ea7",
+        "cluster": "a",
+        "c": 4,
+        "round": 0,
+        "task": "apl-45c7ce35-00",
+        "unobserved": {},
+        "egress_attach_ms": 10093,
+        "submit_to_result_ms": 23481,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4214,
+        "server_resume_to_running_ms": 2161
+      },
+      {
+        "run_id": "39f007c6-abe2-4564-b154-0d5f27539327",
+        "cluster": "a",
+        "c": 4,
+        "round": 0,
+        "task": "apl-e0db3d52-00",
+        "unobserved": {},
+        "egress_attach_ms": 9041,
+        "submit_to_result_ms": 22098,
+        "empty_exec_ms": 1564,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4131,
+        "server_resume_to_running_ms": 2142
+      },
+      {
+        "run_id": "7d4f8e7f-c315-496a-b61d-ab633a456c1f",
+        "cluster": "a",
+        "c": 4,
+        "round": 1,
+        "task": "apl-0ca83375-01",
+        "unobserved": {},
+        "egress_attach_ms": 12713,
+        "submit_to_result_ms": 25735,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4296,
+        "server_resume_to_running_ms": 2186
+      },
+      {
+        "run_id": "727ec235-0827-4116-be9e-b74f1c191c3e",
+        "cluster": "a",
+        "c": 4,
+        "round": 1,
+        "task": "apl-a24c0870-01",
+        "unobserved": {},
+        "egress_attach_ms": 11425,
+        "submit_to_result_ms": 24722,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4314,
+        "server_resume_to_running_ms": 2193
+      },
+      {
+        "run_id": "444eb3ae-62d8-496f-ba7a-d24fcbe27854",
+        "cluster": "a",
+        "c": 4,
+        "round": 1,
+        "task": "apl-45c7ce35-01",
+        "unobserved": {},
+        "egress_attach_ms": 10240,
+        "submit_to_result_ms": 23362,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4289,
+        "server_resume_to_running_ms": 2159
+      },
+      {
+        "run_id": "a33082b0-ce3f-4cd1-9eab-6d1eb3df231b",
+        "cluster": "a",
+        "c": 4,
+        "round": 1,
+        "task": "apl-e0db3d52-01",
+        "unobserved": {},
+        "egress_attach_ms": 8749,
+        "submit_to_result_ms": 22079,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3727,
+        "server_resume_to_running_ms": 2157
+      },
+      {
+        "run_id": "9bcf7529-5c83-4ec1-8569-b39ffa2518ba",
+        "cluster": "a",
+        "c": 4,
+        "round": 2,
+        "task": "apl-0ca83375-02",
+        "unobserved": {},
+        "egress_attach_ms": 12467,
+        "submit_to_result_ms": 25760,
+        "empty_exec_ms": 1558,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4925,
+        "server_resume_to_running_ms": 2225
+      },
+      {
+        "run_id": "3d57a23f-3347-46bd-8041-6ce237afb872",
+        "cluster": "a",
+        "c": 4,
+        "round": 2,
+        "task": "apl-a24c0870-02",
+        "unobserved": {},
+        "egress_attach_ms": 11287,
+        "submit_to_result_ms": 24732,
+        "empty_exec_ms": 1558,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4829,
+        "server_resume_to_running_ms": 2215
+      },
+      {
+        "run_id": "ebf5bb17-11c1-4502-9e76-cd4d743d4960",
+        "cluster": "a",
+        "c": 4,
+        "round": 2,
+        "task": "apl-45c7ce35-02",
+        "unobserved": {},
+        "egress_attach_ms": 10250,
+        "submit_to_result_ms": 23551,
+        "empty_exec_ms": 1558,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4672,
+        "server_resume_to_running_ms": 2218
+      },
+      {
+        "run_id": "a8199234-7abd-401f-8739-e5db775989ae",
+        "cluster": "a",
+        "c": 4,
+        "round": 2,
+        "task": "apl-e0db3d52-02",
+        "unobserved": {},
+        "egress_attach_ms": 8815,
+        "submit_to_result_ms": 22264,
+        "empty_exec_ms": 1558,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4530,
+        "server_resume_to_running_ms": 2226
+      },
+      {
+        "run_id": "9c58bd17-f433-47bd-b1f0-be2ae2fb3730",
+        "cluster": "a",
+        "c": 4,
+        "round": 3,
+        "task": "apl-0ca83375-03",
+        "unobserved": {},
+        "egress_attach_ms": 12770,
+        "submit_to_result_ms": 25807,
+        "empty_exec_ms": 1615,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4611,
+        "server_resume_to_running_ms": 2187
+      },
+      {
+        "run_id": "db2ad662-e4e0-48b0-b3f5-16cc5311083d",
+        "cluster": "a",
+        "c": 4,
+        "round": 3,
+        "task": "apl-a24c0870-03",
+        "unobserved": {},
+        "egress_attach_ms": 11476,
+        "submit_to_result_ms": 24534,
+        "empty_exec_ms": 1615,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4518,
+        "server_resume_to_running_ms": 2193
+      },
+      {
+        "run_id": "b8ca9976-f31b-4b4c-a17e-502959f1a843",
+        "cluster": "a",
+        "c": 4,
+        "round": 3,
+        "task": "apl-45c7ce35-03",
+        "unobserved": {},
+        "egress_attach_ms": 10172,
+        "submit_to_result_ms": 23312,
+        "empty_exec_ms": 1615,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4417,
+        "server_resume_to_running_ms": 2212
+      },
+      {
+        "run_id": "b2f5e9d1-1937-4cd3-bc80-33daed500c76",
+        "cluster": "a",
+        "c": 4,
+        "round": 3,
+        "task": "apl-e0db3d52-03",
+        "unobserved": {},
+        "egress_attach_ms": 8861,
+        "submit_to_result_ms": 21512,
+        "empty_exec_ms": 1615,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3838,
+        "server_resume_to_running_ms": 2221
+      },
+      {
+        "run_id": "eeb848dc-3e79-4d22-8c89-f045f0eb1d9f",
+        "cluster": "a",
+        "c": 4,
+        "round": 4,
+        "task": "apl-0ca83375-04",
+        "unobserved": {},
+        "egress_attach_ms": 12604,
+        "submit_to_result_ms": 26131,
+        "empty_exec_ms": 1596,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3726,
+        "server_resume_to_running_ms": 2156
+      },
+      {
+        "run_id": "f254ddfb-c8a2-42b8-8f3d-495b3fc8caf5",
+        "cluster": "a",
+        "c": 4,
+        "round": 4,
+        "task": "apl-a24c0870-04",
+        "unobserved": {},
+        "egress_attach_ms": 11487,
+        "submit_to_result_ms": 24801,
+        "empty_exec_ms": 1596,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4299,
+        "server_resume_to_running_ms": 2194
+      },
+      {
+        "run_id": "36be1320-0c7c-44a2-b546-33856de3bea0",
+        "cluster": "a",
+        "c": 4,
+        "round": 4,
+        "task": "apl-45c7ce35-04",
+        "unobserved": {},
+        "egress_attach_ms": 10198,
+        "submit_to_result_ms": 23193,
+        "empty_exec_ms": 1596,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4047,
+        "server_resume_to_running_ms": 2189
+      },
+      {
+        "run_id": "ff8ed59f-0ecd-469d-9486-73c770f9cbaa",
+        "cluster": "a",
+        "c": 4,
+        "round": 4,
+        "task": "apl-e0db3d52-04",
+        "unobserved": {},
+        "egress_attach_ms": 8812,
+        "submit_to_result_ms": 21636,
+        "empty_exec_ms": 1596,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4220,
+        "server_resume_to_running_ms": 2156
+      },
+      {
+        "run_id": "fb0f346b-2a09-489b-a514-004273314512",
+        "cluster": "a",
+        "c": 4,
+        "round": 5,
+        "task": "apl-0ca83375-05",
+        "unobserved": {},
+        "egress_attach_ms": 12806,
+        "submit_to_result_ms": 25673,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4090,
+        "server_resume_to_running_ms": 2160
+      },
+      {
+        "run_id": "be51ca2a-d2d4-49ac-82ff-8e3e44c49de2",
+        "cluster": "a",
+        "c": 4,
+        "round": 5,
+        "task": "apl-a24c0870-05",
+        "unobserved": {},
+        "egress_attach_ms": 11459,
+        "submit_to_result_ms": 24446,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4259,
+        "server_resume_to_running_ms": 2142
+      },
+      {
+        "run_id": "581c9e59-d7d9-4bd1-9125-427ed2e9c7fd",
+        "cluster": "a",
+        "c": 4,
+        "round": 5,
+        "task": "apl-45c7ce35-05",
+        "unobserved": {},
+        "egress_attach_ms": 10284,
+        "submit_to_result_ms": 23170,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4009,
+        "server_resume_to_running_ms": 2149
+      },
+      {
+        "run_id": "1bde2d37-bff7-421a-ae33-f8b6e469657f",
+        "cluster": "a",
+        "c": 4,
+        "round": 5,
+        "task": "apl-e0db3d52-05",
+        "unobserved": {},
+        "egress_attach_ms": 8771,
+        "submit_to_result_ms": 21479,
+        "empty_exec_ms": 1581,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3999,
+        "server_resume_to_running_ms": 2167
+      },
+      {
+        "run_id": "0f95ff00-198c-4e91-86bf-6733b28a0041",
+        "cluster": "a",
+        "c": 4,
+        "round": 6,
+        "task": "apl-0ca83375-06",
+        "unobserved": {},
+        "egress_attach_ms": 12810,
+        "submit_to_result_ms": 25914,
+        "empty_exec_ms": 1586,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4386,
+        "server_resume_to_running_ms": 2180
+      },
+      {
+        "run_id": "d9269990-233c-4bba-8347-8c87156c4faf",
+        "cluster": "a",
+        "c": 4,
+        "round": 6,
+        "task": "apl-a24c0870-06",
+        "unobserved": {},
+        "egress_attach_ms": 11190,
+        "submit_to_result_ms": 24733,
+        "empty_exec_ms": 1586,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4254,
+        "server_resume_to_running_ms": 2166
+      },
+      {
+        "run_id": "4e8af772-6463-4078-a6cf-12b20cbbeb30",
+        "cluster": "a",
+        "c": 4,
+        "round": 6,
+        "task": "apl-45c7ce35-06",
+        "unobserved": {},
+        "egress_attach_ms": 10177,
+        "submit_to_result_ms": 23409,
+        "empty_exec_ms": 1586,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 3790,
+        "server_resume_to_running_ms": 2147
+      },
+      {
+        "run_id": "c680e436-45f0-494f-9996-677f22d40c93",
+        "cluster": "a",
+        "c": 4,
+        "round": 6,
+        "task": "apl-e0db3d52-06",
+        "unobserved": {},
+        "egress_attach_ms": 8783,
+        "submit_to_result_ms": 22019,
+        "empty_exec_ms": 1586,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4320,
+        "server_resume_to_running_ms": 2172
+      },
+      {
+        "run_id": "f7a3aba3-1f61-4de7-9aab-ff6f5b242d53",
+        "cluster": "a",
+        "c": 4,
+        "round": 7,
+        "task": "apl-0ca83375-07",
+        "unobserved": {},
+        "egress_attach_ms": 12768,
+        "submit_to_result_ms": 25755,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4250,
+        "server_resume_to_running_ms": 2164
+      },
+      {
+        "run_id": "09a30eba-0158-4b71-a043-5549fe7dc1b2",
+        "cluster": "a",
+        "c": 4,
+        "round": 7,
+        "task": "apl-a24c0870-07",
+        "unobserved": {},
+        "egress_attach_ms": 11645,
+        "submit_to_result_ms": 24634,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4259,
+        "server_resume_to_running_ms": 2179
+      },
+      {
+        "run_id": "cfeea3a2-a6bf-41fb-8d5f-eb4ab2088960",
+        "cluster": "a",
+        "c": 4,
+        "round": 7,
+        "task": "apl-45c7ce35-07",
+        "unobserved": {},
+        "egress_attach_ms": 10038,
+        "submit_to_result_ms": 23235,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 3972,
+        "server_resume_to_running_ms": 2204
+      },
+      {
+        "run_id": "feb40d0c-00c3-4a6c-a388-5afbbac14dd5",
+        "cluster": "a",
+        "c": 4,
+        "round": 7,
+        "task": "apl-e0db3d52-07",
+        "unobserved": {},
+        "egress_attach_ms": 8762,
+        "submit_to_result_ms": 21858,
+        "empty_exec_ms": 1551,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4202,
+        "server_resume_to_running_ms": 2153
+      },
+      {
+        "run_id": "44f5bd56-43d5-491e-ba2a-b19f88b8eb59",
+        "cluster": "a",
+        "c": 4,
+        "round": 8,
+        "task": "apl-0ca83375-08",
+        "unobserved": {},
+        "egress_attach_ms": 13038,
+        "submit_to_result_ms": 25757,
+        "empty_exec_ms": 1519,
+        "worker": {
+          "name": "12896065-bb87-4ba2-9ba8-ed3eff688fa7"
+        },
+        "command_duration_ms": 4159,
+        "server_resume_to_running_ms": 2140
+      },
+      {
+        "run_id": "38ff8ff3-80da-4f68-91cf-bcfed017affa",
+        "cluster": "a",
+        "c": 4,
+        "round": 8,
+        "task": "apl-a24c0870-08",
+        "unobserved": {},
+        "egress_attach_ms": 11730,
+        "submit_to_result_ms": 24670,
+        "empty_exec_ms": 1519,
+        "worker": {
+          "name": "bc3c683a-ee33-425b-a53c-33449a6a1166"
+        },
+        "command_duration_ms": 4137,
+        "server_resume_to_running_ms": 2144
+      },
+      {
+        "run_id": "f0b93a97-3562-45c7-b273-41639d58bf51",
+        "cluster": "a",
+        "c": 4,
+        "round": 8,
+        "task": "apl-45c7ce35-08",
+        "unobserved": {},
+        "egress_attach_ms": 10133,
+        "submit_to_result_ms": 23054,
+        "empty_exec_ms": 1519,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4078,
+        "server_resume_to_running_ms": 2177
+      },
+      {
+        "run_id": "55446e08-db27-4cf1-b173-2a75803ffb27",
+        "cluster": "a",
+        "c": 4,
+        "round": 8,
+        "task": "apl-e0db3d52-08",
+        "unobserved": {},
+        "egress_attach_ms": 8843,
+        "submit_to_result_ms": 21368,
+        "empty_exec_ms": 1519,
+        "worker": {
+          "name": "ea84ea85-5ac8-42c2-8136-347e3945442b"
+        },
+        "command_duration_ms": 4011,
+        "server_resume_to_running_ms": 2188
+      }
+    ],
+    "rounds": [
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 0,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 1,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 2,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 3,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 4,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 5,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 6,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 7,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 8,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 9,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 10,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 11,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 12,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 13,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 14,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 15,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 16,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 17,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 18,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 19,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 20,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 21,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 22,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 23,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 24,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 25,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 26,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 27,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 28,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 29,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 1,
+        "round": 30,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 0,
+        "resume_spread_ms": 17,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 1,
+        "resume_spread_ms": 1,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 2,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 3,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 4,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 5,
+        "resume_spread_ms": 2,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 6,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 7,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 8,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 9,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 10,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 11,
+        "resume_spread_ms": 4,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 12,
+        "resume_spread_ms": 1,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 13,
+        "resume_spread_ms": 1,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 14,
+        "resume_spread_ms": 2,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 2,
+        "round": 15,
+        "resume_spread_ms": 0,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 0,
+        "resume_spread_ms": 6,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 1,
+        "resume_spread_ms": 23,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 2,
+        "resume_spread_ms": 9,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 3,
+        "resume_spread_ms": 1,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 4,
+        "resume_spread_ms": 15,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 5,
+        "resume_spread_ms": 5,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 6,
+        "resume_spread_ms": 7,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 7,
+        "resume_spread_ms": 4,
+        "leftover_actors": 0
+      },
+      {
+        "cluster": "a",
+        "c": 4,
+        "round": 8,
+        "resume_spread_ms": 2,
+        "leftover_actors": 0
+      }
+    ],
+    "rounds_absent": []
+  }
+}

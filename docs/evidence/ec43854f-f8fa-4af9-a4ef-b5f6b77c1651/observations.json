@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "case_id": "F3-A1",
+  "run_id": "ec43854f-f8fa-4af9-a4ef-b5f6b77c1651",
+  "profile": "ax",
+  "mode": "scripted",
+  "execution": "EXECUTED",
+  "candidate_revision": "bf05d514b939b1f09e70300ec12a09875d5b31fb",
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "mutation": "none",
+  "collector_methods": [
+    "--run-facts: step, concurrency and task counts from the operator's plan (recorded, not asserted)",
+    "HTTP GET /apl/result via atenet-router (collector pod, own pod certificate)",
+    "S3 GetObject (collector client, own credentials)",
+    "S3 GetObject of the in-sandbox coordinator's ledger export (collector client, own credentials)",
+    "Slack conversations.history (reader token)",
+    "Slack conversations.list (reader token)",
+    "Slack conversations.replies (reader token)",
+    "ax get task (operator CLI, recorded before collection; never an assertion)"
+  ],
+  "observed_at": "2026-10-30T11:22:37.765Z",
+  "observations": {
+    "command_exit_code": 0,
+    "ax_task_phase": "Running",
+    "step": 2,
+    "concurrency": 1,
+    "tasks_planned": 30,
+    "ticket_count": 1,
+    "receipt_count": 1,
+    "receipt_matches_request": true,
+    "completion_reply_count": 1
+  },
+  "unobserved": {
+    "tasks_timed": "not computable: no tasks_timed in the run facts"
+  }
+}

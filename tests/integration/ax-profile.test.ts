@@ -93,19 +93,15 @@ describe("ax doctor (offline)", () => {
   });
 });
 
-describe("ax run (refusal paths only)", () => {
-  it("refuses without authorized=true and makes no call", async () => {
-    const r = await ax.run("w01-happy", { authorized: false, env: declaredEnv() });
+describe("ax run (always BLOCKED: cluster runs go through multi.ts)", () => {
+  it.each([
+    ["without authorized=true", false, declaredEnv()],
+    ["with authorized=true and every prerequisite declared", true, declaredEnv()],
+    ["with authorized=true and nothing declared", true, {}],
+  ])("refuses %s, names profiles/ax/multi.ts and makes no call", async (_, authorized, env) => {
+    const r = await ax.run("w01-happy", { authorized, env });
     expect(r.status).toBe("BLOCKED");
-    expect(r.reason).toMatch(/authorized=true/);
-    expect(r.external_calls).toBe(0);
-    expect(processCalls()).toBe(0);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("refuses when doctor is blocked even if authorized=true", async () => {
-    const r = await ax.run("w01-happy", { authorized: true, env: {} });
-    expect(r.status).toBe("BLOCKED");
+    expect(r.reason).toContain("profiles/ax/multi.ts");
     expect(r.external_calls).toBe(0);
     expect(processCalls()).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();

@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "case_id": "F3-A1",
+  "run_id": "4e8c64d0-1dfe-4d56-9121-4a0badc389d6",
+  "profile": "ax",
+  "mode": "scripted",
+  "candidate_revision": "bf05d514b939b1f09e70300ec12a09875d5b31fb",
+  "tree_sha": "UNKNOWN",
+  "dirty": true,
+  "fixture_sha256": "45d084dfd28ceb3ba311fc9b691d9e58f504f3332bf6769b8f651b3dda30c6f8",
+  "dependencies_sha256": "1629b08a2f09902e22c6eeafb3e98c5bc178cb7da9990bf310ec2ae3536f57d1",
+  "seed": 0,
+  "collector": "apl-ax-collector pid=9460 (plain Pod outside the sandbox; reader Slack token, own S3 credentials, router GET /apl/result)",
+  "observed_at": "2026-10-30T11:08:36.570Z",
+  "execution": "EXECUTED",
+  "mutation": "none",
+  "simulated_faults": [],
+  "status": "PASS",
+  "lanes": {
+    "local": {
+      "status": "PASS",
+      "selected": true,
+      "reason": "AX lane: required assertions only"
+    },
+    "salesforce": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "coderabbit": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "ax": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    },
+    "live-model": {
+      "status": "SKIPPED",
+      "selected": false,
+      "reason": "not selected"
+    }
+  },
+  "all_lanes_status": "PASS",
+  "banner": {
+    "green": true,
+    "text": "PASS: all 5 required assertions passed with evidence (AX task (scripted driver))"
+  },
+  "assertions": [
+    {
+      "id": "ticket_count",
+      "required": true,
+      "expected": 1,
+      "observed": 1,
+      "evidence_refs": [
+        "evidence/w01-ledger.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "receipt_count",
+      "required": true,
+      "expected": 1,
+      "observed": 1,
+      "evidence_refs": [
+        "evidence/w01-s3.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "receipt_matches_request",
+      "required": true,
+      "expected": true,
+      "observed": true,
+      "evidence_refs": [
+        "evidence/w01-ledger.json",
+        "evidence/w01-s3.json",
+        "evidence/w01-thread.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "completion_reply_count",
+      "required": true,
+      "expected": 1,
+      "observed": 1,
+      "evidence_refs": [
+        "evidence/w01-thread.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    },
+    {
+      "id": "command_exit_code",
+      "required": true,
+      "expected": 0,
+      "observed": 0,
+      "evidence_refs": [
+        "evidence/ax-result.json"
+      ],
+      "status": "PASS",
+      "reason": null
+    }
+  ],
+  "counts": {
+    "required": 5,
+    "passed": 5,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_run": 0,
+    "unknown": 0
+  },
+  "limitations": [
+    "Mode: AX task (scripted driver).",
+    "Public challenge cases are visible to builders; they are not secret holdouts.",
+    "Hashes bind artifacts; they do not prove an honest collector.",
+    "Emulate's simulator routes accept any valid token; separation from the worker is proxy-enforced, not token-custody alone.",
+    "Ledger facts come from an export the in-sandbox coordinator wrote to the task's bucket; the collector reads it with its own credentials but cannot open the sandbox's ledger.",
+    "Slack transport limits (Emulate's documented gaps, docs/RESEARCH.md): Socket Mode, slash commands, shortcuts, exact rate limiting and interaction types other than button actions and modal submissions are not emulated; this lab exercises Events API callbacks and button actions only, so it makes no claim about those surfaces.",
+    "One collector identity per cluster: whether a second, separately allowlisted identity could read another tenant's results through the router is not tested.",
+    "One operator identity drives the AX API; a tenant is a namespace, an atespace and an Emulate workspace, not a separately authenticated AX tenant (L-034).",
+    "gVisor sandboxes only.",
+    "Both clusters are in one project and one VPC.",
+    "Isolation is judged only on traffic that leaves the sandbox through the egress gateway.",
+    "Isolation verdicts rest on a gateway-log extract the operator copies verbatim into the private set dir; the public MT-ISO export carries a copy with addresses replaced by roles, so the verdict cannot be re-derived from public files.",
+    "Cluster B's Substrate uses cluster A's snapshot transfer identity.",
+    "The ate-api-server Workload Identity principal is the same identity on both clusters, so its bindings on B's bucket also apply to A's ate-api-server.",
+    "One collector Secret holds every current tenant's fake credentials on its cluster."
+  ],
+  "cleanup_status": "CLEAN",
+  "started_at": "2026-10-30T11:08:36.570Z",
+  "ended_at": "2026-10-30T11:08:36.570Z",
+  "durations": {
+    "wall_clock_seconds": {
+      "value": null,
+      "reason": "start or end not recorded"
+    }
+  }
+}

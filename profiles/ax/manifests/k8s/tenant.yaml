@@ -1,0 +1,118 @@
+# One tenant of a multi-tenant AX set (docs/MULTI_CLUSTER_BUILD.md section 5), rendered by
+# `orchestrate.ts manifests --tenant` and applied with `kubectl apply -f`. Derived from emulators.yaml's emulator
+# half, with requests added. The pool and the collector are shared and live in collector.yaml.
+# Every object carries apl-run, apl-set, apl-cluster, apl-tenant and apl-role=tenant.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: emulate-seed
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+type: Opaque
+# A JSON string literal (orchestrate.ts fills it with JSON.stringify), which is also a valid YAML double-quoted scalar.
+stringData:
+  seed: ${APL_EMULATE_SEED}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: floci
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant, app: floci }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: floci }
+  template:
+    metadata:
+      labels: { app: floci, apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+    spec:
+      automountServiceAccountToken: false
+      # Kubernetes service-link env would set FLOCI_PORT=tcp://<ip>:4566, which Floci reads as its own port (L-032).
+      enableServiceLinks: false
+      containers:
+        - name: floci
+          image: "${APL_FLOCI_IMAGE}"
+          env:
+            - { name: FLOCI_SERVICES_UI_ENABLED, value: "false" }
+          ports: [{ containerPort: 4566 }]
+          readinessProbe: { tcpSocket: { port: 4566 }, periodSeconds: 2 }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "768Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: floci
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+spec:
+  selector: { app: floci }
+  ports: [{ name: http, port: 4566, targetPort: 4566 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emulate
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant, app: emulate }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: emulate }
+  template:
+    metadata:
+      labels: { app: emulate, apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      containers:
+        - name: emulate
+          image: "${APL_EMULATE_IMAGE}"
+          env:
+            - { name: APL_EMULATE_BASE_URL, value: "http://emulate.apl-ax-${APL_SHORT_ID}.svc.cluster.local:8080" }
+            - name: APL_EMULATE_SEED
+              valueFrom: { secretKeyRef: { name: emulate-seed, key: seed } }
+          ports: [{ containerPort: 8080 }, { containerPort: 8081 }]
+          readinessProbe: { httpGet: { path: /_apl/health, port: 8081 }, periodSeconds: 2 }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: emulate
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+spec:
+  selector: { app: emulate }
+  ports:
+    - { name: slack, port: 8080, targetPort: 8080 }
+    - { name: mailbox, port: 8081, targetPort: 8081 }
+---
+# Task egress reaches the emulators only through Substrate's egress gateway (atenet-egress in ate-system). The
+# other peer is the shared collector, selected by its namespace and pod label together.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: emulators-ingress
+  namespace: apl-ax-${APL_SHORT_ID}
+  labels: { apl-run: "${APL_RUN_ID}", apl-set: "${APL_SET_ID}", apl-cluster: "${APL_CLUSTER}", apl-tenant: "${APL_TENANT}", apl-role: tenant }
+spec:
+  podSelector:
+    matchExpressions: [{ key: app, operator: In, values: [floci, emulate] }]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ate-system } }
+          podSelector: { matchLabels: { app: atenet-egress } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: "${APL_COLLECTOR_NS}" } }
+          podSelector: { matchLabels: { app: apl-collector } }

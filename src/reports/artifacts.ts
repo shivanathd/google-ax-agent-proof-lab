@@ -31,7 +31,11 @@ export function expectationsFor(caseId: string): Record<string, boolean | number
 export const readBundle = (dir: string) => assertContract<Bundle>("observation-bundle", JSON.parse(readFileSync(join(dir, "observations.json"), "utf8")));
 
 // Regenerates report.json/report.md and the checksum list from the stored bundle. Safe to re-run.
-export async function generateReport(runId: string, o: { cleanup_status?: "CLEAN" | "INCOMPLETE" | "NOT_RUN" | "RETAINED_BY_REQUEST"; cleanup_remaining?: string[]; started_at?: string; ended_at?: string } = {}) {
+// `expected` replaces the cases.json lookup (AX cases live in profiles/ax/cases.ax.json); `limitations` are appended.
+export async function generateReport(runId: string, o: {
+  cleanup_status?: "CLEAN" | "INCOMPLETE" | "NOT_RUN" | "RETAINED_BY_REQUEST"; cleanup_remaining?: string[]; started_at?: string; ended_at?: string;
+  expected?: Record<string, boolean | number | string>; limitations?: string[];
+} = {}) {
   const dir = artifactDir(runId);
   if (!existsSync(join(dir, "observations.json"))) throw new Error(`no observations for run ${runId}`);
   // Regenerating must not launder tampering: captured files must still match the recorded checksums.
@@ -46,7 +50,7 @@ export async function generateReport(runId: string, o: { cleanup_status?: "CLEAN
   const meta = existsSync(join(dir, "manifest.json")) ? JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) : {};
   const optional = await laneStatuses((bundle.selected_profiles ?? []) as ProfileName[], process.env);
   const report = buildReport({
-    bundle, expected: expectationsFor(bundle.case_id), optional,
+    bundle, expected: o.expected ?? expectationsFor(bundle.case_id), optional, limitations: o.limitations,
     cleanup_status: o.cleanup_status ?? meta.cleanup_status, cleanup_remaining: o.cleanup_remaining ?? [],
     started_at: o.started_at ?? meta.started_at, ended_at: o.ended_at ?? meta.ended_at,
     artifacts: ["manifest.json", "events.ndjson", "observations.json", ...(bundle.evidence ?? []).map((e) => e.path), "report.json", "report.md", "checksums.sha256"],
