@@ -92,7 +92,7 @@ function writeBundle(dir: string, kase: string, obs: Record<string, number | boo
 
 interface FakeOpts { actorNever?: string; exhaustedOn?: string; attachFails?: string; resumeFails?: string; noResult?: string; observeFails?: string; deleteFails?: string;
   leftovers?: boolean; leftoverDeleteFails?: boolean; pfDies?: number; context?: string; versions?: { nodes?: string }; teardownOut?: string;
-  breachOn?: string; getTaskFails?: string; markerBlind?: boolean; portBusy?: boolean }
+  breachOn?: string; getTaskFails?: string; markerBlind?: boolean; portBusy?: boolean; noWorkers?: boolean; teardownErr?: string }
 
 const isoTask = (t: string) => /-(iso|ctl)$/.test(t);
 const emulateIp = (ns: string) => `10.96.${Number.parseInt(ns.slice(-2), 16)}.1`; // as the fake's `get svc,endpoints` answers
@@ -112,7 +112,7 @@ function fake(o: FakeOpts = {}) {
     const a = c.args, s = ` ${a.join(" ")} `;
     const owned = () => readJson(join(dirname(c.env.KUBECONFIG!), "owned-resources.json"));
     const need = (pred: (ow: any) => boolean, what: string) => { if (!pred(owned())) violations.push(`${what} created before it was recorded`); };
-    if (c.cmd === "bash") return ok(c.args[1] === "--snapshot" ? "snapshot written" : (o.teardownOut ?? "teardown: done"));
+    if (c.cmd === "bash") return c.args[1] === "--snapshot" ? ok("snapshot written") : ok(o.teardownOut ?? "teardown: done", 0, o.teardownErr ?? "");
     if (c.background) { const n = ++pfs; return { ...ok(), alive: () => !(o.pfDies && n <= o.pfDies), stop: () => {} }; }
     if (s.includes(" config current-context ")) return ok(`${o.context ?? readFileSync(a[a.indexOf("--kubeconfig") + 1]!, "utf8").trim()}\n`);
     if (c.cmd === "gcloud") return ok({ currentMasterVersion: VERSIONS.gke.master, currentNodeVersion: o.versions?.nodes ?? VERSIONS.gke.nodes });
@@ -177,8 +177,15 @@ function fake(o: FakeOpts = {}) {
     if (s.includes(" get workerpools -A ")) return ok({ items: [{ metadata: { namespace: "apl-ax-6882d106", name: "apl-ax-pool" } }] });
     if (s.includes(" get workerpool apl-ax-pool ")) return ok({ spec: { replicas: 1 } });
     if (s.includes(" get svc atenet-router ")) return ok({ spec: { clusterIP: "10.96.0.40" } });
-    if (s.includes(" get pods,replicasets,statefulsets ")) {
-      return ok({ items: [{ kind: "Pod", metadata: { name: "worker-0", uid: "p", ownerReferences: [{ kind: "WorkerPool", name: "apl-ax-pool", uid: "w" }] }, spec: { containers: [] }, status: { podIP: "10.244.9.9" } }] });
+    if (k[0] === "-n" && k[1] === "apl-ax-6882d106" && k[2] === "get" && k[3]!.startsWith("pods,")) {
+      // As on GKE: Pod -> ReplicaSet apl-ax-pool-<hash> -> Deployment apl-ax-pool -> WorkerPool; only the kinds asked for.
+      const plural: Record<string, string> = { Pod: "pods", ReplicaSet: "replicasets", Deployment: "deployments" };
+      const items = o.noWorkers ? [] : [
+        { kind: "Pod", metadata: { name: "apl-ax-pool-5d8f9-x2x7q", uid: "p", labels: { "ate.dev/worker-pool": "apl-ax-pool" }, ownerReferences: [{ kind: "ReplicaSet", name: "apl-ax-pool-5d8f9", uid: "rs" }] }, spec: { containers: [] }, status: { podIP: "10.244.9.9" } },
+        { kind: "ReplicaSet", metadata: { name: "apl-ax-pool-5d8f9", uid: "rs", ownerReferences: [{ kind: "Deployment", name: "apl-ax-pool", uid: "dep" }] } },
+        { kind: "Deployment", metadata: { name: "apl-ax-pool", uid: "dep", ownerReferences: [{ kind: "WorkerPool", name: "apl-ax-pool", uid: "w" }] } },
+      ];
+      return ok({ items: items.filter((i) => k[3]!.split(",").includes(plural[i.kind]!)) });
     }
     if (s.includes(" app=atenet-egress ") && s.includes(" get pods ")) return ok({ items: [{ metadata: { name: "atenet-egress-aaaa" }, status: { containerStatuses: [{ restartCount: 0 }] } }] });
     if (s.includes(" logs -l app=atenet-egress ")) {
@@ -557,9 +564,11 @@ describe("run-step against the recording fake", () => {
   });
 
   it("teardown output naming a delete it continued past is INCOMPLETE, not CLEAN", async () => {
-    const r = await runStep(smallPlan("probe", 1, 2), { teardownOut: "teardown: kubectl ate delete actor golden-x failed (continuing)\nteardown: done" });
+    const r = await runStep(smallPlan("probe", 1, 2), { teardownOut: "teardown: kubectl ate delete actor golden-x failed (continuing)\nteardown: done", teardownErr: "warning: context ctx-a" });
     expect(r.code).toBe(0);
     expect(readJson(join(r.stepDir, "teardown.json"))).toMatchObject({ exit_code: 0, status: "INCOMPLETE" });
+    // teardown.json says INCOMPLETE; teardown.log says why.
+    expect(readFileSync(join(r.stepDir, "teardown.log"), "utf8")).toBe("teardown: kubectl ate delete actor golden-x failed (continuing)\nteardown: done\n--- stderr ---\nwarning: context ctx-a");
   });
 
   it("the tenant-run registry: a held lock stops the step before a tenant is registered; the lock is released after each write", async () => {
@@ -653,6 +662,14 @@ describe("MT-ISO on the real path (design 7.4, §10)", () => {
     expect(r.calls.at(-1)!.cmd).toBe("bash");
   });
 
+  it("finds the worker Pods through their ReplicaSet and Deployment, as GKE owns them, so the owner walk reaches the WorkerPool", async () => {
+    const r = await runStep(isoPlan());
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    expect(r.calls.filter((c) => argsOf(c).includes("-n apl-ax-6882d106 get pods,")).map((c) => c.args[5])).toEqual(["pods,replicasets,deployments,statefulsets"]);
+    const t1 = r.plan.configurations[0]!.tenant_runs[0]!;
+    expect(readJson(join(r.setDir, "tenants", t1.tenant_run_id, `probes-${t1.tasks[0]}.json`))).toContainEqual({ role: "worker-1-80", address: "10.244.9.9", port: 80, tcp: true });
+  });
+
   it("a failed ax get task leaves foreign_secret_in_task_count out with the reason; a dead target is recorded as target_ran false", async () => {
     const planFile = isoPlan(), p: MultiPlan = readJson(planFile);
     const [t1, t2] = isoTasks(p);
@@ -664,6 +681,100 @@ describe("MT-ISO on the real path (design 7.4, §10)", () => {
     expect(readJson(join(r.setDir, `run-facts-${t1}.json`))).toMatchObject({ target_ran: false });
     expect(readJson(join(r.setDir, `run-facts-${t2}.json`))).toMatchObject({ target_ran: true });
     expect(readJson(join(r.setDir, `disclosure-${t2}.json`))).toMatchObject({ foreign_secret_in_task_count: 0 });
+  });
+});
+
+describe("run-step --only and report over several step runs (§4.7, §11.2)", () => {
+  // Step 1's probe and MT-ISO configurations on A with the planted egress control, as buildPlan() plans them.
+  function probeIsoPlan(): string {
+    const p = buildPlan({ step: 1, setId: uuid(), clusters: { a: { infra_run_dir: infra.a, context: "ctx-a", step_run_id: uuid() } }, registry: [], uuid });
+    const plan: MultiPlan = { ...p, configurations: p.configurations.filter((c) => c.kind === "probe" || c.kind === "mt-iso"), controls: p.controls.filter((c) => c.kind === "egress") };
+    const dir = join(runsRoot, "sets", plan.set_id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "plan.json"), JSON.stringify(plan));
+    return join(dir, "plan.json");
+  }
+  const only = async (planFile: string, kinds: string, o: FakeOpts = {}, extra: string[] = []) => {
+    const f = fake(o), lines: string[] = [];
+    const code = await main(["run-step", "--plan", planFile, "--cluster", "a", "--only", kinds, ...extra], { exec: f.exec, runsRoot, evidenceRoot, sleep: async () => {}, log: (l) => lines.push(l), uuid, portFree: async () => true });
+    return { ...f, code, lines };
+  };
+  const bundlesOf = (cfgs: MultiPlan["configurations"]) => cfgs.flatMap((c) => c.tenant_runs.flatMap((t) => t.bundles));
+
+  it("re-runs only the named kinds in a fresh step run dir on fresh tenant runs, and plan.json records both step runs", async () => {
+    const planFile = probeIsoPlan();
+    expect((await only(planFile, "mt-iso")).lines.join("\n")).toMatch(/--only re-runs configurations of a step that ran/);
+    const first = await runStep(planFile, { noWorkers: true }); // as on the real cluster before the fix: MT-ISO stops
+    expect(first.code).toBe(1);
+    const iso = first.plan.configurations.find((c) => c.kind === "mt-iso")!;
+    expect(first.stopped.map((x: any) => [x.run_id, x.execution])).toEqual(bundlesOf([iso]).map((b) => [b.run_id, "BLOCKED"]));
+    expect(first.stopped[0].reason).toMatch(/no worker Pod of WorkerPool apl-ax-pool was found/);
+    const before = readFileSync(planFile, "utf8");
+    expect((await only(planFile, "mt-iso,bogus")).lines.join("\n")).toMatch(/--only takes probe, configuration, mt-iso/);
+    const dry = await only(planFile, "mt-iso", {}, ["--dry-run"]);
+    expect(dry.code, dry.lines.join("\n")).toBe(0);
+    expect(readFileSync(planFile, "utf8")).toBe(before); // a dry run records nothing
+
+    const r = await only(planFile, "mt-iso");
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    expect(r.violations).toEqual([]);
+    const plan: MultiPlan = readJson(planFile), a = plan.clusters.a!;
+    expect(a.step_run_id).toBe(first.plan.clusters.a!.step_run_id); // still names the first
+    expect(a.step_runs!.map((x) => [x.step_run_id, x.only])).toEqual([[a.step_run_id, undefined], [expect.not.stringMatching(a.step_run_id), ["mt-iso"]]]);
+    const rerun = a.step_runs![1]!;
+    expect(rerun.configurations!.map((c) => [c.kind, c.c, c.tenant_runs.map((t) => t.tenant)])).toEqual([["mt-iso", 2, ["t1", "t2", "t3", "t4"]]]);
+    const fresh = rerun.configurations![0]!.tenant_runs;
+    for (const [i, t] of fresh.entries()) {
+      const old = iso.tenant_runs[i]!;
+      expect(t.tr8).not.toBe(old.tr8);
+      expect(t.tasks).toEqual(old.tasks.map((x) => x.replace(old.tr8, t.tr8)));
+      expect(t.bundles.map((b) => [b.case, b.task])).toEqual(old.bundles.map((b) => [b.case, b.task!.replace(old.tr8, t.tr8)]));
+    }
+    expect(rerun.controls).toEqual([expect.objectContaining({ kind: "egress", tenant_run_id: fresh[0]!.tenant_run_id, task: fresh[0]!.tasks[2] })]);
+    // Only MT-ISO ran, in its own step run dir, with its own teardown; nothing of the first step run was touched.
+    const probeTasks = first.plan.configurations[0]!.tenant_runs[0]!.tasks;
+    expect(r.calls.some((c) => probeTasks.some((t) => argsOf(c).includes(t)))).toBe(false);
+    const stepDir = join(runsRoot, rerun.step_run_id);
+    expect(readJson(join(stepDir, "stopped.json"))).toEqual([]);
+    expect(readJson(join(stepDir, "teardown.json")).status).toBe("CLEAN");
+    expect(argsOf(r.calls.at(-1)!)).toBe(`${join(ROOT, "profiles/ax/teardown.sh")} ${stepDir}`);
+    expect(r.calls.filter((c) => c.env.KUBECONFIG !== join(stepDir, "kubeconfig"))).toEqual([]);
+    expect(readJson(join(first.stepDir, "stopped.json"))).toEqual(first.stopped);
+    for (const b of bundlesOf(rerun.configurations!)) expect(verifyChecksums(artifactDir(b.run_id)).ok).toBe(true);
+    expect(existsSync(join(first.setDir, `run-step-a-${rerun.step_run_id.slice(0, 8)}.json`))).toBe(true);
+    expect(readJson(join(first.setDir, "run-step-a.json")).detector).toBeDefined(); // the first step run's facts are kept
+    const registered = readJson(join(runsRoot, "tenant-runs.json")).map((e: any) => e.tenant_run_id);
+    expect(registered).toEqual(expect.arrayContaining(fresh.map((t) => t.tenant_run_id)));
+  });
+
+  it("report takes the re-run's observed bundle over the earlier stop bundle, lists that stop, and gives the worst cleanup", async () => {
+    const planFile = probeIsoPlan();
+    const first = await runStep(planFile, { noWorkers: true });
+    const r = await only(planFile, "mt-iso", { teardownOut: "teardown: kubectl ate delete actor golden-x failed (continuing)" });
+    expect(r.code, r.lines.join("\n")).toBe(0);
+    const plan: MultiPlan = readJson(planFile), rerun = plan.clusters.a!.step_runs![1]!;
+    const oldIso = bundlesOf(first.plan.configurations.filter((c) => c.kind === "mt-iso")), newIso = bundlesOf(rerun.configurations!);
+    const probe = bundlesOf(first.plan.configurations.filter((c) => c.kind === "probe"));
+    const lines: string[] = [];
+    expect(await main(["report", "--plan", planFile], { exec: fake().exec, runsRoot, evidenceRoot, log: (l) => lines.push(l) }), lines.join("\n")).toBe(0);
+    // The earlier stop, still visible: in superseded.json and in the line report prints.
+    const superseded = oldIso.map((b, i) => ({ run_id: b.run_id, case: "MT-ISO", task: b.task, step_run_id: plan.clusters.a!.step_run_id, execution: "BLOCKED",
+      reason: expect.stringMatching(/no worker Pod of WorkerPool apl-ax-pool was found/), replaced_by: newIso[i]!.run_id, replaced_by_step_run_id: rerun.step_run_id }));
+    expect(readJson(join(first.setDir, "superseded.json"))).toEqual(superseded);
+    expect(JSON.parse(lines.at(-1)!)).toMatchObject({ reports: 6, superseded, aggregate: "EXPORTED" });
+    // Counted once: the stop bundle stays private, unreported and unexported; the observed one is reported and exported.
+    for (const b of oldIso) {
+      expect(readJson(join(artifactDir(b.run_id), "observations.json")).execution).toBe("BLOCKED");
+      expect(existsSync(join(artifactDir(b.run_id), "report.json"))).toBe(false);
+      expect(existsSync(join(evidenceRoot, b.run_id))).toBe(false);
+    }
+    for (const b of [...probe, ...newIso]) {
+      expect(readJson(join(artifactDir(b.run_id), "report.json"))).toMatchObject({ status: "PASS", cleanup_status: "INCOMPLETE" }); // CLEAN, then INCOMPLETE
+      expect(existsSync(join(evidenceRoot, b.run_id, "report.json"))).toBe(true);
+    }
+    const agg = readJson(join(evidenceRoot, plan.set_id, "aggregate.json"));
+    expect(agg.line).toBe("all clusters: PASS (A PASS, 6 of 6 planned reports)");
+    expect(agg.rows.filter((x: any) => x.case === "MT-ISO").map((x: any) => [x.run_id, x.tenant_run_id])).toEqual(newIso.map((b, i) => [b.run_id, rerun.configurations![0]!.tenant_runs[i]!.tenant_run_id]));
   });
 });
 

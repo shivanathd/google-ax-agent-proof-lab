@@ -1,7 +1,7 @@
 // The one cluster driver for the many-tenant and two-cluster AX runs (design rule 9; docs/MULTI_CLUSTER_BUILD.md §1).
 //   multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir> --step1-set-id <uuid>]
 //   multi.ts infra     a|b --infra <dir> [--resize 0|2] [--dry-run]
-//   multi.ts run-step  --plan <plan.json> --cluster a|b [--dry-run]
+//   multi.ts run-step  --plan <plan.json> --cluster a|b [--only probe|configuration|mt-iso[,...]] [--dry-run]
 //   multi.ts report    --plan <plan.json>
 // plan and report refuse --dry-run.
 // Every kubectl, kubectl ate, ax, gcloud and teardown.sh call goes through one injectable Exec, after the context
@@ -59,11 +59,15 @@ type D = Required<Deps>;
 
 interface BundleRef { run_id: string; case: string; task: string | null }
 interface TenantRun { kind: string; tenant: string; tenant_run_id: string; tr8: string; tasks: string[]; bundles: BundleRef[] }
-interface Configuration { kind: "probe" | "configuration" | "mt-iso"; cluster: ClusterId; c: number; rounds: number; warmup: boolean; tenant_runs: TenantRun[] }
+type Kind = "probe" | "configuration" | "mt-iso";
+const KINDS: Kind[] = ["probe", "configuration", "mt-iso"];
+interface Configuration { kind: Kind; cluster: ClusterId; c: number; rounds: number; warmup: boolean; tenant_runs: TenantRun[] }
 interface Control { kind: "marker" | "egress"; cluster: ClusterId; tenant_run_id: string; task: string | null; run_id: string }
+// A `run-step --only` (§4.7): its fresh copies of the configurations it re-ran and of their controls.
+interface StepRun { step_run_id: string; only?: Kind[]; created_at?: string; configurations?: Configuration[]; controls?: Control[] }
 export interface MultiPlan {
   set_id: string; step: 1 | 2; created_at: string;
-  clusters: Partial<Record<ClusterId, { infra_run_dir: string; context: string; step_run_id: string }>>;
+  clusters: Partial<Record<ClusterId, { infra_run_dir: string; context: string; step_run_id: string; step_runs?: StepRun[] }>>;
   configurations: Configuration[]; controls: Control[];
   a?: { reused: { set_id: string; c: 1 } } | { rerun: { differences: string[] } };
 }
@@ -212,7 +216,7 @@ function dryResult(c: Call): Result {
   if (a.includes(" get svc atenet-router ")) return ok({ spec: { clusterIP: DRY.router } });
   if (a.includes(" app=atenet-egress ") && a.includes(" get pods ")) return ok({ items: [{ metadata: { name: "atenet-egress-dry" }, status: { containerStatuses: [{ restartCount: 0 }] } }] });
   if (a.includes(" get cm atenet-egress ")) return ok({ data: { "envoy.yaml": Object.values(accessLogBlocks(FIXTURE)).map((b) => b.join("\n")).join("\n") } });
-  if (a.includes(" get pods,replicasets,statefulsets ")) {
+  if (a.includes(" get pods,replicasets,deployments,statefulsets ")) {
     return ok({ items: [{ kind: "Pod", metadata: { name: "worker-dry", uid: "p", ownerReferences: [{ kind: "WorkerPool", name: "apl-ax-pool", uid: "w" }] }, spec: { containers: [] }, status: { podIP: DRY.worker } }] });
   }
   if (/ ate .* get actor \S+ /.test(a)) return ok({ metadata: { name: "dry" }, status: { state: "DRY_RUN" } });
@@ -286,6 +290,33 @@ export function buildPlan(o: { step: 1 | 2; setId: string; clusters: MultiPlan["
     set_id: o.setId, step: o.step, created_at: iso(), clusters: o.clusters, configurations, controls,
     ...(o.step === 2 ? { a: o.aReused ? { reused: { set_id: o.aReused, c: 1 as const } } : { rerun: { differences: o.differences ?? [] } } } : {}),
   };
+}
+
+// Every step run of a cluster: the plan's first (`step_run_id`), then each `run-step --only` (§4.7).
+const stepRunsOf = (c: { step_run_id: string; step_runs?: StepRun[] }): StepRun[] => c.step_runs ?? [{ step_run_id: c.step_run_id }];
+const taskSuffix = (task: string) => task.slice("apl-12345678-".length);
+
+// §4.7: fresh copies of configurations for `run-step --only`, with new tenant run IDs, task names and bundle run IDs,
+// so no tenant dir, namespace, registry entry or artifacts/runs/<run_id>/ of an earlier step run is reused.
+function freshCopies(plan: MultiPlan, cfgs: Configuration[], registry: { tr8: string }[], uuid: () => string) {
+  const planned = [...plan.configurations, ...Object.values(plan.clusters).flatMap((c) => stepRunsOf(c!).flatMap((s) => s.configurations ?? []))];
+  const used = new Set([COLLECTOR_TR8, ...registry.map((r) => r.tr8), ...planned.flatMap((cfg) => cfg.tenant_runs.map((t) => t.tr8))]);
+  const copies = new Map<string, TenantRun>();
+  const configurations = cfgs.map((cfg) => ({ ...cfg, tenant_runs: cfg.tenant_runs.map((tr) => {
+    const id = uuid(), tr8 = id.slice(0, 8);
+    if (!UUID.test(id)) throw new Error("tenant run IDs must be UUIDs");
+    if (used.has(tr8)) throw new Error(`refusing tenant run <tr8> ${tr8}: it is the collector's, registered or already in the plan`);
+    used.add(tr8);
+    const copy: TenantRun = { ...tr, tenant_run_id: id, tr8, tasks: tr.tasks.map((t) => taskName(tr8, taskSuffix(t))),
+      bundles: tr.bundles.map((b) => ({ ...b, run_id: uuid(), task: b.task && taskName(tr8, taskSuffix(b.task)) })) };
+    copies.set(tr.tenant_run_id, copy);
+    return copy;
+  }) }));
+  const controls = plan.controls.filter((x) => copies.has(x.tenant_run_id)).map((x) => {
+    const tr = copies.get(x.tenant_run_id)!;
+    return { ...x, tenant_run_id: tr.tenant_run_id, task: x.task && taskName(tr.tr8, taskSuffix(x.task)), run_id: uuid() };
+  });
+  return { configurations, controls };
 }
 
 // §1.3: the read-only queries. A digest missing from `images` is an error, never a guess.
@@ -510,7 +541,7 @@ class StepRunner {
   private isoBreach?: string;
 
   constructor(readonly plan: MultiPlan, readonly cl: Cluster, readonly stepDir: string, readonly setDir: string, readonly registryFile: string,
-    private d: D, readonly labImage: string, readonly labCommit: string | undefined, readonly emulateImage: string) {
+    private d: D, readonly labImage: string, readonly labCommit: string | undefined, readonly emulateImage: string, readonly fileTag = "") {
     cl.onOutput = (c, out) => {
       if (this.warm && (c.cmd === cl.axCli || c.args[0] === "ate") && /Unimplemented|error unmarshal/i.test(out)) this.warm.fail ??= "an ax or kubectl ate call returned Unimplemented or an unmarshal error (L-030)";
     };
@@ -724,7 +755,7 @@ class StepRunner {
       if (x.code) this.errors.push({ at: iso(), where: cl.where, task: s.task, error: `ax delete task failed: ${grpcCode(x)}; it stays listed for teardown` });
     }
     const log = (await cl.kubectl(["-n", "ax-system", "logs", "deployment/ax-server", `--since-time=${start}`, "--tail=-1"])).stdout;
-    writeFileSync(join(this.setDir, `ax-server-${cfg.cluster}-c${cfg.c}-r${r}.log`), log);
+    writeFileSync(join(this.setDir, `ax-server-${cfg.cluster}-c${cfg.c}-r${r}${this.fileTag}.log`), log);
     const iv = serverIntervals(log, slots.map((s) => s.task));
     for (const s of slots.filter((x) => x.bundle?.case === "F3-A1")) {
       const f = iv[s.task]!;
@@ -881,7 +912,8 @@ class StepRunner {
     for (const tr of cfg.tenant_runs) ts.push(await this.setupTenant(cfg, tr));
     const router = parseJson((await cl.kubectl(["-n", "ate-system", "get", "svc", "atenet-router", "-o", "json"])).stdout)?.spec?.clusterIP;
     if (!router) throw new Stop("BLOCKED", "the atenet-router ClusterIP was not found");
-    const workers = workerTargets(parseJson((await cl.kubectl(["-n", COLLECTOR_NS, "get", "pods,replicasets,statefulsets", "-o", "json"])).stdout));
+    // On GKE the chain is Pod -> ReplicaSet apl-ax-pool-<hash> -> Deployment apl-ax-pool -> WorkerPool apl-ax-pool.
+    const workers = workerTargets(parseJson((await cl.kubectl(["-n", COLLECTOR_NS, "get", "pods,replicasets,deployments,statefulsets", "-o", "json"])).stdout));
     if (!workers.length) throw new Stop("BLOCKED", "no worker Pod of WorkerPool apl-ax-pool was found (§10 refuses an empty list)");
     ts.forEach((t, i) => (t.targets = isoTargets(ts, i, router, workers)));
     for (const t of ts) {
@@ -978,19 +1010,38 @@ class StepRunner {
   }
 }
 
-async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): Promise<number> {
-  const plan: MultiPlan = readJson(planFile);
+async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean, only?: string): Promise<number> {
+  let plan: MultiPlan = readJson(planFile);
   const c = plan.clusters[id];
   if (!c) throw new Error(`the plan has no cluster ${id}`);
   const infra = readInfra(c.infra_run_dir);
   assertIdentity(id, infra);
+  let mine = plan.configurations.filter((cfg) => cfg.cluster === id);
+  let stepRunId = c.step_run_id;
+  if (only !== undefined) {
+    // §4.7: a fresh step run on fresh copies of the named configurations, recorded in plan.json before any call.
+    const kinds = only.split(",") as Kind[];
+    if (kinds.some((k) => !KINDS.includes(k))) throw new Error(`--only takes ${KINDS.join(", ")}, comma-separated`);
+    if (!existsSync(join(d.runsRoot, c.step_run_id, "owned-resources.json"))) throw new Error(`--only re-runs configurations of a step that ran; cluster ${id}'s first step run has not`);
+    const fresh = freshCopies(plan, mine.filter((cfg) => kinds.includes(cfg.kind)), readJsonIf(join(d.runsRoot, "tenant-runs.json")) ?? [], d.uuid);
+    if (!fresh.configurations.length) throw new Error(`the plan has no ${kinds.join(" or ")} configuration on cluster ${id}`);
+    stepRunId = d.uuid();
+    if (!dry) {
+      c.step_runs = [...stepRunsOf(c), { step_run_id: stepRunId, only: kinds, created_at: iso(), ...fresh }];
+      writeFileSync(`${planFile}.tmp`, `${JSON.stringify(plan, null, 2)}\n`);
+      renameSync(`${planFile}.tmp`, planFile);
+    }
+    mine = fresh.configurations;
+    plan = { ...plan, clusters: { ...plan.clusters, [id]: { ...c, step_run_id: stepRunId } }, configurations: mine, controls: fresh.controls };
+  }
+  const fileTag = stepRunId === c.step_run_id ? "" : `-${stepRunId.slice(0, 8)}`;
   const root = dry ? mkdtempSync(join(tmpdir(), "apl-multi-dry-")) : d.runsRoot;
   const registryFile = join(root, "tenant-runs.json");
   if (dry) {
     d.log(`DRY RUN on cluster ${id}: run dirs under ${root}; nothing below is executed except the context check`);
     if (existsSync(join(d.runsRoot, "tenant-runs.json"))) copyFileSync(join(d.runsRoot, "tenant-runs.json"), registryFile);
   }
-  const stepDir = join(root, c.step_run_id), setDir = join(root, "sets", plan.set_id);
+  const stepDir = join(root, stepRunId), setDir = join(root, "sets", plan.set_id);
   if (existsSync(join(stepDir, "owned-resources.json"))) throw new Error("this step run dir exists; a step is never resumed (design 14, crash recovery)");
   mkdirSync(join(stepDir, "axhome"), { recursive: true });
   mkdirSync(setDir, { recursive: true });
@@ -1000,7 +1051,7 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
   chmodSync(join(stepDir, "kubeconfig"), 0o600);
   const l = infra.owned.local ?? {};
   const owned = {
-    run_id: c.step_run_id, short_id: c.step_run_id.slice(0, 8), kube_context: c.context,
+    run_id: stepRunId, short_id: stepRunId.slice(0, 8), kube_context: c.context,
     ...(infra.owned.project ? { project: infra.owned.project } : {}), ...(infra.owned.zone ? { zone: infra.owned.zone } : {}), ...(infra.owned.cluster ? { cluster: infra.owned.cluster } : {}),
     ax: [], substrate: [], kubernetes: [], cluster_scoped: [], scaled: [], scaled_namespaces: [],
     local: { ...(l.bin ? { bin: l.bin } : {}), ...(l.ax_cli ? { ax_cli: l.ax_cli } : {}), ...(l.kubectl ? { kubectl: l.kubectl } : {}) },
@@ -1011,8 +1062,7 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
 
   const cl = new Cluster(id, c.context, stepDir, infra, d, dry);
   const emulate = (() => { try { return imageRef(infra, /\/apl-emulate$/); } catch { return dry ? "<apl-emulate image>" : ""; } })();
-  const runner = new StepRunner(plan, cl, stepDir, setDir, registryFile, d, infra.versions.lab_image ?? "<lab_image>", infra.versions.lab_commit, emulate);
-  const mine = plan.configurations.filter((cfg) => cfg.cluster === id);
+  const runner = new StepRunner(plan, cl, stepDir, setDir, registryFile, d, infra.versions.lab_image ?? "<lab_image>", infra.versions.lab_commit, emulate, fileTag);
   let stop: Stop | undefined;
   try {
     const blocked = await preflight(infra, c.context)
@@ -1040,6 +1090,7 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
     // teardown.sh logs a failed AX or Substrate delete as "failed (continuing)" and goes on to exit 0.
     const status = td.code === 0 && !/UNEXPECTED|failed \(continuing\)/.test(td.stdout) ? "CLEAN" : "INCOMPLETE";
     writeFileSync(join(stepDir, "teardown.json"), JSON.stringify({ exit_code: td.code, status, at: iso() }, null, 2));
+    writeFileSync(join(stepDir, "teardown.log"), `${td.stdout}${td.stderr ? `\n--- stderr ---\n${td.stderr}` : ""}`); // resource names only; stays in the private run dir
   }
   if (stop?.scope === "set") d.log(`[${id}] stop rule 2 stops the set: no further step runs until the context is resolved`);
   for (const cfg of mine) for (const tr of cfg.tenant_runs) for (const b of tr.bundles) {
@@ -1048,8 +1099,9 @@ async function runStepCmd(planFile: string, id: ClusterId, d: D, dry: boolean): 
   writeFileSync(join(stepDir, "stopped.json"), `${JSON.stringify(runner.stopped, null, 2)}\n`);
   const rawFile = join(setDir, "timing-raw.json");
   const raw = readJsonIf(rawFile) ?? { tasks: [], rounds: [], rounds_absent: [] };
-  writeFileSync(rawFile, `${JSON.stringify({ tasks: [...raw.tasks, ...runner.rows], rounds: [...raw.rounds, ...runner.rounds], rounds_absent: [...(raw.rounds_absent ?? []), ...runner.roundsAbsent] }, null, 2)}\n`);
-  writeFileSync(join(setDir, `run-step-${id}.json`), `${JSON.stringify({ errors: runner.errors, events: runner.events, leftovers: runner.leftoverLog, actor_probe: runner.actorProbe, detector: runner.detector }, null, 2)}\n`);
+  const tag = (xs: object[]) => xs.map((x) => ({ ...x, step_run_id: stepRunId })); // §4.7: which step run a round's spread is from
+  writeFileSync(rawFile, `${JSON.stringify({ tasks: [...raw.tasks, ...runner.rows], rounds: [...raw.rounds, ...tag(runner.rounds)], rounds_absent: [...(raw.rounds_absent ?? []), ...tag(runner.roundsAbsent)] }, null, 2)}\n`);
+  writeFileSync(join(setDir, `run-step-${id}${fileTag}.json`), `${JSON.stringify({ errors: runner.errors, events: runner.events, leftovers: runner.leftoverLog, actor_probe: runner.actorProbe, detector: runner.detector }, null, 2)}\n`);
   d.log(`[${id}] ${dry ? "dry run done" : "run-step done"}: ${runner.observed.size} observed, ${runner.stopped.length} in stopped.json${stop ? `; stopped: ${stop.message}` : ""}`);
   return stop ? 1 : 0;
 }
@@ -1075,24 +1127,42 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
   const plan: MultiPlan = readJson(planFile);
   const setDir = join(d.runsRoot, "sets", plan.set_id);
   const table = readJson(join(AX, "cases.ax.json"));
-  const clusterOf = new Map(plan.configurations.flatMap((cfg) => cfg.tenant_runs.flatMap((t) => t.bundles.map((b) => [b.run_id, cfg.cluster] as const))));
   const steps = Object.entries(plan.clusters) as [ClusterId, NonNullable<MultiPlan["clusters"]["a"]>][];
   const commit = Object.fromEntries(steps.map(([k, c]) => [k, readInfra(c.infra_run_dir).versions.lab_commit as string | undefined]));
-  const cleanup = Object.fromEntries(steps.map(([k, c]) => [k, readJsonIf(join(d.runsRoot, c.step_run_id, "teardown.json"))?.status ?? "NOT_RUN"]));
-  for (const [k, c] of steps) {
-    for (const e of (readJsonIf(join(d.runsRoot, c.step_run_id, "stopped.json")) ?? []) as Stopped[]) {
-      if (!existsSync(join(artifactDir(e.run_id), "observations.json"))) writeStopBundle(e, commit[k]);
-    }
+  // §11.2: every step run of each cluster, with the configurations it ran, its stopped.json and its teardown status.
+  const runs = steps.flatMap(([k, c]) => stepRunsOf(c).map((s, i) => ({
+    cluster: k, step_run_id: s.step_run_id, configurations: i === 0 ? plan.configurations.filter((cfg) => cfg.cluster === k) : s.configurations ?? [],
+    stopped: (readJsonIf(join(d.runsRoot, s.step_run_id, "stopped.json")) ?? []) as Stopped[],
+    teardown: (readJsonIf(join(d.runsRoot, s.step_run_id, "teardown.json"))?.status ?? "NOT_RUN") as "CLEAN" | "NOT_RUN" | "INCOMPLETE",
+  })));
+  const WORST = ["CLEAN", "NOT_RUN", "INCOMPLETE"];
+  const cleanup = Object.fromEntries(steps.map(([k]) => [k, runs.filter((r) => r.cluster === k).map((r) => r.teardown).reduce((w, x) => (WORST.indexOf(x) > WORST.indexOf(w) ? x : w), "CLEAN")]));
+  for (const r of runs) {
+    for (const e of r.stopped) if (!existsSync(join(artifactDir(e.run_id), "observations.json"))) writeStopBundle(e, commit[r.cluster]);
   }
-  const bundles = plan.configurations.flatMap((cfg) => cfg.tenant_runs.flatMap((t) => t.bundles));
+  // One bundle per planned bundle: observed over a stop bundle over none, the later step run between equals. The
+  // others are superseded and listed, so an earlier stop stays visible without being counted twice.
+  const keyOf = (cfg: Configuration, tr: TenantRun, b: BundleRef) => [cfg.cluster, cfg.kind, cfg.c, tr.tenant, b.case, b.task ? taskSuffix(b.task) : ""].join("|");
+  const cands = runs.flatMap((run) => run.configurations.flatMap((cfg) => cfg.tenant_runs.flatMap((tr) => tr.bundles.map((b) => {
+    const stop = run.stopped.find((e) => e.run_id === b.run_id);
+    return { key: keyOf(cfg, tr, b), run, tr, b, stop, rank: stop ? 1 : existsSync(join(artifactDir(b.run_id), "observations.json")) ? 2 : 0 };
+  }))));
+  const taken = new Map<string, (typeof cands)[number]>();
+  for (const x of cands) if (x.rank >= (taken.get(x.key)?.rank ?? 0)) taken.set(x.key, x);
+  const superseded = cands.filter((x) => taken.get(x.key) !== x).map((x) => ({
+    run_id: x.b.run_id, case: x.b.case, task: x.b.task, step_run_id: x.run.step_run_id,
+    ...(x.stop ? { execution: x.stop.execution, reason: x.stop.reason } : { execution: x.rank ? "observed" : "no bundle" }),
+    replaced_by: taken.get(x.key)!.b.run_id, replaced_by_step_run_id: taken.get(x.key)!.run.step_run_id,
+  }));
+  writeFileSync(join(setDir, "superseded.json"), `${JSON.stringify(superseded, null, 2)}\n`);
   const reports: Record<string, { status: Status }> = {};
   const disagree: object[] = [];
-  for (const b of bundles) {
+  for (const { b, run } of taken.values()) {
     const dir = artifactDir(b.run_id);
     if (!existsSync(join(dir, "observations.json"))) continue; // the aggregate lists it as NOT_RUN ("planned, no report")
     const ev = spawnSync("python3", [join(AX, "evaluate_ax.py"), b.case, dir], { encoding: "utf8" });
     const verdict = parseJson(ev.stdout.trim().split("\n").pop() ?? "");
-    const rep = await generateReport(b.run_id, { expected: table[b.case].expected, limitations: LIMITATIONS, cleanup_status: cleanup[clusterOf.get(b.run_id)!] });
+    const rep = await generateReport(b.run_id, { expected: table[b.case].expected, limitations: LIMITATIONS, cleanup_status: cleanup[run.cluster] });
     reports[b.run_id] = { status: rep.status };
     if (!verdict || !agrees(verdict, rep.status)) disagree.push({ run_id: b.run_id, case: b.case, evaluate: verdict?.status ?? "no verdict", report: rep.status });
   }
@@ -1105,8 +1175,20 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
   writeFileSync(join(setDir, "exports.json"), `${JSON.stringify(exports, null, 2)}\n`);
   // Step 2 with A's half reused: A's row is step 1's c = 1 configuration on A and its reports (§4.6).
   const reused = plan.a && "reused" in plan.a ? plan.a.reused : undefined;
-  const raw = readJsonIf(join(setDir, "timing-raw.json")) ?? { tasks: [], rounds: [] };
-  let aggPlan: Plan = plan as unknown as Plan, aggRaw: TimingRaw = raw;
+  // §11.4: the plan with each planned bundle replaced by the one taken; a configuration's rounds only from the step
+  // runs its taken bundles came from (a round with no step_run_id is the first step run's).
+  const effective: MultiPlan = { ...plan, configurations: plan.configurations.map((cfg) => ({ ...cfg, tenant_runs: cfg.tenant_runs.map((tr) => {
+    const ws = tr.bundles.map((b) => taken.get(keyOf(cfg, tr, b))!);
+    const bySuffix = new Map(ws.flatMap((w) => (w.b.task ? [[taskSuffix(w.b.task), w.b.task] as const] : [])));
+    return { ...tr, tenant_run_id: [...new Set(ws.map((w) => w.tr.tenant_run_id))].join("+"), tasks: tr.tasks.map((t) => bySuffix.get(taskSuffix(t)) ?? t), bundles: ws.map((w) => w.b) };
+  }) })) };
+  const fromTaken = (r: { cluster: string; c: number; step_run_id?: string }) => {
+    const cfg = plan.configurations.find((x) => x.kind === "configuration" && x.cluster === r.cluster && x.c === r.c);
+    return !cfg || cfg.tenant_runs.some((tr) => tr.bundles.some((b) => taken.get(keyOf(cfg, tr, b))!.run.step_run_id === (r.step_run_id ?? plan.clusters[r.cluster as ClusterId]?.step_run_id)));
+  };
+  const setRaw = readJsonIf(join(setDir, "timing-raw.json")) ?? { tasks: [], rounds: [] };
+  const raw = { ...setRaw, rounds: setRaw.rounds.filter(fromTaken), rounds_absent: (setRaw.rounds_absent ?? []).filter(fromTaken) };
+  let aggPlan: Plan = effective as unknown as Plan, aggRaw: TimingRaw = raw;
   if (reused) {
     const one: MultiPlan = readJson(join(d.runsRoot, "sets", reused.set_id, "plan.json"));
     const cfg = one.configurations.find((x) => x.kind === "configuration" && x.cluster === "a" && x.c === 1);
@@ -1116,12 +1198,12 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
       if (r) reports[b.run_id] = { status: r.status };
     }
     const oneRaw = readJsonIf(join(d.runsRoot, "sets", reused.set_id, "timing-raw.json")) ?? { tasks: [], rounds: [] };
-    aggPlan = { ...plan, configurations: [cfg, ...plan.configurations] } as unknown as Plan;
+    aggPlan = { ...effective, configurations: [cfg, ...effective.configurations] } as unknown as Plan;
     const aC1 = (x: any) => x.cluster === "a" && x.c === 1;
     aggRaw = { tasks: [...oneRaw.tasks.filter(aC1), ...raw.tasks], rounds: [...oneRaw.rounds.filter(aC1), ...raw.rounds], rounds_absent: [...(oneRaw.rounds_absent ?? []).filter(aC1), ...(raw.rounds_absent ?? [])] };
   }
   const agg = writeAggregate(aggPlan, reports, aggRaw, { outRoot: d.evidenceRoot });
-  d.log(JSON.stringify({ reports: Object.keys(reports).length, exported: exports.filter((x) => x.status === "EXPORTED").length,
+  d.log(JSON.stringify({ reports: Object.keys(reports).length, superseded, exported: exports.filter((x) => x.status === "EXPORTED").length,
     quarantined: exports.filter((x) => x.status !== "EXPORTED").map((x) => x.run_id), aggregate: agg.status, output: agg.output }));
   return agg.status === "EXPORTED" ? 0 : 1;
 }
@@ -1132,7 +1214,7 @@ export async function main(argv: string[], deps: Deps): Promise<number> {
   const { positionals: [cmd, which], values: v } = parseArgs({
     args: argv, allowPositionals: true,
     options: { step: { type: "string" }, "set-id": { type: "string" }, "infra-a": { type: "string" }, "infra-b": { type: "string" }, "step1-set-id": { type: "string" },
-      infra: { type: "string" }, resize: { type: "string" }, plan: { type: "string" }, cluster: { type: "string" }, "dry-run": { type: "boolean" } },
+      infra: { type: "string" }, resize: { type: "string" }, plan: { type: "string" }, cluster: { type: "string" }, only: { type: "string" }, "dry-run": { type: "boolean" } },
   });
   const d: D = { sleep: (ms) => new Promise((r) => setTimeout(r, ms)), log: (s) => console.log(s), runsRoot: join(ROOT, "private-runs", "ax"),
     evidenceRoot: join(ROOT, "docs", "evidence"), uuid: randomUUID, portFree, ...deps };
@@ -1143,7 +1225,7 @@ export async function main(argv: string[], deps: Deps): Promise<number> {
     if (cmd === "plan") return await planCmd(v, d);
     if ((cmd === "infra" || cmd === "run-step") && id !== "a" && id !== "b") throw new Error("the cluster must be a or b");
     if (cmd === "infra" && v.infra) return await infraCmd(id, v.infra, v, d, Boolean(v["dry-run"]));
-    if (cmd === "run-step" && v.plan) return await runStepCmd(v.plan, id, d, Boolean(v["dry-run"]));
+    if (cmd === "run-step" && v.plan) return await runStepCmd(v.plan, id, d, Boolean(v["dry-run"]), v.only);
     if (cmd === "report" && v.plan) return await reportCmd(v.plan, d);
   } catch (e) {
     d.log(`multi.ts ${cmd}: ${e instanceof Stop ? "STOP: " : ""}${(e as Error).message}`);
