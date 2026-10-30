@@ -2,7 +2,7 @@ Status: accepted at EGM cap after round 5 (owner, 2026-10-29); executed 2026-10-
 
 # Multi-tenant and two-cluster test design (AX lane, steps 1 and 2)
 
-This is a test design, not a result. Nothing in it has run. It extends the optional AX lane (`profiles/ax/`) with two owner-approved steps, many tenants on cluster A and the same case on clusters A and B, and records the answer to the third: its portability question is answered DOCUMENTED from a read of the pinned protos (9.1), and its eviction test moves to a follow-up design (9.2). Every PASS or FAIL planned here comes from an independent collector and the supplied evaluator, never from AX task phase (L-006).
+This is the test design as accepted; it was executed on 2026-10-30 and its results are in [`profiles/ax/RESULTS.md`](../profiles/ax/RESULTS.md) run 4 (claims C-80 to C-90). It extends the optional AX lane (`profiles/ax/`) with two owner-approved steps, many tenants on cluster A and the same case on clusters A and B, and records the answer to the third: its portability question is answered DOCUMENTED from a read of the pinned protos (9.1), and its eviction test moves to a follow-up design (9.2). Every PASS or FAIL planned here comes from an independent collector and the supplied evaluator, never from AX task phase (L-006).
 
 This file says what is tested, what is asserted and what may be claimed. How it is built, run, parsed and torn down is in the build plan, [`MULTI_CLUSTER_BUILD.md`](MULTI_CLUSTER_BUILD.md) ("build §n" below), which is verified by its phase gates and dry run, not by document review.
 

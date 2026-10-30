@@ -6,7 +6,7 @@ This ledger lists every outcome claim that the README, the article or a recordin
 
 ## Evidence sets
 
-Five sets of runs back this ledger. Each row says which one it uses. All dates are 2026-10-28, UTC.
+Eight sets of runs back this ledger. Each row says which one it uses. Dates are UTC; sets H to X and BL ran on 2026-10-28 or 2026-10-29 as their rows state, and XM on 2026-10-30.
 
 | Set | What ran | Identity | Where the evidence is |
 |---|---|---|---|
