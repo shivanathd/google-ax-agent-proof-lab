@@ -1155,7 +1155,7 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
     replaced_by: taken.get(x.key)!.b.run_id, replaced_by_step_run_id: taken.get(x.key)!.run.step_run_id,
   }));
   writeFileSync(join(setDir, "superseded.json"), `${JSON.stringify(superseded, null, 2)}\n`);
-  const reports: Record<string, { status: Status }> = {};
+  const reports: Record<string, { status: Status; reason: string | null }> = {};
   const disagree: object[] = [];
   for (const { b, run } of taken.values()) {
     const dir = artifactDir(b.run_id);
@@ -1163,7 +1163,7 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
     const ev = spawnSync("python3", [join(AX, "evaluate_ax.py"), b.case, dir], { encoding: "utf8" });
     const verdict = parseJson(ev.stdout.trim().split("\n").pop() ?? "");
     const rep = await generateReport(b.run_id, { expected: table[b.case].expected, limitations: LIMITATIONS, cleanup_status: cleanup[run.cluster] });
-    reports[b.run_id] = { status: rep.status };
+    reports[b.run_id] = { status: rep.status, reason: rep.reason ?? null };
     if (!verdict || !agrees(verdict, rep.status)) disagree.push({ run_id: b.run_id, case: b.case, evaluate: verdict?.status ?? "no verdict", report: rep.status });
   }
   if (disagree.length) {
@@ -1195,7 +1195,7 @@ async function reportCmd(planFile: string, d: D): Promise<number> {
     if (!cfg) throw new Error("step 1's set has no c = 1 configuration on A to reuse");
     for (const b of cfg.tenant_runs.flatMap((t) => t.bundles)) {
       const r = readJsonIf(join(artifactDir(b.run_id), "report.json"));
-      if (r) reports[b.run_id] = { status: r.status };
+      if (r) reports[b.run_id] = { status: r.status, reason: r.reason ?? null };
     }
     const oneRaw = readJsonIf(join(d.runsRoot, "sets", reused.set_id, "timing-raw.json")) ?? { tasks: [], rounds: [] };
     aggPlan = { ...effective, configurations: [cfg, ...effective.configurations] } as unknown as Plan;

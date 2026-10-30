@@ -23,13 +23,13 @@ export interface TimingRaw {
 // Task `00` of a tenant run is its warm-up (build §7): listed, never counted.
 const isWarmup = (task: string | null) => task?.endsWith("-00") ?? false;
 
-export function rollUp(plan: Plan, reports: Record<string, { status: Status } | undefined>) {
+export function rollUp(plan: Plan, reports: Record<string, { status: Status; reason?: string | null } | undefined>) {
   const rows = plan.configurations.flatMap((cfg, configuration) => cfg.tenant_runs.flatMap((tr) => tr.bundles.map((b) => {
     const r = reports[b.run_id];
     return {
       cluster: cfg.cluster, configuration, c: cfg.c, kind: tr.kind, tenant: tr.tenant, tenant_run_id: tr.tenant_run_id,
-      run_id: b.run_id, case: b.case, task: b.task, warmup: isWarmup(b.task),
-      status: r?.status ?? ("NOT_RUN" as Status), reason: r ? null : "planned, no report",
+      run_id: b.run_id, case: b.case, task: b.task, warmup: isWarmup(b.task), reported: Boolean(r),
+      status: r?.status ?? ("NOT_RUN" as Status), reason: !r ? "planned, no report" : r.status === "PASS" ? null : (r.reason ?? null),
     };
   })));
   const counted = rows.filter((r) => !r.warmup);
@@ -42,7 +42,7 @@ export function rollUp(plan: Plan, reports: Record<string, { status: Status } | 
   }));
   const clusters = [...new Set(plan.configurations.map((c) => c.cluster))].sort().map((cluster) => ({
     cluster, status: aggregate(configurations.filter((c) => c.cluster === cluster).map((c) => c.status)),
-    reports: counted.filter((r) => r.cluster === cluster && r.reason === null).length, planned: counted.filter((r) => r.cluster === cluster).length,
+    reports: counted.filter((r) => r.cluster === cluster && r.reported).length, planned: counted.filter((r) => r.cluster === cluster).length,
   }));
   const overall = aggregate(clusters.map((c) => c.status));
   const line = `all clusters: ${overall} (${clusters.map((c) => `${c.cluster.toUpperCase()} ${c.status}, ${c.reports} of ${c.planned} planned reports`).join("; ")})`;
@@ -55,7 +55,7 @@ export function aggregateMarkdown(a: ReturnType<typeof rollUp>) {
     "| Cluster | c | Tenant | Kind | Status |", "|---|---|---|---|---|",
     ...a.tenants.map((t) => `| ${t.cluster} | ${t.c} | ${t.tenant} | ${t.kind} | ${t.status} |`), "",
     "| Run | Case | Task | Cluster | Tenant | Status | Reason |", "|---|---|---|---|---|---|---|",
-    ...a.rows.map((r) => `| ${r.run_id} | ${r.case} | ${r.task ?? "—"}${r.warmup ? " (warm-up, not counted)" : ""} | ${r.cluster} | ${r.tenant} | ${r.status} | ${r.reason ?? ""} |`), "",
+    ...a.rows.map((r) => `| ${r.run_id} | ${r.case} | ${r.task ?? "-"}${r.warmup ? " (warm-up, not counted)" : ""} | ${r.cluster} | ${r.tenant} | ${r.status} | ${r.reason ?? ""} |`), "",
   ].join("\n");
 }
 
@@ -100,7 +100,7 @@ export interface AggregateResult { status: "EXPORTED" | "QUARANTINED" | "REJECTE
 
 // Writes aggregate.json, aggregate.md, timing.json and checksums.sha256 to docs/evidence/<set_id>/. Each file is
 // scanned first with SECRET_RULES, holdsAddress() and the private-terms list, and a finding quarantines the set, as exportRun() does.
-export function writeAggregate(plan: Plan, reports: Record<string, { status: Status } | undefined>, raw: TimingRaw,
+export function writeAggregate(plan: Plan, reports: Record<string, { status: Status; reason?: string | null } | undefined>, raw: TimingRaw,
   o: { termsPath?: string; outRoot?: string; quarantineRoot?: string } = {}): AggregateResult {
   const rolled = rollUp(plan, reports);
   const files: Record<string, string> = {

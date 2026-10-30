@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { rollUp, timingSummary, writeAggregate, type Plan } from "../../src/reports/aggregate.ts";
+import { aggregateMarkdown, rollUp, timingSummary, writeAggregate, type Plan } from "../../src/reports/aggregate.ts";
 import { verifyChecksums, type Status } from "../../src/reports/report.ts";
 
 // Two clusters, one tenant run each: a warm-up F3-A1, two counted F3-A1 and one MT-W01.
@@ -40,6 +40,15 @@ describe("set roll-up (build §11.4)", () => {
     expect(r.clusters.map((c) => c.status)).toEqual(["BLOCKED", "UNKNOWN"]);
     expect(r.overall).toBe("UNKNOWN");
     expect(rollUp(plan(), { ...allPass(), "a-01": { status: "BLOCKED" }, "a-02": { status: "UNKNOWN" } }).tenants[0]!.status).toBe("UNKNOWN");
+  });
+
+  it("a non-PASS report carries its own reason, is still counted as a report, and the markdown is ASCII", () => {
+    const r = rollUp(plan(), { ...allPass(), "b-01": { status: "BLOCKED", reason: "egress policy not attached" } });
+    expect(r.rows.find((x) => x.run_id === "b-01")).toMatchObject({ status: "BLOCKED", reason: "egress policy not attached" });
+    expect(r.line).toBe("all clusters: BLOCKED (A PASS, 3 of 3 planned reports; B BLOCKED, 3 of 3 planned reports)");
+    const md = aggregateMarkdown(r);
+    expect(md).toContain("| BLOCKED | egress policy not attached |");
+    expect(md).not.toMatch(/[^\x00-\x7F]/);
   });
 
   it("all PASS gives PASS with every cluster named, and the warm-up is listed but not counted", () => {
