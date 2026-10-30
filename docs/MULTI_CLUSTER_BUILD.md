@@ -14,13 +14,13 @@ It makes every cluster call for these runs (design rule 9). It reuses `doctor()`
 |---|---|---|---|
 | `plan` | set ID, the two infrastructure run dirs, the tenant-run registry | `private-runs/ax/sets/<set_id>/plan.json`: clusters, configurations, tenant runs by kind (design 6.1), evidence run IDs, tasks per round, controls | none at step 1; at step 2 the read-only queries of §1.3 on A (§4.6) |
 | `infra` | one cluster's infrastructure run dir | §4.1 | `kubectl apply`, `scale`, `patch`, `delete`; `gcloud container clusters resize`; the read-only queries of §1.3 |
-| `run-step` | `plan.json`, that cluster's infrastructure run dir | the step run dir, tenant run dirs, rendered manifests, `artifacts/runs/<run_id>/` per bundle with its `checksums.sha256`, `timing-raw.json`, log extracts, `stopped.json` | `doctor()`, `teardown.sh --snapshot`, §4.2 to §4.5, then `teardown.sh <step-run-dir>` |
-| `report` | the bundles, `stopped.json` | stop bundles (§11.3); per bundle `report.json`, `report.md` and export; then the aggregate (§11.4) | `evaluate_ax.py`, `generateReport()`, `agrees()`, `exportRun()`, `aggregate.ts` |
+| `run-step` | `plan.json`, that cluster's infrastructure run dir; `--only` names the configuration kinds to re-run (§4.7) | the step run dir, tenant run dirs, rendered manifests, `artifacts/runs/<run_id>/` per bundle with its `checksums.sha256`, `timing-raw.json`, log extracts, `stopped.json`, `teardown.json` and `teardown.log`; with `--only`, a `step_runs` entry in `plan.json` | `doctor()`, `teardown.sh --snapshot`, §4.2 to §4.5, then `teardown.sh <step-run-dir>` |
+| `report` | the bundles, `stopped.json` and `teardown.json` of every step run of each cluster | stop bundles (§11.3); per bundle `report.json`, `report.md` and export; then the aggregate (§11.4) | `evaluate_ax.py`, `generateReport()`, `agrees()`, `exportRun()`, `aggregate.ts` |
 
 ```
 multi.ts plan      --step 1|2 --set-id <uuid> --infra-a <dir> [--infra-b <dir> --step1-set-id <uuid>]   # step 2 names step 1's set (§4.6)
 multi.ts infra     a|b --infra <dir> [--resize 0|2] [--dry-run]                                         # --resize: B's node pool only
-multi.ts run-step  --plan <plan.json> --cluster a|b [--dry-run]
+multi.ts run-step  --plan <plan.json> --cluster a|b [--only probe|configuration|mt-iso[,…]] [--dry-run]   # --only: §4.7
 multi.ts report    --plan <plan.json>                                                                   # plan and report refuse --dry-run
 orchestrate.ts manifests --tenant --dir <tenant-run-dir> --set-id <uuid> --cluster a|b --tenant-role t1|t2|t3|t4
 orchestrate.ts manifests --dir <tenant-run-dir> --task <name> --mode W01-H|isolation|term --image <ref>
@@ -124,7 +124,9 @@ Each phase ends when its gate and the existing `npm test` pass. No cluster call 
    - the plan: bundles per tenant-run kind (design 6.1), no MT-W01 for the probe run, and a `<tr8>` equal to the collector's or to a registered one refused;
    - the context guard: another cluster's kubeconfig, port or `gcloud` cluster refused, and `KUBECONFIG` set in every subprocess environment;
    - the setup order of §4.2, each object recorded before its create; a leftover actor recorded, deleted and marked `removed_at` after its round, actor before template;
-   - each row of §4.4 producing its listed bundle; `stopped.json` turned into the stop bundles of §11.3, checksummed;
+   - each row of §4.4 producing its listed bundle; `stopped.json` turned into the stop bundles of §11.3, checksummed; teardown's output written to `teardown.log`;
+   - MT-ISO's worker targets found through a ReplicaSet and a Deployment, as on GKE;
+   - `--only` running only the named kinds in a fresh step run dir, `plan.json` recording both step runs, `report` taking a re-run's observed bundle over the earlier stop bundle and listing that stop, and the cleanup status the worst of the step runs;
    - a dry run that prints every planned call, makes none, and asserts the resolved context per cluster; `npm run validate:package`.
 6. **Lab image.** Build from a clean tree (`git status --porcelain` empty) at the commit that passed gates 1 to 5: `docker buildx build --platform linux/amd64 -f profiles/ax/runner/Dockerfile.lab --build-arg APL_CANDIDATE_REVISION=$(git rev-parse HEAD) .`. Push it to the private repo (the push needs owner approval), resolve the digest, and record `lab_image` as `<registry>/apl-lab@sha256:…` in both clusters' `versions.json`. Gate: `docker run --rm --entrypoint printenv <lab_image> APL_CANDIDATE_REVISION` prints that commit; the existing image test (linux/amd64, runner at `/usr/local/bin/ax-task-runner`) passes on it; the rendered tenant and collector manifests carry that digest. During the run, `run-step` checks that the first bundle's `candidate_revision` equals the commit and stops if it does not.
 
@@ -199,6 +201,15 @@ One probe tenant run has `apl-<tr8>-p1` in round 1 and `apl-<tr8>-p2` in round 2
 - If either check fails, the plan lists the differing fields (`"a": {"rerun": {"differences": [...]}}`), and A is planned first exactly as B: one tenant, c = 1, a warm-up round and 30 counted tasks. If A's doctor is BLOCKED, the versions cannot be re-read and `plan --step 2` refuses rather than guess.
 - `ax-multi.test.ts` (phase 5) covers both outcomes of the plan.
 
+### 4.7 Re-running configurations (`run-step --only`)
+
+- `multi.ts run-step --plan <plan.json> --cluster a|b --only <kind>[,<kind>]`, with kinds `probe`, `configuration` and `mt-iso`, re-runs only that cluster's configurations of those kinds. It needs the plan's first step run on that cluster to have run (its step run dir exists). Everything else is as in a first step run: doctor, the context guard, recording before each create, the stop rules, the tenant-run registry and the closing `teardown.sh`.
+- It runs in a fresh step run dir with a new `step_run_id`, on fresh copies of the selected configurations: new tenant run IDs (each `<tr8>` refused if it is the collector's, a registered one or one already in the plan), task names and bundle run IDs. No tenant dir, namespace, registry entry, `artifacts/runs/<run_id>/` or control bundle of an earlier step run is reused. The controls of the copied tenant runs (the marker control of a re-run configuration, the planted egress control of a re-run MT-ISO) are copied with new run IDs too.
+- Before its first cluster call it appends `{"step_run_id", "only", "created_at", "configurations", "controls"}` to `clusters.<cluster>.step_runs` in `plan.json`, written to a temporary file and renamed over it. The list starts with `{"step_run_id": <the first>}`, so `step_run_id` keeps naming the first step run and every step run stays recorded. A dry run writes nothing to `plan.json`.
+- Each round in `timing-raw.json` carries the `step_run_id` it ran in; a round without one is from the first step run.
+- Its `run-step-<cluster>.json` and ax-server logs (§12) end in `-<first 8 characters of its step_run_id>` before the extension, so it overwrites nothing an earlier step run wrote to the set dir; every other set-dir file it writes is named by its fresh tasks or tenant runs.
+- To re-run only MT-ISO on A: `node --import tsx profiles/ax/multi.ts run-step --plan private-runs/ax/sets/<set_id>/plan.json --cluster a --only mt-iso`, then `multi.ts report --plan …` as usual (§11.2).
+
 ## 5. Templates and placeholders
 
 `render()` (`index.ts`) replaces `${APL_*}` placeholders and refuses an unknown one. The templates use only these:
@@ -262,7 +273,9 @@ On A, `infra a` applies only its Pod and NetworkPolicy documents. Both clusters 
   - `owned-resources.json`, listing every tenant namespace with its objects, the atespace, the egress policy (for the record), AX Task and Workspace, leftover actors and templates, and `collector-env-tenants`. It copies `project`, `zone` or `cluster`, and `local` (`bin`, `ax_cli`, `kubectl`) from the cluster's infrastructure run dir, because `teardown.sh` reads `local.bin` and `local.ax_cli` from the run dir it is given;
   - `kubeconfig` (mode 0600, a copy of the infrastructure run dir's, whose current context the guard checks) and `axhome/`;
   - `pre-snapshot.json`, from `teardown.sh --snapshot` before the step's first apply;
-  - `stopped.json`, and `teardown.json` (teardown's exit code and `CLEAN` or `INCOMPLETE`, the cleanup status `report` passes on). It is `INCOMPLETE` if the script exits nonzero or its output has an `UNEXPECTED` diff line or a "failed (continuing)" delete.
+  - `stopped.json`, and `teardown.json` (teardown's exit code and `CLEAN` or `INCOMPLETE`, the cleanup status `report` passes on). It is `INCOMPLETE` if the script exits nonzero or its output has an `UNEXPECTED` diff line or a "failed (continuing)" delete;
+  - `teardown.log`, the script's full stdout and then its stderr, so an `INCOMPLETE` can be traced to its line. It holds resource names only and stays in the private step run dir; nothing exports it.
+- **Step runs of a cluster.** `plan.json` names the first step run of each cluster in `clusters.<cluster>.step_run_id`; each `run-step --only` adds one to `clusters.<cluster>.step_runs` (§4.7). `report` reads them all (§11.2).
 - **Set dir** `private-runs/ax/sets/<set_id>/` holds `plan.json`; `versions-<cluster>.json`, the versions each step ran on (§4.6); the tenant run dirs (`secrets.json`, `emulate-seed.json`, rendered manifests), which own nothing; `timing-raw.json`; the ax-server and gateway log extracts; the targets, markers and disclosure files; and the controls' bundles.
 - New run dirs leave `substrate_install` absent: the schema requires it to carry a `previous` install, and made-up values there would arm `--restore-substrate-v05`.
 
@@ -337,7 +350,7 @@ These blocks are vendored, dedented and otherwise unchanged, in `profiles/ax/tes
 | each other MT-ISO tenant's Emulate | ClusterIP and pod IP, 8080 and 8081, Host `emulate.<ns>.svc.cluster.local` | `/_apl/missing` |
 | each other MT-ISO tenant's Floci | ClusterIP and pod IP, 4566, Host `floci.<ns>.svc.cluster.local` | an object in a bucket that does not exist |
 | the router | the `atenet-router` ClusterIP, 443, TLS, Host `atenet-router.ate-system.svc`, header `ate-target-actor: apl-ax-<target tr8>/apl-<target tr8>-tgt` | `/apl/missing` |
-| the workers | each Pod in `apl-ax-6882d106` whose owner chain reaches WorkerPool `apl-ax-pool` (the runner refuses an empty list): its pod IP on every `containerPort` its spec declares, plus 80, the lab runner's port (`EXPOSE 80` in `Dockerfile.lab`), raw TCP | none |
+| the workers | each Pod in `apl-ax-6882d106` whose owner chain reaches WorkerPool `apl-ax-pool`, read with `get pods,replicasets,deployments,statefulsets` because on GKE the chain is Pod → ReplicaSet `apl-ax-pool-<hash>` → Deployment `apl-ax-pool` → WorkerPool (the runner refuses an empty list): its pod IP on every `containerPort` its spec declares, plus 80, the lab runner's port (`EXPOSE 80` in `Dockerfile.lab`), raw TCP | none |
 | the allowed control | the tenant's own Emulate ClusterIP, 8080 | `/_apl/missing` |
 | run 3's probes | as in `isolation()` in `case.ts`; by-name ones fail DNS and stay in the self-report | as in `case.ts` |
 
@@ -365,11 +378,17 @@ The fixed limitation "Grants live in the worker-written ledger; …" becomes, fo
 
 ### 11.2 Per bundle
 
-For each planned bundle, `multi.ts report`:
+`report` reads every step run of each cluster (`step_runs`, or `step_run_id` alone when there is no list): its `stopped.json` and `teardown.json`, and the configurations it ran (the plan's own for the first, the copies in its entry for a `--only` one).
+
+- **One bundle per planned bundle.** A planned bundle is named by cluster, configuration kind and c, tenant role, case and task suffix (`07`, `iso`; none for MT-W01). Each step run that ran its configuration has one bundle for it. The report takes an observed bundle (copied to `artifacts/runs/` and not in its step run's `stopped.json`) over a stop bundle, and a stop bundle over none; between two of the same rank, the later step run's. So a bundle a `--only` re-run observes replaces the earlier step run's stop bundle and is counted once.
+- **History.** Every bundle not taken is superseded: it is not evaluated, reported or exported. Each is listed with its step run, its execution and reason (or "observed"), and the run ID that replaced it, in the set dir's `superseded.json` and under `superseded` in the line `report` prints, so an earlier stop stays visible.
+- **Cleanup.** A cluster's cleanup status is the worst of its step runs' `teardown.json`: `INCOMPLETE` over `NOT_RUN` (no `teardown.json`) over `CLEAN`.
+
+For each planned bundle so chosen, `multi.ts report`:
 
 1. writes its stop bundle if `stopped.json` lists it (§11.3);
 2. runs `evaluate_ax.py <case> <dir>`;
-3. calls `generateReport(run_id, { expected, limitations, cleanup_status })`, with the case's expectations from `cases.ax.json` and the cleanup status from teardown;
+3. calls `generateReport(run_id, { expected, limitations, cleanup_status })`, with the case's expectations from `cases.ax.json` and its cluster's cleanup status;
 4. applies `agrees()`;
 5. calls `exportRun(run_id, { outRoot: join(ROOT, "docs/evidence") })`. Besides `SECRET_RULES` and the private terms, its scan quarantines any IP address other than 127.0.0.1 (`holdsAddress()` in `export.ts`, the backstop behind `redactAddresses()`; loopback is where the local profile's emulators listen).
 
@@ -400,7 +419,7 @@ Each `stopped.json` entry becomes a C4 bundle, checksummed when written:
 
 ### 11.4 `src/reports/aggregate.ts`
 
-- **Input:** `plan.json`, every planned bundle's `report.json`, and `timing-raw.json`.
+- **Input:** `plan.json` with each planned bundle replaced by the one §11.2 takes, every taken bundle's `report.json`, and `timing-raw.json`. A tenant row's `tenant_run_id` names every tenant run its bundles came from, joined by `+`. Timing rows of superseded tasks drop out by task name, and a configuration's rounds count only from the step runs its taken bundles came from.
 - **Rows:** one per planned bundle. A planned bundle with no report is NOT_RUN ("planned, no report"), never dropped. Tenant, configuration, cluster and overall rows use `aggregate()` from `report.ts`, and the overall line names each cluster (design 8.4).
 - **Output:** `docs/evidence/<set_id>/aggregate.json`, `aggregate.md`, `timing.json` and `checksums.sha256`. Before writing, each is scanned with `SECRET_RULES`, `holdsAddress()` and the private-terms list, and quarantined on a finding, as `exportRun()` does. Each cluster in the overall line shows the reports present and the planned count ("A PASS, 30 of 31 planned reports").
 - **Gate:** one FAIL among PASS rows gives FAIL; a missing planned row gives NOT_RUN; UNKNOWN outranks BLOCKED; all PASS gives PASS with every cluster named.
@@ -422,7 +441,7 @@ Each `stopped.json` entry becomes a C4 bundle, checksummed when written:
   3. Kubernetes objects by exact name (`collector-env-tenants` included), then the tenant namespaces;
   4. the diff against the step's `pre-snapshot.json`.
 
-  Egress policies go with their actor.
+  Egress policies go with their actor. Its stdout and stderr go to `teardown.log` in the step run dir, its status to `teardown.json` (§8.1). A `run-step --only` tears down its own step run dir the same way.
 - **After the last step, B first, run by the operator.** `teardown.sh <B's infrastructure run dir>` runs from the operator's terminal, because the script keeps gcloud's interactive delete confirmations. In order:
   1. the objects B's run dir lists;
   2. B's four recorded bindings, then its bucket;
@@ -440,7 +459,7 @@ One compact example per file. Values are illustrative, and private values are pl
 
 | File | Where | Example |
 |---|---|---|
-| `plan.json` | set dir | `{"set_id": "<uuid>", "step": 1, "clusters": {"a": {"infra_run_dir": "41dc91c3-…", "context": "<context-a>", "step_run_id": "<uuid>"}}, "configurations": [{"cluster": "a", "c": 2, "rounds": 15, "tenant_runs": [{"kind": "configuration", "tenant": "t1", "tenant_run_id": "<uuid>", "tr8": "1a2b3c4d", "tasks": ["apl-1a2b3c4d-00", "apl-1a2b3c4d-01"], "bundles": [{"run_id": "<uuid>", "case": "F3-A1", "task": "apl-1a2b3c4d-01"}, {"run_id": "<uuid>", "case": "MT-W01", "task": null}]}]}]}` |
+| `plan.json` | set dir | `{"set_id": "<uuid>", "step": 1, "clusters": {"a": {"infra_run_dir": "41dc91c3-…", "context": "<context-a>", "step_run_id": "<uuid>", "step_runs": [{"step_run_id": "<uuid>"}, {"step_run_id": "<uuid>", "only": ["mt-iso"], "created_at": "<iso>", "configurations": [<fresh copies>], "controls": [<fresh copies>]}]}}, "configurations": [{"cluster": "a", "c": 2, "rounds": 15, "tenant_runs": [{"kind": "configuration", "tenant": "t1", "tenant_run_id": "<uuid>", "tr8": "1a2b3c4d", "tasks": ["apl-1a2b3c4d-00", "apl-1a2b3c4d-01"], "bundles": [{"run_id": "<uuid>", "case": "F3-A1", "task": "apl-1a2b3c4d-01"}, {"run_id": "<uuid>", "case": "MT-W01", "task": null}]}]}]}` |
 | `versions.json` | infrastructure run dir | `{"cluster": "<cluster-a>", "gke": {"master": "1.36.4-gke.<n>", "nodes": "1.36.4-gke.<n>"}, "kubectl_client": "v1.36.6", "substrate": {"version": "v0.6.0", "commit": "d3f2363…", "kubectl_ate": "v0.6.0 build"}, "ax": {"commit": "4b7bf6f…", "ax_server": "<registry>/ax-server@sha256:…", "client_pins_substrate": "v0.6.0"}, "lab_image": "<registry>/apl-lab@sha256:…"}` |
 | `tenant-runs.json` | `private-runs/ax/` | `[{"tenant_run_id": "<uuid>", "tr8": "1a2b3c4d", "kind": "configuration", "cluster": "a", "set_id": "<uuid>", "created_at": "<iso>", "run_ids": ["<uuid>"], "tasks": ["apl-1a2b3c4d-01"], "token_sha256": ["<hex>"]}]` |
 | `--foreign-markers-file` | set dir | `{"tenant_run_id": "<uuid>", "foreign": [<every other tenant-runs.json entry>]}` |
@@ -449,7 +468,7 @@ One compact example per file. Values are illustrative, and private values are pl
 | `--egress-log-file` | set dir, `egress-<task>.json` per probing task | `{"window": {"from": "<iso>", "to": "<iso>", "margin_s": 10, "events": {"resume_issued": "<iso>", "result_returned": "<iso>"}}, "source": "kubectl logs -l app=atenet-egress -c envoy --tail=-1 --prefix --max-log-requests=<n>, ate-system", "pods_before": [{"name": "<pod>", "restarts": 0}], "pods_after": [{"name": "<pod>", "restarts": 0}], "exit_code": 0, "line_count": 42, "lines": ["<access-log line, verbatim>"]}` |
 | `--run-facts` | set dir | `{"step": 1, "concurrency": 2, "tasks_planned": 15, "tasks_timed": 15}`; an MT-ISO prober's also has `"target_ran": true` |
 | `stopped.json` | step run dir | `[{"run_id": "<uuid>", "case": "F3-A1", "execution": "NOT_RUN", "reason": "stop rule 4: ResourceExhausted at c = 4, round 3", "at": "<iso>"}]` |
-| `timing-raw.json` | set dir | `{"tasks": [{"run_id": "<uuid>", "cluster": "a", "c": 2, "round": 3, "task": "apl-1a2b3c4d-03", "server_resume_to_running_ms": 2100, "command_duration_ms": 8400, "egress_attach_ms": 9000, "submit_to_result_ms": 19700, "empty_exec_ms": 600, "worker": "<worker-pod>", "unobserved": {}}], "rounds": [{"cluster": "a", "c": 2, "round": 3, "resume_spread_ms": 180, "leftover_actors": 0}]}` |
+| `timing-raw.json` | set dir | `{"tasks": [{"run_id": "<uuid>", "cluster": "a", "c": 2, "round": 3, "task": "apl-1a2b3c4d-03", "server_resume_to_running_ms": 2100, "command_duration_ms": 8400, "egress_attach_ms": 9000, "submit_to_result_ms": 19700, "empty_exec_ms": 600, "worker": "<worker-pod>", "unobserved": {}}], "rounds": [{"cluster": "a", "c": 2, "round": 3, "resume_spread_ms": 180, "leftover_actors": 0, "step_run_id": "<uuid>"}]}` |
 | `timing.json` | `docs/evidence/<set_id>/` | `{"set_id": "<uuid>", "configurations": [{"cluster": "a", "step": 1, "case": "F3-A1", "c": 2, "server_resume_to_running_ms": {"n": 30, "p50": 2100, "max": 2600}, "command_duration_ms": {"n": 30, "p50": 8400, "max": 9100, "source": "sandbox-written: …"}, "resume_spread_ms": {"p50": 180, "max": 400, "rounds_absent": 0}, "operator": {"submit_to_result_ms": {"p50": 19700, "max": 21000}}, "warmup": [{"task": "apl-1a2b3c4d-00", "server_resume_to_running_ms": 2900}]}], "raw": <timing-raw.json rows>}` |
 
 ## Appendix B. The proto read for MV-PORT (moved from design 9.1)
