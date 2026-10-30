@@ -105,6 +105,7 @@
     "gcs_snapshot_prefixes": { "type": "array", "items": { "$ref": "#/definitions/gcs_prefix" } },
     "images": {
       "type": "array",
+      "description": "name is the full repository path, with an optional tag and no digest (registry.example/lab/apl-emulate, gcr.io/project/ate-images/ateworker-gvisor:v0.6.0); multi.ts builds name@digest from it.",
       "items": {
         "type": "object",
         "additionalProperties": false,
