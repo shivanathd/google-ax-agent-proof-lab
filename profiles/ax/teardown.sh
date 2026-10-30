@@ -34,6 +34,14 @@ DRY=0
 run() { echo "+ $*"; [ "$DRY" = 1 ] || "$@"; }
 # run_in <dir> <cmd...>: same, from a directory (the Substrate installer reads manifests from its checkout).
 run_in() { local d=$1; shift; echo "+ (cd $d && $*)"; [ "$DRY" = 1 ] || (cd "$d" && "$@"); }
+# del <what> <cmd...>: a delete answered with gRPC NotFound is already gone (multi.ts deletes each task after
+# observing it), not a failure; any other error is "failed (continuing)".
+del() {
+  local what=$1 out; shift
+  if out=$(run "$@" 2>&1); then printf '%s\n' "$out"; return; fi
+  printf '%s\n' "$out"
+  case "$out" in *"code = NotFound"*) echo "teardown: $what already gone" ;; *) echo "teardown: $what failed (continuing)" ;; esac
+}
 
 # load_run_dir <run-dir>: refuse unless owned-resources.json matches the schema and the current kube context is the
 # one the run recorded; then (unless dry) pin that context in a single-context kubeconfig for every later call.
@@ -147,7 +155,7 @@ if [ -n "$(rows "[(1,)] if d['ax'] else []")" ]; then
   fi
   rows "sorted(((r['kind'], r['atespace'], r['name']) for r in d['ax']), key=lambda r: r[0] == 'workspace')" |
     while read -r kind atespace name; do
-      run "$AXCLI" --server "http://127.0.0.1:$PORT" delete "$kind" "$name" -a "$atespace" || echo "teardown: ax delete $kind $name failed (continuing)"
+      del "ax delete $kind $name" "$AXCLI" --server "http://127.0.0.1:$PORT" delete "$kind" "$name" -a "$atespace"
     done
 fi
 
@@ -155,8 +163,8 @@ fi
 #    local.bin holds a kubectl-ate built at the deployed Substrate's API version (L-030).
 rows "sorted(((r['kind'], r.get('atespace') or '-', r['name']) for r in d['substrate'] if r['kind'] != 'egress-policy' and not r.get('removed_at')), key=lambda r: r[0] == 'atespace')" |
   while read -r kind atespace name; do
-    if [ "$kind" = atespace ]; then run kubectl ate delete atespace "$name"; else run kubectl ate delete "$kind" "$name" -a "$atespace"; fi ||
-      echo "teardown: kubectl ate delete $kind $name failed (continuing)"
+    if [ "$kind" = atespace ]; then del "kubectl ate delete atespace $name" kubectl ate delete atespace "$name"
+    else del "kubectl ate delete $kind $name" kubectl ate delete "$kind" "$name" -a "$atespace"; fi
   done
 
 # 3. Namespaced Kubernetes objects by exact name, then the namespaces the run created.
