@@ -195,14 +195,14 @@ Design: [`docs/MULTI_CLUSTER.md`](../../docs/MULTI_CLUSTER.md) (cases, keys, pre
 | `e0ab865c-94a8-48fd-a06b-1226991e27f9` | 1, many tenants | A | [`docs/evidence/e0ab865c-…/`](../../docs/evidence/e0ab865c-94a8-48fd-a06b-1226991e27f9/aggregate.md) |
 | `7d9ea2cc-40c6-4cf6-ab7e-c5dcaae33407` | 2, same case on two clusters | A and B | [`docs/evidence/7d9ea2cc-…/`](../../docs/evidence/7d9ea2cc-40c6-4cf6-ab7e-c5dcaae33407/aggregate.md) |
 
-Each aggregate lists every bundle by run ID; each bundle's export is `docs/evidence/<run_id>/`. The raw evidence (ax-server log extracts, gateway-log extracts, the two planted controls, superseded stop bundles, step run dirs) names the clusters and stays in the gitignored `private-runs/ax/sets/<set_id>/`.
+Each aggregate lists every bundle by run ID; each bundle's export is `docs/evidence/<run_id>/`. The raw evidence (ax-server log extracts, gateway-log extracts, the two planted controls, superseded stop bundles, step run dirs) names the clusters and stays in the gitignored `private-runs/ax/sets/<set_id>/`. The actor probe's G = 0 and L = 0 rest on the private actor listings (`actors-apl-ax-a2de0159-r{0,1}-*.json` in the step 1 set dir), not on exported files.
 
 ### 4.1 Setup
 
 | | Cluster A | Cluster B |
 |---|---|---|
 | Cluster | the run 3 cluster | created for this design (same project, VPC and subnet as A; design 8.1, 8.5) |
-| Nodes | c3-standard-4, amd64. Node pool 2 → 3 for the run (owner approval, 2026-10-30): Substrate (2.1 vCPU) and kube-system (1.3 vCPU) requests left about 4.0 of 7.84 allocatable vCPU for the lab, and the design needed 4.3 (L-059) | c3-standard-4, amd64. Node pool 0 → 3 for step 2: 3 rather than the design's 2, to match A |
+| Nodes | c3-standard-4, amd64. Node pool 2 → 3 for the run (owner approval, 2026-10-30). Before the third node (operator, read-only `kubectl`, 2026-10-30), CPU requests on the 2 × 3.92 = 7.84 allocatable vCPU were `ate-system` 2.10, `kube-system` 1.30, `ax-system` 0.20 and GKE-managed agents about 0.17 (`gke-managed-cim` 0.105, `gke-managed-otel` 0.05, `gmp-system` 0.011): about 3.77, leaving about 4.07 vCPU for the lab against the design's 4.3. After two 1-CPU workers and the collector the nodes had about 0.75 and 0.50 vCPU free, so neither could take the third 1-CPU worker (L-059) | c3-standard-4, amd64. Node pool 0 → 3 for step 2: 3 rather than the design's 2, to match A |
 | GKE | 1.36.4 | 1.36.4 |
 | Substrate | v0.6.0 `d3f2363` | v0.6.0 `d3f2363` |
 | AX | `4b7bf6f`, `ax-server@sha256:41665100…` | same commit and digest |
@@ -235,7 +235,7 @@ Approvals: design §12 lists those the run needed. A's node pool 2 → 3 was out
 - **MT-W01.** `foreign_marker_count` 0 for each tenant at c = 1, 2 and 4. Marker control (one extra observation whose markers file lists the tenant's own first task): counted 4, so the detector can fail. `foreign_secret_in_task_count` is absent, not 0: "not collected: disclosure".
 - **MT-ISO.** For each of the four tenants: `cross_tenant_upstream_count` 0, `allowed_control_reached` true, `target_ran` true, `probe_self_report_reached_count` 0, `foreign_marker_count` 0. Egress control (one isolation task under a lab policy that also allows one foreign tenant's Emulate): `cross_tenant_upstream_count` 1, so the detector can fail. `foreign_secret_in_task_count` is absent ("not computable: ax get task returned no task"), recorded only.
 - **Actor probe.** G = 0 and L = 0 in both rounds (one actor listed after apply and after the result, none after delete); no leftover held a worker. Every round's leftover check in both steps found 0 actors.
-- **Worker co-residency** (recorded, not asserted). At c = 2 the two tenants' task actors shared a worker in 3 of 16 rounds; at c = 4 at least two shared a worker in all 9 rounds (3 workers, 4 tasks). Other rounds show only a shared pool.
+- **Worker co-residency** (recorded, not asserted). At c = 2 the two tenants' task actors shared a worker in 3 of 15 counted rounds (3 of 16 including the warm-up round); at c = 4 at least two shared a worker in 8 of 8 counted rounds (9 of 9 including the warm-up round; 3 workers, 4 tasks). Other rounds show only a shared pool.
 
 Timing (recorded, not asserted; nearest-rank p50 and max; warm-ups excluded):
 
@@ -256,8 +256,8 @@ Timing (recorded, not asserted; nearest-rank p50 and max; warm-ups excluded):
 | A | 30 PASS | PASS (`foreign_marker_count` 0) | PASS |
 | B | 29 PASS, 1 BLOCKED | PASS (`foreign_marker_count` 0; 29 of 30 tasks timed) | BLOCKED |
 
-- **The BLOCKED task.** `apl-a64f9fba-06` on B (run `6648320f-7097-43bb-aaec-668dc0ea2fdf`): reason "egress policy not attached". `kubectl ate create egress-policy` for that task failed and the runner did not capture the command's stderr (L-067), so why it failed is UNKNOWN. The task was deleted without being resumed; its round has no resume spread. The aggregate's Reason column is empty for this row; the reason is in the bundle's `report.json`.
-- **No retry.** The operator did not re-run B until it was green: re-running a configuration until it passes is retry-until-pass, and the one BLOCKED task stands. So the two clusters did not reach the same verdict, for a tooling reason, not a case failure.
+- **The BLOCKED task.** `apl-a64f9fba-06` on B (run `6648320f-7097-43bb-aaec-668dc0ea2fdf`): reason "egress policy not attached". `kubectl ate create egress-policy` for that task failed and the runner did not capture the command's stderr (L-067), so why it failed is UNKNOWN. The task was deleted without being resumed; its round has no resume spread.
+- **No retry.** The operator did not re-run B until it was green: re-running a configuration until it passes is retry-until-pass, and the one BLOCKED task stands. So the two clusters did not reach the same verdict. B's row is a BLOCKED, not a FAIL: the `kubectl ate create egress-policy` call against B's Substrate API failed and its stderr was not captured (L-067), so the cause is not determined (a Substrate-side fault is not excluded).
 - **Marker control on B.** Counted 4 (kept in the set dir, not exported), so B's MT-W01 detector can fail.
 
 | Cluster | n | ax-server log: resume → running, ms | `result.json` command duration, ms |
@@ -275,12 +275,12 @@ On B the warm-up (6134 ms) and the first counted task (6165 ms) were slow; the o
 | F3-A1 PASS for every counted task at c = 1, 2, 4 | 92 of 92 PASS (plus the 2 probe tasks) | met |
 | MT-W01 PASS at c = 1, 2, 4 | 7 of 7 PASS | met |
 | MT-ISO PASS for each of four tenants | 4 of 4 PASS | met |
-| c = 4 and MT-ISO fit (no NOT_RUN for capacity) | fitted, on 3 nodes instead of 2 (L-059) | met only after adding a node |
+| c = 4 and MT-ISO fit on 2 × c3-standard-4 (design 7.3; no NOT_RUN for capacity) | did not fit: the third worker could not schedule on 2 nodes; fitted after A's node pool went to 3 (L-059) | missed |
 | Both controls fire | marker 4, egress 1 on A; marker 4 on B | met |
 | resume → running p50 at c = 1 about 2.1 s | 2114 ms | met |
 | resume → running p50 at c = 4 above c = 1's | 2177 vs 2114 ms | met (no trend claim) |
 | A's `versions.json` unchanged, so A's half reused | reuse refused on a name-format difference with the same digest (L-064); A re-run | missed |
-| Warm-up preflight passes on B | warm-up PASS | met |
+| Warm-up preflight passes on B (design 8.2) | warm-up PASS; 8.2's checks (every actor decoded, no `Unimplemented` or unmarshal error) are not separately recorded | partly evidenced |
 | F3-A1 PASS for every counted task on B, MT-W01 PASS | 29 PASS, 1 BLOCKED; MT-W01 PASS | missed (one BLOCKED) |
 | All-clusters view PASS for both | BLOCKED | missed |
 
@@ -295,6 +295,8 @@ On B the warm-up (6134 ms) and the first counted task (6165 ms) were slow; the o
 | Step 2, B's first run | Stopped before any cluster call: B's run dir listed no `apl-emulate` image (L-065) | Run-dir data fixed; B re-run with `run-step --only configuration`. The 32 stop bundles (31 F3-A1, 1 MT-W01) are listed in `superseded.json` and not exported |
 | Step 2, B task `-06` | BLOCKED: egress policy not attached (L-067) | Not retried (4.4) |
 | Overnight | `gcloud` credentials expired; non-interactive `kubectl` and `gcloud` failed with "Reauthentication failed" (L-058) | Owner re-login; no cluster change happened |
+
+The re-run rule applied: a configuration was re-run only after a fix for a known, recorded cause and before it produced any observation (MT-ISO after the worker-lookup fix; B's first step run, which made no cluster call). An observed BLOCKED with an unknown cause (B task `-06`) was not re-run, to avoid retry-until-pass.
 
 Every step run ended CLEAN: step 1's two after the teardown re-run, step 2's A and B on the first teardown. B's first step run made no cluster call.
 
